@@ -137,14 +137,14 @@ function VendorBookings() {
     <div className="flex flex-col gap-14 lg:gap-24">
       <PageHeader
         label={capitalize(vendor.category)}
-        title={vendor.name}
+        title={<span className="[overflow-wrap:anywhere]">{vendor.name}</span>}
         description="Booking requests addressed to you."
       />
 
-      <Card className="flex flex-wrap items-center justify-between gap-4">
+      <Card className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-7">
         <div className="min-w-0">
           <p className="label">Your service</p>
-          <p className="mt-1 truncate font-display text-xl">{vendor.name}</p>
+          <p className="mt-1 truncate font-display text-xl" title={vendor.name}>{vendor.name}</p>
           <p className="text-sm text-muted-foreground">
             {capitalize(vendor.category)} <span aria-hidden="true">·</span> {formatNumber(vendor.price)}
           </p>

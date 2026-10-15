@@ -102,6 +102,7 @@ export default function VendorProfilePage() {
 
     savingRef.current = true;
     setSaving(true);
+    let redirecting = false;
     try {
       const payload = { name, category: fields.category, price: numericPrice };
       if (profile) {
@@ -111,6 +112,7 @@ export default function VendorProfilePage() {
         setSaved(true);
       } else {
         await api.createVendorProfile(payload);
+        redirecting = true;
         router.replace("/vendor");
       }
     } catch (error) {
@@ -132,8 +134,11 @@ export default function VendorProfilePage() {
         }
       }
     } finally {
-      savingRef.current = false;
-      setSaving(false);
+      // After a create the page is leaving, so the form stays locked until it does.
+      if (!redirecting) {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   }
 

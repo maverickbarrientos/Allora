@@ -18,6 +18,9 @@ const CATEGORIES = ["venue", "catering", "photography", "music", "decoration"];
 const PROFILE_PREFIX = "allora.mock.vendor.profile.";
 const BOOKINGS_PREFIX = "allora.mock.vendor.bookings.";
 
+// Short latency so saving and in-progress states are visible in the UI.
+const delay = () => new Promise((resolve) => setTimeout(resolve, 250));
+
 function currentSession() {
   const session = readMockSession();
   if (!session) throw new ApiError(401, "unauthorized", "Not signed in.");
@@ -176,6 +179,7 @@ export async function createMockVendorProfile(
   input: Omit<Vendor, "id">,
 ): Promise<{ vendor: Vendor; categoryLocked: false }> {
   const session = currentVendor();
+  await delay();
   if (!input || typeof input !== "object") {
     throw new ApiError(400, "validation_error", "Profile fields are required.");
   }
@@ -204,6 +208,7 @@ export async function updateMockVendorProfile(
   input: Partial<Omit<Vendor, "id">>,
 ): Promise<VendorProfile> {
   const session = currentVendor();
+  await delay();
   const data = dataFor(session.user.email);
   if (!data) throw new ApiError(404, "vendor_not_linked", "Vendor profile not found.");
   if (!input || typeof input !== "object") {
@@ -251,6 +256,7 @@ export async function decideMockVendorBooking(
   status: "confirmed" | "declined",
 ): Promise<{ booking: VendorBooking }> {
   const session = currentVendor();
+  await delay();
   const data = dataFor(session.user.email);
   if (!data) throw new ApiError(404, "vendor_not_linked", "Vendor profile not found.");
   if (status !== "confirmed" && status !== "declined") {
