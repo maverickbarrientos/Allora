@@ -92,6 +92,18 @@ export type PlanBooking = {
   payment?: PlanPayment | null;
 };
 
+/** docs/SPEC-booking-documents.md: a booking's receipt, for the event's customer only. */
+export type BookingReceipt = {
+  bookingId: string;
+  category: string;
+  status: BookingStatus;
+  bookedAt: string;
+  event: { id: string; name: string | null; type: EventType; date: string; guestCount: number };
+  vendor: { name: string; price: number };
+  /** null when no deposit was ever paid. paidAt is when the deposit was paid. */
+  deposit: { status: "paid" | "refunded"; amount: number | null; paidAt: string | null } | null;
+};
+
 // Shape from docs/SPEC-vendor-portal.md ("Shared shapes").
 export type VendorBooking = {
   id: string;

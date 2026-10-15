@@ -328,7 +328,14 @@ export default function PlanPage() {
                       >
                         Contract
                       </Link>
-                      </div>
+                      <Link
+                        href={`/events/${event.id}/bookings/${b.id}/receipt`}
+                        className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
+                        aria-label={`Receipt for ${b.vendorName}`}
+                      >
+                        Receipt
+                      </Link>
+                    </div>
                   </div>
                 </Reveal>
               </li>

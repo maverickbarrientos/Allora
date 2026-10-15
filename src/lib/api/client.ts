@@ -1,4 +1,5 @@
 import type {
+  BookingReceipt,
   BudgetEntry,
   BudgetSummary,
   ChatIntent,
@@ -139,6 +140,8 @@ export const api = {
       `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
       { testMethod },
     ),
+  getBookingReceipt: (bookingId: string) =>
+    request<{ receipt: BookingReceipt }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/receipt`),
 
   listVendorBookings: () =>
     request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),

@@ -6,11 +6,11 @@
 
 **Status:** todo
 
-- [ ] Every booking row on the plan has a Receipt link
-- [ ] The receipt shows the event, vendor, service, price and status, with status in words, not only colour
-- [ ] A paid deposit shows its amount and date; a refunded one shows "Deposit refunded"; no deposit shows no deposit line
-- [ ] Download PDF produces a clean one-document printout with no navigation or buttons
-- [ ] Another customer, a vendor, or a made-up booking id gets "not found"; logged-out visitors go to login
-- [ ] No AI is called
-- [ ] Works on a phone at 375px wide
+- [x] Every booking row on the plan has a Receipt link
+- [x] The receipt shows the event, vendor, service, price and status, with status in words, not only colour
+- [x] A paid deposit shows its amount and date; a refunded one shows "Deposit refunded"; no deposit shows no deposit line
+- [x] Download PDF produces a clean one-document printout with no navigation or buttons
+- [x] Another customer, a vendor, or a made-up booking id gets "not found"; logged-out visitors go to login
+- [x] No AI is called
+- [x] Works on a phone at 375px wide
 - [ ] Works on the live URL
