@@ -6,7 +6,13 @@ export type VendorBooking = {
   category: string;
   status: "pending" | "confirmed" | "declined";
   createdAt: string;
-  event: { type: "wedding" | "birthday" | "corporate"; date: string; guestCount: number };
+  customerName: string;
+  event: {
+    type: "wedding" | "birthday" | "corporate";
+    date: string;
+    guestCount: number;
+    budget: number;
+  };
 };
 
 export type VendorBookingRow = {
@@ -17,6 +23,8 @@ export type VendorBookingRow = {
   event_type: VendorBooking["event"]["type"];
   event_date: string;
   guest_count: number;
+  event_budget: number | string;
+  customer_name: string;
 };
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,7 +35,13 @@ export function toVendorBooking(r: VendorBookingRow): VendorBooking {
     category: r.category,
     status: r.status,
     createdAt: r.created_at,
-    event: { type: r.event_type, date: r.event_date, guestCount: r.guest_count },
+    customerName: r.customer_name,
+    event: {
+      type: r.event_type,
+      date: r.event_date,
+      guestCount: r.guest_count,
+      budget: Number(r.event_budget),
+    },
   };
 }
 
