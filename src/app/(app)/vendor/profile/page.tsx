@@ -10,20 +10,51 @@ import { useProfile } from "@/components/app-shell";
 import { useLoad } from "@/lib/use-load";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { ABOUT_MAX, CONTACT_FIELDS, LOCATION_MAX, contactValue } from "@/lib/vendor-profile";
+import { ContactFields } from "./contact-fields";
+import { TextField } from "./text-field";
 
-type Fields = { name: string; category: string; price: string };
+type Fields = {
+  name: string;
+  category: string;
+  price: string;
+  about: string;
+  location: string;
+  phone: string;
+  email: string;
+  website: string;
+};
 type FieldErrors = Partial<Record<keyof Fields, string>>;
 
-const EMPTY_FIELDS: Fields = { name: "", category: "", price: "" };
+const ABOUT_COUNTER_FROM = 900;
+
+const EMPTY_FIELDS: Fields = {
+  name: "",
+  category: "",
+  price: "",
+  about: "",
+  location: "",
+  phone: "",
+  email: "",
+  website: "",
+};
 const FIELD_ERRORS: Record<keyof Fields, string> = {
   name: "Enter a name between 1 and 80 characters.",
   category: "Choose a category.",
   price: "Enter a price above 0, up to 100,000,000, with no more than 2 decimals.",
+  about: `Keep the description to ${ABOUT_MAX.toLocaleString("en-US")} characters or fewer.`,
+  location: `Keep the location to ${LOCATION_MAX} characters or fewer.`,
+  phone: "Use only digits, spaces and + ( ) - . (5 to 30 characters).",
+  email: "Enter an email address like name@example.com.",
+  website: "Enter a link that starts with http:// or https://.",
 };
+
+/** Character count as the server counts it (an emoji is one character). */
+const charCount = (text: string) => [...text].length;
 
 function fieldsFromProfile(profile: VendorProfile | null): Fields {
   return profile
@@ -31,6 +62,11 @@ function fieldsFromProfile(profile: VendorProfile | null): Fields {
         name: profile.vendor.name,
         category: profile.vendor.category,
         price: String(profile.vendor.price),
+        about: profile.vendor.about ?? "",
+        location: profile.vendor.location ?? "",
+        phone: profile.contact.phone ?? "",
+        email: profile.contact.email ?? "",
+        website: profile.contact.website ?? "",
       }
     : EMPTY_FIELDS;
 }
@@ -95,6 +131,13 @@ export default function VendorProfilePage() {
     ) {
       errors.price = FIELD_ERRORS.price;
     }
+    const about = fields.about.trim();
+    const location = fields.location.trim();
+    if (charCount(about) > ABOUT_MAX) errors.about = FIELD_ERRORS.about;
+    if (charCount(location) > LOCATION_MAX) errors.location = FIELD_ERRORS.location;
+    for (const field of CONTACT_FIELDS) {
+      if (contactValue(field, fields[field]) === undefined) errors[field] = FIELD_ERRORS[field];
+    }
     setFieldErrors(errors);
     setFormError(null);
     setSaved(false);
@@ -103,7 +146,17 @@ export default function VendorProfilePage() {
     savingRef.current = true;
     setSaving(true);
     try {
-      const payload = { name, category: fields.category, price: numericPrice };
+      // An empty optional field is sent as null, which clears it.
+      const payload = {
+        name,
+        category: fields.category,
+        price: numericPrice,
+        about: about || null,
+        location: location || null,
+        phone: fields.phone.trim() || null,
+        email: fields.email.trim() || null,
+        website: fields.website.trim() || null,
+      };
       if (profile) {
         const updated = await api.updateVendorProfile(payload);
         setProfileOverride(updated);
@@ -159,7 +212,15 @@ export default function VendorProfilePage() {
     );
   }
 
+  /** Updates one field of the draft, clears its error and the "Saved" note. */
+  function setField(key: keyof Fields, value: string) {
+    setFieldDraft((current) => ({ ...(current ?? fieldsFromProfile(profile)), [key]: value }));
+    setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    setSaved(false);
+  }
+
   const isEdit = profile !== null;
+  const aboutCounter = charCount(fields.about) >= ABOUT_COUNTER_FROM;
 
   return (
     <div className="flex max-w-xl flex-col gap-10">
@@ -174,27 +235,16 @@ export default function VendorProfilePage() {
       />
       <form onSubmit={submit} noValidate className="flex flex-col gap-6">
         {formError && <Alert variant="destructive">{formError}</Alert>}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="vendor-name">Service name</Label>
-          <Input
-            id="vendor-name"
-            name="name"
-            autoComplete="organization"
-            value={fields.name}
-            disabled={saving}
-            aria-invalid={Boolean(fieldErrors.name)}
-            aria-describedby={fieldErrors.name ? "vendor-name-error" : undefined}
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                name: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, name: undefined }));
-              setSaved(false);
-            }}
-          />
-          {fieldErrors.name && <p id="vendor-name-error" className="text-sm text-destructive">{fieldErrors.name}</p>}
-        </div>
+        <TextField
+          id="vendor-name"
+          label="Service name"
+          name="name"
+          autoComplete="organization"
+          value={fields.name}
+          disabled={saving}
+          error={fieldErrors.name}
+          onChange={(event) => setField("name", event.target.value)}
+        />
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="vendor-category">Category</Label>
@@ -211,14 +261,7 @@ export default function VendorProfilePage() {
                   ? "vendor-category-note"
                   : undefined
             }
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                category: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, category: undefined }));
-              setSaved(false);
-            }}
+            onChange={(event) => setField("category", event.target.value)}
           >
             <option value="" disabled>Choose a category</option>
             {categories.map((category) => (
@@ -235,31 +278,64 @@ export default function VendorProfilePage() {
           {fieldErrors.category && <p id="vendor-category-error" className="text-sm text-destructive">{fieldErrors.category}</p>}
         </div>
 
+        <TextField
+          id="vendor-price"
+          label="Price"
+          name="price"
+          type="number"
+          inputMode="decimal"
+          step="0.01"
+          min="0.01"
+          max="100000000"
+          value={fields.price}
+          disabled={saving}
+          error={fieldErrors.price}
+          onChange={(event) => setField("price", event.target.value)}
+        />
+
+        <TextField
+          id="vendor-location"
+          label="Location (optional)"
+          name="location"
+          autoComplete="address-level2"
+          placeholder="e.g. Quezon City"
+          value={fields.location}
+          disabled={saving}
+          error={fieldErrors.location}
+          onChange={(event) => setField("location", event.target.value)}
+        />
+
         <div className="flex flex-col gap-2">
-          <Label htmlFor="vendor-price">Price</Label>
-          <Input
-            id="vendor-price"
-            name="price"
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0.01"
-            max="100000000"
-            value={fields.price}
+          <Label htmlFor="vendor-about">About (optional)</Label>
+          <Textarea
+            id="vendor-about"
+            name="about"
+            rows={5}
+            placeholder="What you offer, your style, and what customers can expect."
+            value={fields.about}
             disabled={saving}
-            aria-invalid={Boolean(fieldErrors.price)}
-            aria-describedby={fieldErrors.price ? "vendor-price-error" : undefined}
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                price: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, price: undefined }));
-              setSaved(false);
-            }}
+            aria-invalid={Boolean(fieldErrors.about)}
+            aria-describedby={
+              [fieldErrors.about && "vendor-about-error", aboutCounter && "vendor-about-counter"]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
+            onChange={(event) => setField("about", event.target.value)}
           />
-          {fieldErrors.price && <p id="vendor-price-error" className="text-sm text-destructive">{fieldErrors.price}</p>}
+          {aboutCounter && (
+            <p id="vendor-about-counter" className="self-end text-xs text-muted-foreground" aria-live="polite">
+              {charCount(fields.about).toLocaleString("en-US")} / {ABOUT_MAX.toLocaleString("en-US")}
+            </p>
+          )}
+          {fieldErrors.about && <p id="vendor-about-error" className="text-sm text-destructive">{fieldErrors.about}</p>}
         </div>
+
+        <ContactFields
+          values={fields}
+          errors={fieldErrors}
+          disabled={saving}
+          onChange={setField}
+        />
 
         <div className="flex flex-wrap items-center gap-4">
           <Button type="submit" disabled={saving}>

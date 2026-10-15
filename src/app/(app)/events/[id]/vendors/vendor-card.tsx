@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Vendor } from "@/lib/api/types";
 import { formatNumber } from "@/lib/format";
 import { ImagePlaceholder } from "@/components/image-placeholder";
@@ -17,19 +18,22 @@ const CAPTIONS: Record<string, string> = {
   transport: "Car at the entrance",
   makeup: "Mirror, warm light",
 };
-const captionFor = (category: string) => CAPTIONS[category] ?? "Table setting, natural light";
+export const captionFor = (category: string) => CAPTIONS[category] ?? "Table setting, natural light";
 
 /**
- * Compact vendor card: image, category label, one-line name, then price and
- * the Book button. The lift on hover comes from Card (pointer devices only).
+ * Compact vendor card: image, category label, one-line name (a link to the
+ * vendor's page), location, then price and the Book button. The lift on hover comes from Card (pointer devices only).
  */
 export function VendorCard({
   vendor,
+  href,
   booked,
   eventDate,
   onBook,
 }: {
   vendor: Vendor;
+  /** The vendor's page for this event. */
+  href: string;
   booked: boolean;
   eventDate: string;
   /** Opens "Check availability"; nothing is booked until the customer confirms there. */
@@ -41,9 +45,17 @@ export function VendorCard({
       <ImagePlaceholder caption={captionFor(vendor.category)} aspect="16 / 9" />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="label">{vendor.category}</p>
-        <h2 className="truncate font-display text-h2" title={vendor.name}>
-          {vendor.name}
+        <h2 className="min-w-0 font-display text-h2" title={vendor.name}>
+          {/* -my-2 py-2: a 44px tap target without changing the layout */}
+          <Link href={href} className="-my-2 block truncate py-2 underline-offset-4 hover:underline">
+            {vendor.name}
+          </Link>
         </h2>
+        {vendor.location && (
+          <p className="truncate text-sm text-muted-foreground" title={vendor.location}>
+            {vendor.location}
+          </p>
+        )}
         {available !== undefined && (
           <p className={available ? "text-sm text-forest" : "text-sm text-brick"}>
             {available ? `Available on ${eventDate}` : `Unavailable on ${eventDate}`}

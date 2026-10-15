@@ -227,6 +227,7 @@ function VendorList({
         <Reveal key={v.id} delay={Math.min(i, 5) * 60} className="min-w-0">
           <VendorCard
             vendor={v}
+            href={`/events/${eventId}/vendors/${v.id}`}
             booked={booked.has(v.id)}
             eventDate={eventDate}
             onBook={() => onBook(v)}

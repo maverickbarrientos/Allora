@@ -308,7 +308,12 @@ export default function PlanPage() {
                 <Reveal delay={500 + Math.min(i, 3) * 80}>
                   <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-1 py-3 sm:grid-cols-[9rem_1fr_auto_5.5rem]">
                     <span className="label col-span-2 sm:col-span-1">{b.category}</span>
-                    <span className="min-w-0 font-display text-h2 wrap-anywhere">{b.vendorName}</span>
+                    <Link
+                      href={`/events/${event.id}/vendors/${b.vendorId}`}
+                      className="-my-2 min-w-0 py-2 font-display text-h2 wrap-anywhere underline-offset-4 hover:underline"
+                    >
+                      {b.vendorName}
+                    </Link>
                     <span className="hidden text-right sm:block">{formatNumber(b.price)}</span>
                     <StatusBadge status={b.status} className="justify-self-end" />
                     <span className="text-sm sm:hidden">{formatNumber(b.price)}</span>
