@@ -122,6 +122,24 @@ export type ChatResponse = {
   source: "ai" | "fallback";
 };
 
+// Shapes from docs/SPEC-dashboard.md.
+export type DashboardActionType = "pay_deposit" | "find_replacement" | "awaiting_vendor";
+export type DashboardAction = {
+  type: DashboardActionType;
+  bookingId: string;
+  vendorName: string;
+  category: string;
+  /** The deposit amount for pay_deposit, otherwise null. */
+  amount: number | null;
+};
+export type MissingService = { category: string; budgetShare: number };
+export type Dashboard = {
+  event: Event;
+  bookingCounts: { pending: number; confirmed: number; declined: number };
+  actions: DashboardAction[];
+  missing: MissingService[];
+};
+
 export type CreateEventInput = {
   name: string;
   type: EventType;
