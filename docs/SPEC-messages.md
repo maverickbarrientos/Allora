@@ -18,7 +18,7 @@ Email or push notifications (see LATER.md), attachments and images, editing or d
 - Messages are never sent to the LLM, and the dashboard doesn't use them.
 
 ## Data and tables
-SQL `017_messages.sql`, safe to re-run.
+SQL `018_messages.sql`, safe to re-run.
 - **`conversations`**:
   - Columns: `id`, `customer_id` (profile, removed with it), `vendor_id` (vendor, removed with it), `created_at`, `last_message_at` (null until the first message), `customer_last_read_at`, `vendor_last_read_at`. Unique on (customer_id, vendor_id).
   - RLS read: the customer, or the vendor's owner.

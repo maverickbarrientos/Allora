@@ -1,8 +1,8 @@
-# 19 — Unread badges
+# 23 — Unread badges
 
 **What to build:** Customers and vendors can see at a glance how many messages they haven't read: on the sidebar, in the inbox and on each booking row.
 
-**Blocked by:** 17, 18
+**Blocked by:** 21, 22
 
 **Status:** todo
 

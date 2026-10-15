@@ -1,8 +1,8 @@
-# 17 — Messages arrive instantly
+# 21 — Messages arrive instantly
 
 **What to build:** When one side sends a message, it appears on the other side's open conversation without reloading.
 
-**Blocked by:** 16
+**Blocked by:** 20
 
 **Status:** todo
 

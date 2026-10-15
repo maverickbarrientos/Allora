@@ -1,8 +1,8 @@
-# 18 — Messages inbox
+# 22 — Messages inbox
 
 **What to build:** Customers and vendors have a Messages page listing all their conversations, newest first, reachable from the sidebar.
 
-**Blocked by:** 16
+**Blocked by:** 20
 
 **Status:** todo
 

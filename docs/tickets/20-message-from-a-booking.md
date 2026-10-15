@@ -1,4 +1,4 @@
-# 16 — Customer and vendor message each other
+# 20 — Customer and vendor message each other
 
 **What to build:** Once a customer books a vendor, both of them can open their conversation from the booking and write to each other. While they have a pending or confirmed booking, the conversation is open. With only declined bookings, it becomes read-only.
 
