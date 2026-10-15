@@ -11,6 +11,7 @@ export function ServicePicker({
   locked,
   disabled,
   hintId,
+  error,
   onChange,
 }: {
   categories: readonly string[];
@@ -19,6 +20,8 @@ export function ServicePicker({
   disabled?: boolean;
   /** id for the "Choose at least one service" hint, so a Save button can point at it. */
   hintId?: string;
+  /** Shown in place of the hint, as an error (e.g. after a refused submit). */
+  error?: string | null;
   onChange: (next: string[]) => void;
 }) {
   function toggle(category: string, checked: boolean) {
@@ -50,10 +53,16 @@ export function ServicePicker({
           );
         })}
       </div>
-      {selected.length === 0 && (
-        <p id={hintId} role="status" className="text-sm text-muted-foreground">
-          Choose at least one service.
+      {error ? (
+        <p id={hintId} role="alert" className="text-sm text-destructive">
+          {error}
         </p>
+      ) : (
+        selected.length === 0 && (
+          <p id={hintId} role="status" className="text-sm text-muted-foreground">
+            Choose at least one service.
+          </p>
+        )
       )}
     </fieldset>
   );

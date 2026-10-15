@@ -83,9 +83,10 @@ export default function NewEventPage() {
   }, [templates.state, router]);
 
   const templateList = templates.state.status === "loaded" ? templates.state.data.templates : [];
-  // The chosen type's template list, until the customer changes it.
-  const services =
-    customServices ?? [...(templateList.find((t) => t.type === values.type)?.services ?? [])];
+  // The chosen type's template list, until the customer changes it. Empty
+  // when the templates didn't load: then nothing can be prefilled.
+  const typeTemplate = templateList.find((t) => t.type === values.type);
+  const services = customServices ?? [...(typeTemplate?.services ?? [])];
 
   const labelFor = (c: Choice) =>
     c === "blank" ? "Start blank" : (templateList.find((t) => t.type === c)?.label ?? c);
@@ -197,9 +198,13 @@ export default function NewEventPage() {
         Services
       </p>
       <p className="text-sm text-muted-foreground">
-        {values.type
-          ? "The usual services for this type are ticked. Add or remove any before you create the event."
-          : "Choose a type to see its usual services, or pick your own."}
+        {customServices
+          ? "Your choice of services stays as it is when you change the type."
+          : typeTemplate
+            ? "The usual services for this type are ticked. Add or remove any before you create the event."
+            : values.type
+              ? "Pick the services you need."
+              : "Choose a type to see its usual services, or pick your own."}
       </p>
       {categories.state.status === "loaded" ? (
         <ServicePicker
@@ -207,6 +212,7 @@ export default function NewEventPage() {
           selected={services}
           locked={NO_LOCKS}
           disabled={saving}
+          error={servicesError}
           onChange={(next) => {
             setCustomServices(next);
             if (next.length > 0) setServicesError(null);
@@ -224,8 +230,8 @@ export default function NewEventPage() {
       ) : (
         <Skeleton role="status" aria-label="Loading services" className="h-24" />
       )}
-      {servicesError && (
-        <p id="services-error" className="text-sm text-destructive">
+      {servicesError && categories.state.status !== "loaded" && (
+        <p role="alert" className="text-sm text-destructive">
           {servicesError}
         </p>
       )}
@@ -268,6 +274,7 @@ export default function NewEventPage() {
                 {pendingChoice === "blank"
                   ? "Starting blank clears every field, including your changes."
                   : `The ${labelFor(pendingChoice)} template fills every field with its suggestions and replaces your changes.`}
+                {customServices && " Your choice of services stays as you set it."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
