@@ -57,7 +57,7 @@ export function VendorCard({
 /** Placeholder with the same size and layout as a VendorCard. */
 export function VendorCardSkeleton() {
   return (
-    <div aria-hidden="true" className="surface-plum flex flex-col gap-2">
+    <div aria-hidden="true" className="rounded-[var(--radius)] bg-card p-7 text-card-foreground shadow-soft flex flex-col gap-2">
       <Skeleton className="aspect-[16/9] w-full" />
       <div className="flex flex-col gap-2">
         <Skeleton className="h-3 w-20" />

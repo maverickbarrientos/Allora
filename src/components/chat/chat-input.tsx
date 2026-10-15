@@ -55,7 +55,7 @@ export function ChatInput({
             }
           }}
           aria-describedby={text.length >= COUNTER_FROM ? "chat-counter" : undefined}
-          className="min-h-12 resize-none rounded-xl bg-ivory text-plum-ink placeholder:text-plum-ink/60"
+          className="min-h-12 resize-none rounded-xl bg-ivory text-foreground placeholder:text-muted-foreground"
         />
         <Button type="submit" size="icon" disabled={disabled || blank} aria-label="Send message">
           <ArrowUp className="h-5 w-5" strokeWidth={1.5} />

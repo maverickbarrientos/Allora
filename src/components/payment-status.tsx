@@ -43,12 +43,12 @@ export function VendorPaymentBadge({ booking }: { booking: VendorBooking }) {
   if (!p) return null;
   if (p.status === "paid") {
     return (
-      <span className={cn(badge, "border-[#1f3a32] text-[#1f3a32]")}>
+      <span className={cn(badge, "border-forest text-forest")}>
         Deposit paid{p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
       </span>
     );
   }
   if (p.status === "refunded") return <span className={cn(badge, "border-foreground text-foreground")}>Refunded</span>;
   if (booking.status !== "confirmed") return null;
-  return <span className={cn(badge, "border-plum text-plum")}>Awaiting deposit</span>;
+  return <span className={cn(badge, "border-brass text-brass-ink")}>Awaiting deposit</span>;
 }

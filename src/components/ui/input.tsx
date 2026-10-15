@@ -14,7 +14,7 @@ export function Input({
         "placeholder:text-muted-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "aria-[invalid=true]:border-destructive",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "disabled:cursor-not-allowed disabled:bg-stone disabled:text-ink-muted",
         className,
       )}
       {...props}

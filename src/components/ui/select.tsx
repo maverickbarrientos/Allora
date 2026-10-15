@@ -12,7 +12,7 @@ export function Select({
         "flex h-12 w-full rounded-xl border border-input bg-ivory px-4 py-2 text-base",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "aria-[invalid=true]:border-destructive",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "disabled:cursor-not-allowed disabled:bg-stone disabled:text-ink-muted",
         className,
       )}
       {...props}
