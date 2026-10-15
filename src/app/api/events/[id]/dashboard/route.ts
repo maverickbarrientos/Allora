@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { UUID_RE, errorResponse, requireSession } from "@/lib/api-helpers";
-import type { EventType } from "@/lib/matching/config";
 import { findGaps } from "@/lib/matching/gaps";
 import { budgetShare, roundShare } from "@/lib/matching/shares";
 import { planPayments } from "@/lib/payments/status";
 import { toSetBudgets } from "@/lib/server/budgets";
+import { loadEventServices } from "@/lib/server/services";
 import { EVENT_COLUMNS, PLAN_BOOKING_COLUMNS, toEvent, toPlanBooking } from "@/lib/server/shapes";
 
 // Customer dashboard for one event (docs/SPEC-dashboard.md). Deterministic:
@@ -35,7 +35,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (eventError) return errorResponse(500, "server_error", "Could not load event.");
     if (!event) return errorResponse(404, "event_not_found", "Event not found.");
 
-    const [bookingsResult, budgetsResult] = await Promise.all([
+    const [bookingsResult, budgetsResult, services] = await Promise.all([
       supabase
         .from("bookings")
         .select(PLAN_BOOKING_COLUMNS)
@@ -43,11 +43,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         .order("created_at", { ascending: true })
         .order("id", { ascending: true }),
       supabase.from("event_budgets").select("category, amount").eq("event_id", id),
+      loadEventServices(supabase, id),
     ]);
-    if (bookingsResult.error || budgetsResult.error) return errorResponse(500, "server_error", "Could not load the plan.");
+    if (bookingsResult.error || budgetsResult.error || !services) return errorResponse(500, "server_error", "Could not load the plan.");
 
     const bookings = (bookingsResult.data ?? []).map(toPlanBooking);
-    const type = event.type as EventType;
 
     // Payment status and the current deposit, only for confirmed bookings:
     // they are the only ones that can need a deposit.
@@ -62,7 +62,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const bookingCounts = { pending: 0, confirmed: 0, declined: 0 };
     for (const b of bookings) bookingCounts[b.status] += 1;
 
-    const gaps = findGaps(type, bookings);
+    const gaps = findGaps(services, bookings);
     const gapSet = new Set(gaps);
 
     const actions: DashboardAction[] = [];
@@ -84,7 +84,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const setBudgets = toSetBudgets(budgetsResult.data ?? []);
     const missing = gaps.map((category) => ({
       category,
-      budgetShare: roundShare(budgetShare(type, Number(event.budget), category, setBudgets)),
+      budgetShare: roundShare(budgetShare(services, Number(event.budget), category, setBudgets)),
     }));
 
     return NextResponse.json({ event: toEvent(event), bookingCounts, actions, missing });

@@ -1,4 +1,3 @@
-import { CHECKLISTS, type EventType } from "../matching/config";
 import { findGaps } from "../matching/gaps";
 import { budgetShare, roundShare, type SetBudgets } from "../matching/shares";
 import { daysUntil } from "./input";
@@ -54,7 +53,8 @@ const fromCents = (c: number) => c / 100;
 const isActive = (status: string) => status === "pending" || status === "confirmed";
 
 export function computeFinance(args: {
-  type: EventType;
+  /** The event's own service list, in order. */
+  services: readonly string[];
   budget: number;
   date: string;
   today: string;
@@ -62,9 +62,8 @@ export function computeFinance(args: {
   bookings: readonly BookingFact[];
   vendors: readonly VendorPriceFact[];
 }): Finance {
-  const { type, budget, bookings, vendors, setBudgets } = args;
-  const checklist = CHECKLISTS[type];
-  const missing = findGaps(type, bookings);
+  const { services: checklist, budget, bookings, vendors, setBudgets } = args;
+  const missing = findGaps(checklist, bookings);
   const active = bookings.filter((b) => isActive(b.status));
 
   // Money is summed in whole cents so float drift never shows up in a total.
@@ -77,7 +76,7 @@ export function computeFinance(args: {
   };
 
   const rows: AffordabilityRow[] = checklist.map((category) => {
-    const share = roundShare(budgetShare(type, budget, category, setBudgets));
+    const share = roundShare(budgetShare(checklist, budget, category, setBudgets));
     const bookedCents = active.filter((b) => b.category === category).reduce((s, b) => s + cents(b.price), 0);
     return {
       category,

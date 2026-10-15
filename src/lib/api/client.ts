@@ -8,6 +8,7 @@ import type {
   Dashboard,
   ErrorBody,
   Event,
+  EventService,
   EventTemplate,
   LoginInput,
   MissingResponse,
@@ -88,6 +89,12 @@ export const api = {
     request<BudgetSummary>("GET", `/api/events/${encodeURIComponent(eventId)}/budgets`),
   saveBudgets: (eventId: string, budgets: BudgetEntry[]) =>
     request<BudgetSummary>("PUT", `/api/events/${encodeURIComponent(eventId)}/budgets`, { budgets }),
+  getServices: (eventId: string) =>
+    request<{ services: EventService[] }>("GET", `/api/events/${encodeURIComponent(eventId)}/services`),
+  saveServices: (eventId: string, services: string[]) =>
+    request<{ services: EventService[] }>("PUT", `/api/events/${encodeURIComponent(eventId)}/services`, {
+      services,
+    }),
   getPlan: (eventId: string) =>
     request<{ event: Event; bookings: PlanBooking[] }>(
       "GET",

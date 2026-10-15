@@ -4,6 +4,7 @@ import { UUID_RE, errorResponse, requireSession } from "@/lib/api-helpers";
 import { requestJson } from "@/lib/llm";
 import { buildCards } from "@/lib/matching/cards";
 import { toSetBudgets } from "@/lib/server/budgets";
+import { loadEventServices } from "@/lib/server/services";
 import type { EventType } from "@/lib/matching/config";
 import { MISSING_SYSTEM_PROMPT, applyText, buildLlmInput } from "@/lib/matching/text";
 
@@ -25,18 +26,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (eventError) return errorResponse(500, "server_error", "Could not load event.");
     if (!event) return errorResponse(404, "event_not_found", "Event not found.");
 
-    const [bookingsResult, vendorsResult, budgetsResult] = await Promise.all([
+    const [bookingsResult, vendorsResult, budgetsResult, services] = await Promise.all([
       supabase.from("bookings").select("category, status").eq("event_id", id),
       supabase.from("vendors").select("id, name, category, price"),
       supabase.from("event_budgets").select("category, amount").eq("event_id", id),
+      loadEventServices(supabase, id),
     ]);
-    if (bookingsResult.error || vendorsResult.error || budgetsResult.error) {
+    if (bookingsResult.error || vendorsResult.error || budgetsResult.error || !services) {
       return errorResponse(500, "server_error", "Could not load the plan.");
     }
 
     const type = event.type as EventType;
     const ranked = buildCards(
-      { type, budget: Number(event.budget) },
+      { services, budget: Number(event.budget) },
       bookingsResult.data ?? [],
       (vendorsResult.data ?? []).map((v) => ({ ...v, price: Number(v.price) })),
       toSetBudgets(budgetsResult.data ?? []),

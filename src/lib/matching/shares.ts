@@ -1,4 +1,4 @@
-import { CHECKLISTS, WEIGHTS, type EventType } from "./config";
+import { WEIGHTS } from "./config";
 
 /** Set budgets by category (docs/SPEC-event-upgrades.md, "Service budget"). */
 export type SetBudgets = Readonly<Record<string, number>>;
@@ -9,20 +9,19 @@ const toCents = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 /**
  * Budget share for a category (docs/SPEC-event-upgrades.md, "Share rule").
  *
- * A category with a set budget (in the event type's checklist) has share = its
+ * A category with a set budget (on the event's service list) has share = its
  * amount. Every other category gets the remainder, max(0, budget minus the sum
- * of the set budgets), split by weight among the checklist categories that have
+ * of the set budgets), split by weight among the listed services that have
  * no set budget. With no set budgets this is budget × weight ÷ (sum of the
- * checklist's weights), as before. Set budgets for categories outside the
- * checklist are ignored. Unrounded; use roundShare for display.
+ * list's weights). Set budgets for categories outside the list are ignored.
+ * Unrounded; use roundShare for display.
  */
 export function budgetShare(
-  type: EventType,
+  checklist: readonly string[],
   budget: number,
   category: string,
   setBudgets: SetBudgets = {},
 ): number {
-  const checklist = CHECKLISTS[type];
   const isSet = (c: string) => checklist.includes(c) && hasOwn(setBudgets, c);
 
   if (isSet(category)) return setBudgets[category];

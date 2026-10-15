@@ -124,6 +124,7 @@ export function EventForm({
   savingLabel,
   onSubmit,
   before,
+  afterType,
   after,
 }: {
   values: EventFormValues;
@@ -135,6 +136,8 @@ export function EventForm({
   onSubmit: () => void;
   /** Shown between the form error and the first field. */
   before?: React.ReactNode;
+  /** Shown right below the type field. */
+  afterType?: React.ReactNode;
   /** Shown next to the submit button. */
   after?: React.ReactNode;
 }) {
@@ -207,6 +210,7 @@ export function EventForm({
         </Select>
         {fieldError("type")}
       </div>
+      {afterType}
       <div className="flex flex-col gap-2">
         <Label htmlFor="date">Date</Label>
         <Input

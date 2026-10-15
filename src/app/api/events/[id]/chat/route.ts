@@ -9,6 +9,7 @@ import { toSetBudgets } from "@/lib/server/budgets";
 import { fallbackResponse, validateChatOutput } from "@/lib/chat/output";
 import type { EventType } from "@/lib/matching/config";
 import { findGaps } from "@/lib/matching/gaps";
+import { loadEventServices } from "@/lib/server/services";
 
 const CHAT_TIMEOUT_MS = 15000;
 
@@ -35,7 +36,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (eventError) return errorResponse(500, "server_error", "Could not load event.");
     if (!event) return errorResponse(404, "event_not_found", "Event not found.");
 
-    const [bookingsResult, vendorsResult, budgetsResult] = await Promise.all([
+    const [bookingsResult, vendorsResult, budgetsResult, services] = await Promise.all([
       supabase
         .from("bookings")
         .select("category, status, created_at, vendor:vendors(name, price)")
@@ -43,10 +44,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         .order("created_at", { ascending: true }),
       supabase.from("vendors").select("category, price"),
       supabase.from("event_budgets").select("category, amount").eq("event_id", id),
+      loadEventServices(supabase, id),
     ]);
     if (bookingsResult.error || vendorsResult.error || budgetsResult.error) {
       return errorResponse(500, "server_error", "Could not load the plan.");
     }
+    if (!services) return errorResponse(500, "server_error", "Could not load services.");
 
     const type = event.type as EventType;
     const bookings = (bookingsResult.data ?? []).map((b) => {
@@ -58,11 +61,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         price: Number(vendor?.price ?? 0),
       };
     });
-    const missing = findGaps(type, bookings);
+    const missing = findGaps(services, bookings);
 
     const today = new Date().toISOString().slice(0, 10);
     const finance = computeFinance({
-      type,
+      services,
       budget: Number(event.budget),
       date: event.date,
       today,
@@ -76,7 +79,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       system: CHAT_SYSTEM_PROMPT,
       input: buildChatInput({
         today,
-        event: { type, date: event.date, budget: Number(event.budget), guestCount: event.guest_count },
+        event: { type, date: event.date, budget: Number(event.budget), guestCount: event.guest_count, services },
         bookings,
         messages: parsed.messages,
         finance,

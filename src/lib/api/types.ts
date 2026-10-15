@@ -172,6 +172,8 @@ export type CreateEventInput = {
   budget: number;
   guestCount: number;
   notes?: string | null;
+  /** The event's services in order. Omitted: the type's default list. */
+  services?: string[];
 };
 
 // Event upgrades (the merged backend: GET /api/event-templates, PATCH /api/events/:id).
@@ -184,9 +186,11 @@ export type EventTemplate = {
   guestCount: number;
   budget: number;
   notes: string;
+  /** The type's default services, in order. */
+  services: string[];
 };
 /** Only the fields present are changed. `notes: null` clears the notes. */
-export type UpdateEventInput = Partial<CreateEventInput>;
+export type UpdateEventInput = Partial<Omit<CreateEventInput, "services">>;
 
 // Budgets by service (GET and PUT /api/events/:id/budgets). One entry per
 // checklist service, in checklist order. `amount` is null when no budget is set;
@@ -195,6 +199,10 @@ export type ServiceBudget = { category: string; amount: number | null; share: nu
 export type BudgetSummary = { eventBudget: number; allocated: number; budgets: ServiceBudget[] };
 /** `amount: null` clears that service's budget. */
 export type BudgetEntry = { category: string; amount: number | null };
+
+// The event's own service list (GET /api/events/:id/services), in list order.
+// `status` is the strongest active booking (confirmed over pending), or null for a gap.
+export type EventService = { category: string; status: "pending" | "confirmed" | null };
 
 /** Error body for all errors: `{ error: { code, message } }`. */
 export type ErrorBody = { error: { code: string; message: string } };
