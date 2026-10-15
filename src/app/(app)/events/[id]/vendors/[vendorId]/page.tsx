@@ -109,6 +109,8 @@ export default function VendorProfilePage() {
   const { state, reload } = useLoad(() => loadPage(id, vendorId));
   const [bookedNow, setBookedNow] = useState(false);
   const [checking, setChecking] = useState(false);
+  // Set when a booking is refused because the date was taken meanwhile.
+  const [takenNow, setTakenNow] = useState(false);
 
   // The plan is for customers only; a vendor session gets 403.
   useEffect(() => {
@@ -157,7 +159,9 @@ export default function VendorProfilePage() {
 
   const { vendor, contact, event } = state.data;
   const booked = state.data.booked || bookedNow;
-  const available = vendor.availableOnEventDate;
+  const available = takenNow ? false : vendor.availableOnEventDate;
+  // Same rule as the vendor cards: unavailable means Book is disabled, the calendar stays reachable.
+  const unavailable = available === false && !booked;
 
   return (
     <div className="flex flex-col gap-10 lg:gap-16">
@@ -190,15 +194,38 @@ export default function VendorProfilePage() {
               </div>
             )}
           </dl>
-          <Button
-            className="w-fit min-w-[5.5rem]"
-            variant={booked ? "outline" : "default"}
-            disabled={booked}
-            onClick={() => setChecking(true)}
-            aria-label={booked ? `${vendor.name}, booked` : `Book ${vendor.name}: check availability first`}
-          >
-            {booked ? "Booked" : "Book"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Button
+              className="w-fit min-w-[5.5rem]"
+              variant={booked || unavailable ? "outline" : "default"}
+              disabled={booked || unavailable}
+              onClick={() => setChecking(true)}
+              aria-describedby={unavailable ? "vendor-unavailable" : undefined}
+              aria-label={
+                booked
+                  ? `${vendor.name}, booked`
+                  : unavailable
+                    ? `Book ${vendor.name}: not available on your event date`
+                    : `Book ${vendor.name}: check availability first`
+              }
+            >
+              {booked ? "Booked" : "Book"}
+            </Button>
+            {unavailable && (
+              <>
+                <p id="vendor-unavailable" className="text-sm text-muted-foreground">
+                  Not available on your event date
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setChecking(true)}
+                  className="min-h-11 text-sm underline underline-offset-4 hover:text-foreground"
+                >
+                  View calendar
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </Reveal>
 
@@ -223,6 +250,7 @@ export default function VendorProfilePage() {
         eventId={id}
         eventDate={event.date}
         onOpenChange={(open) => !open && setChecking(false)}
+        onUnavailable={() => setTakenNow(true)}
         onBooked={() => setBookedNow(true)}
       />
     </div>

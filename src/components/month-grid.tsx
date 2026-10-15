@@ -18,7 +18,9 @@ const TONE: Record<NonNullable<DayInfo["tone"]>, string> = {
 
 /**
  * Month grid, weeks starting on Sunday. Days are plain cells unless
- * `onDayClick` is set, in which case each day is a button. `readOnly` also
+ * `onDayClick` is set, in which case each day is a button (Space and Enter
+ * work as with any button). `selectedDate` marks one day; `selectedDates`
+ * marks several (the vendor calendar's block selection). `readOnly` also
  * hides the month buttons (the page has its own month picker). Every day has
  * an aria-label with the full date and its status.
  */
@@ -30,6 +32,7 @@ export function MonthGrid({
   highlightLabel = "Event date",
   onDayClick,
   selectedDate,
+  selectedDates,
   extraControls,
   readOnly = false,
 }: {
@@ -40,6 +43,7 @@ export function MonthGrid({
   highlightLabel?: string;
   onDayClick?: (date: Ymd) => void;
   selectedDate?: Ymd | null;
+  selectedDates?: ReadonlySet<Ymd>;
   extraControls?: React.ReactNode;
   readOnly?: boolean;
 }) {
@@ -92,24 +96,35 @@ export function MonthGrid({
                 if (!date) return <td key={d} />;
                 const info = dayInfo(date);
                 const isHighlight = date === highlight;
-                const status = [info.label, isHighlight ? highlightLabel : ""].filter(Boolean).join(", ") || "Available";
+                const isSelected = selectedDate === date || !!selectedDates?.has(date);
+                const isPicked = !!selectedDates?.has(date);
+                // In multi-select, a picked day says so in text too ("Blocked · Selected").
+                const shown = isPicked ? [info.label, "Selected"].filter(Boolean).join(" · ") : info.label;
+                // A day with nothing on it: "Available" to customers, "Open" on the vendor's own calendar.
+                const empty = selectedDates ? "Open" : "Available";
+                const status =
+                  [info.label, isHighlight ? highlightLabel : "", isPicked ? "Selected" : ""]
+                    .filter(Boolean)
+                    .join(", ") || empty;
                 const label = `${longDate(date)}, ${status}`;
                 const inner = (
                   <>
                     <span className="text-sm">{Number(date.slice(8))}</span>
-                    {info.label && <span className="block truncate text-[0.625rem] leading-tight">{info.label}</span>}
+                    {shown && <span className="block truncate text-[0.625rem] leading-tight">{shown}</span>}
                   </>
                 );
                 const cls = cn(
                   "flex min-h-11 w-full flex-col items-center justify-center rounded-lg px-0.5 py-1",
-                  info.tone && TONE[info.tone],
+                  // A picked day drops its pattern for a solid fill, so its text stays readable
+                  // and it can't be mistaken for the "Today" ring.
+                  isPicked ? "bg-foreground text-background" : info.tone && TONE[info.tone],
                   isHighlight && "ring-2 ring-forest ring-offset-1 ring-offset-background font-semibold",
                   selectedDate === date && "outline outline-2 outline-ink",
                 );
                 return (
                   <td key={d} className="p-0.5">
                     {onDayClick && !readOnly ? (
-                      <button type="button" className={cls} aria-label={label} aria-pressed={selectedDate === date} onClick={() => onDayClick(date)}>
+                      <button type="button" className={cls} aria-label={label} aria-pressed={isSelected} onClick={() => onDayClick(date)}>
                         {inner}
                       </button>
                     ) : (

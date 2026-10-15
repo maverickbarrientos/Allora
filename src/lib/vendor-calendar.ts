@@ -14,8 +14,13 @@ export function calendarDays(data: VendorCalendar | null) {
 
   const dayInfo = (date: Ymd): DayInfo => {
     const list = byDate.get(date) ?? [];
-    if (list.some((b) => b.status === "confirmed")) return { label: "Confirmed", tone: "confirmed" };
-    if (blocked.has(date)) return { label: "Blocked", tone: "blocked" };
+    // A day can be both (old data, or a confirm before ticket 10's rule): say so.
+    if (list.some((b) => b.status === "confirmed")) {
+      return blocked.has(date) ? { label: "Confirmed, Blocked", tone: "confirmed" } : { label: "Confirmed", tone: "confirmed" };
+    }
+    if (blocked.has(date)) {
+      return list.length > 0 ? { label: "Blocked, Pending", tone: "blocked" } : { label: "Blocked", tone: "blocked" };
+    }
     if (list.length > 0) return { label: "Pending", tone: "pending" };
     return {};
   };
