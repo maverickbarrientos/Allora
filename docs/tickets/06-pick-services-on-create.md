@@ -12,3 +12,5 @@
 - [ ] Creating an event with a custom list gives exactly that list, in that order
 - [ ] An empty or invalid list is rejected and no event is created
 - [ ] Works on the live URL
+
+**Notes (2026-10-15):** Built in `724f8ec`, review fixes in `def757b`, branch `feature/event-services`. Lint and build pass. Not yet checked against the live database or the preview URL, so no box is ticked.
