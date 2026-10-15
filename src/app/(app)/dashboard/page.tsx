@@ -50,15 +50,21 @@ function DashboardView() {
   const events = useLoad(() => api.listEvents());
   const today = todayYmd();
 
-  const list = events.state.status === "loaded" ? events.state.data.events : null;
+  // Events the dashboard endpoint reported as gone (deleted since the list loaded).
+  const [gone, setGone] = useState<string[]>([]);
+  const list = events.state.status === "loaded" ? events.state.data.events.filter((e) => !gone.includes(e.id)) : null;
   const grouped = list ? groupEvents(list, today) : null;
   const fallbackId = list ? defaultEventId(list, today) : null;
-  const selectedId = params.get("event") ?? fallbackId;
+  // A selected event that no longer exists (e.g. deleted) falls back to the
+  // default selection instead of an error (docs/SPEC-event-delete.md).
+  const requested = params.get("event");
+  const requestedGone = !!requested && !!list && !list.some((e) => e.id === requested);
+  const selectedId = requested && !requestedGone ? requested : fallbackId;
 
-  // Keep the default selection in the URL, so a reload shows the same event.
+  // Keep the selection in the URL, so a reload shows the same event.
   useEffect(() => {
-    if (!params.get("event") && fallbackId) router.replace(`/dashboard?event=${encodeURIComponent(fallbackId)}`);
-  }, [params, fallbackId, router]);
+    if ((!requested || requestedGone) && fallbackId) router.replace(`/dashboard?event=${encodeURIComponent(fallbackId)}`);
+  }, [requested, requestedGone, fallbackId, router]);
 
   // Dashboard data for the selected event. Only the latest request may update
   // the page, so fast switching never shows a stale event.
@@ -71,7 +77,12 @@ function DashboardView() {
     api
       .getDashboard(id)
       .then((data) => req === latest.current && setLoaded({ id, state: { status: "loaded", data } }))
-      .catch((e) => req === latest.current && setLoaded({ id, state: { status: "error", error: toApiError(e) } }));
+      .catch((e) => {
+        if (req !== latest.current) return;
+        const error = toApiError(e);
+        if (error.code === "event_not_found") setGone((prev) => (prev.includes(id) ? prev : [...prev, id]));
+        setLoaded({ id, state: { status: "error", error } });
+      });
   }, []);
   useEffect(() => {
     if (selectedId) fetchDash(selectedId);

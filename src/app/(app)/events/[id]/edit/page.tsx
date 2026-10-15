@@ -17,6 +17,7 @@ import {
   type EventFormErrors,
   type EventFormValues,
 } from "@/components/event-form";
+import { DeleteEventSection } from "@/components/delete-event-section";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
@@ -76,6 +77,16 @@ export default function EditEventPage() {
   useEffect(() => {
     if (state.status === "error" && state.error.code === "forbidden") router.replace("/vendor");
   }, [state, router]);
+
+  // After a delete 409: reload the plan data so the delete section explains the new state.
+  async function refreshPlan() {
+    try {
+      const data = await api.getPlan(id);
+      if (alive.current) setState({ status: "loaded", data });
+    } catch {
+      // The section keeps the data it had; the dialog already shows the 409.
+    }
+  }
 
   function onChange(next: EventFormValues) {
     setEdited(next);
@@ -218,6 +229,12 @@ export default function EditEventPage() {
           }
         />
       </Reveal>
+
+      <DeleteEventSection
+        event={saved}
+        bookings={state.status === "loaded" ? state.data.bookings : []}
+        onRefresh={refreshPlan}
+      />
 
       <AlertDialog
         open={pendingTypeChange !== null}

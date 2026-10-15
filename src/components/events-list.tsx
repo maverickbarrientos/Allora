@@ -17,13 +17,14 @@ const createButton = (
   </Link>
 );
 
-/** `/` for customers: loading, empty, list, error. */
-export function EventsList() {
+/** `/events` for customers: loading, empty, list, error. `notice` shows under the header. */
+export function EventsList({ notice }: { notice?: React.ReactNode }) {
   const { state, reload } = useLoad(() => api.listEvents());
 
   return (
     <div className="flex flex-col gap-10 lg:gap-16">
       <PageHeader label="Plans" title="Your events" action={createButton} />
+      {notice}
 
       {state.status === "loading" && (
         <div

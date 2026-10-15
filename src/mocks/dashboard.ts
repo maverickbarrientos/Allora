@@ -16,6 +16,7 @@
 import { ApiError } from "@/lib/api/errors";
 import type { Dashboard, DashboardAction, Event, EventType, MissingService } from "@/lib/api/types";
 import { addDays, todayYmd } from "@/lib/dates";
+import { liveMockEvents } from "@/mocks/events";
 
 const LATENCY_MS = 350;
 const wait = () => new Promise((r) => setTimeout(r, LATENCY_MS));
@@ -27,7 +28,7 @@ const CHECKLISTS: Record<EventType, string[]> = {
 };
 const WEIGHTS: Record<string, number> = { venue: 0.35, catering: 0.3, decoration: 0.13, photography: 0.12, music: 0.1 };
 
-function events(): Event[] {
+export function events(): Event[] {
   const today = todayYmd();
   const e = (id: string, name: string, type: EventType, date: string, budget = 100000, guestCount = 80): Event => ({ id, name, type, date, budget, guestCount, notes: null });
   return [
@@ -69,14 +70,14 @@ const action = (type: DashboardAction["type"], n: number, vendorName: string, ca
 export async function mockListEvents(): Promise<{ events: Event[] }> {
   await wait();
   // Ordered by date, like GET /api/events.
-  return { events: events().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)) };
+  return { events: liveMockEvents(events()).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)) };
 }
 
 export async function mockDashboard(eventId: string): Promise<Dashboard> {
   await wait();
   if ((await callerRole()) === "vendor") throw new ApiError(403, "forbidden", "Not allowed for this role.");
   if (eventId === "broken") throw new ApiError(500, "server_error", "Unexpected error.");
-  const event = events().find((e) => e.id === eventId);
+  const event = liveMockEvents(events()).find((e) => e.id === eventId);
   if (!event || eventId === "missing") throw new ApiError(404, "event_not_found", "Event not found.");
 
   const all = CHECKLISTS[event.type];

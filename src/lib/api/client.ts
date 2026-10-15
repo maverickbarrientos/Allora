@@ -33,7 +33,9 @@ export function toApiError(e: unknown): ApiError {
 }
 
 // TEMPORARY: NEXT_PUBLIC_USE_MOCKS=true serves the dashboard and the event list
-// from src/mocks/dashboard.ts until GET /api/events/:id/dashboard is on main.
+// from src/mocks/dashboard.ts until GET /api/events/:id/dashboard is on main,
+// and the plan, edit and delete of the mock events from src/mocks/events.ts
+// until the event delete frontend is connected.
 // Inlined at build time, so the mock module is dropped when the flag is off.
 const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -82,16 +84,25 @@ export const api = {
       : request<Dashboard>("GET", `/api/events/${encodeURIComponent(eventId)}/dashboard`),
   listEventTemplates: () => request<{ templates: EventTemplate[] }>("GET", "/api/event-templates"),
   updateEvent: (eventId: string, input: UpdateEventInput) =>
-    request<{ event: Event }>("PATCH", `/api/events/${encodeURIComponent(eventId)}`, input),
+    USE_MOCKS
+      ? import("@/mocks/events").then((m) => m.mockUpdateEvent(eventId, input))
+      : request<{ event: Event }>("PATCH", `/api/events/${encodeURIComponent(eventId)}`, input),
+  /** docs/SPEC-event-delete.md: 204 resolves with no value. */
+  deleteEvent: (eventId: string) =>
+    USE_MOCKS
+      ? import("@/mocks/events").then((m) => m.mockDeleteEvent(eventId))
+      : request<void>("DELETE", `/api/events/${encodeURIComponent(eventId)}`),
   getBudgets: (eventId: string) =>
     request<BudgetSummary>("GET", `/api/events/${encodeURIComponent(eventId)}/budgets`),
   saveBudgets: (eventId: string, budgets: BudgetEntry[]) =>
     request<BudgetSummary>("PUT", `/api/events/${encodeURIComponent(eventId)}/budgets`, { budgets }),
   getPlan: (eventId: string) =>
-    request<{ event: Event; bookings: PlanBooking[] }>(
-      "GET",
-      `/api/events/${encodeURIComponent(eventId)}/plan`,
-    ),
+    USE_MOCKS
+      ? import("@/mocks/events").then((m) => m.mockGetPlan(eventId))
+      : request<{ event: Event; bookings: PlanBooking[] }>(
+          "GET",
+          `/api/events/${encodeURIComponent(eventId)}/plan`,
+        ),
   listVendors: (category?: string, eventId?: string) => {
     const q = new URLSearchParams();
     if (category) q.set("category", category);
