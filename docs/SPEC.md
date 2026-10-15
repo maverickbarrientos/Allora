@@ -30,7 +30,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Browse vendors by category
 - Book a vendor
 - View the plan with bookings and status (pending, confirmed, declined)
-- See a vendor's availability in a calendar when booking; a vendor can only be booked on an 
+- See a vendor's availability in a calendar when booking; a vendor can only be booked on an available date (see SPEC-availability.md)
 - Choose the event's services when creating it, and add or remove them later on the plan and edit pages (more categories: florist, cake, lighting, transport, makeup)
 - Dashboard for one selected event: countdown, bookings by status, actions needed, and missing services
 
@@ -41,7 +41,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Change an accept or decline later (confirmed and declined, not back to pending)
 - See the customer's name and the event budget on each booking addressed to them
 - Calendar to block and unblock unavailable dates, and to see bookings by date
- add a rule: A vendor is unavailable on dates they blocked and on dates of their confirmed bookings
+- A vendor is unavailable on dates they blocked and on dates of their confirmed bookings; a booking can't be made or confirmed on an unavailable date, and an event's date can't change once it has a confirmed booking (see SPEC-availability.md)
 
 
 **AI 1: "What's missing" cards**
