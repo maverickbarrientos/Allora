@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils";
 export type BookingStatus = "pending" | "confirmed" | "declined";
 
 const styles: Record<BookingStatus, string> = {
-  pending: "border border-brass text-brass-ink",
-  confirmed: "bg-forest/10 text-forest",
-  declined: "bg-brick/[0.08] text-brick",
+  pending: "border border-plum bg-ivory text-plum",
+  confirmed: "border border-[#1f3a32] bg-ivory text-[#1f3a32]",
+  declined: "border border-brick bg-ivory text-brick",
 };
 
 /** Always shows the text label, never colour alone. */

@@ -7,7 +7,7 @@ export function Card({ className, ...props }: DivProps) {
   return (
     <div
       className={cn(
-        "rounded-[var(--radius)] bg-card text-card-foreground shadow-soft",
+        "surface-plum rounded-[var(--radius)] border border-pink/50 bg-card text-card-foreground shadow-soft",
         className,
       )}
       {...props}
