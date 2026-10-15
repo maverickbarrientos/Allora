@@ -1,4 +1,13 @@
-import type { ErrorBody, LoginInput, Session, SignupInput } from "./types";
+import type {
+  CreateEventInput,
+  ErrorBody,
+  Event,
+  LoginInput,
+  PlanBooking,
+  Session,
+  SignupInput,
+  Vendor,
+} from "./types";
 
 /** An API error response (`{ error: { code, message } }`) with its HTTP status. */
 export class ApiError extends Error {
@@ -51,4 +60,20 @@ export const api = {
   login: (input: LoginInput) => request<Session>("POST", "/api/auth/login", input),
   logout: () => request<void>("POST", "/api/auth/logout"),
   me: () => request<Session>("GET", "/api/me"),
+
+  createEvent: (input: CreateEventInput) =>
+    request<{ event: Event }>("POST", "/api/events", input),
+  listEvents: () => request<{ events: Event[] }>("GET", "/api/events"),
+  getPlan: (eventId: string) =>
+    request<{ event: Event; bookings: PlanBooking[] }>(
+      "GET",
+      `/api/events/${encodeURIComponent(eventId)}/plan`,
+    ),
+  listVendors: (category?: string) =>
+    request<{ vendors: Vendor[] }>(
+      "GET",
+      category ? `/api/vendors?category=${encodeURIComponent(category)}` : "/api/vendors",
+    ),
+  createBooking: (input: { eventId: string; vendorId: string }) =>
+    request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
 };
