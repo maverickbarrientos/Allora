@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 const alertVariants = cva("w-full rounded-xl border p-4 text-sm", {
   variants: {
     variant: {
-      default: "border-border bg-background text-foreground",
-      destructive: "border-destructive/30 bg-destructive/[0.08] text-destructive",
+      default: "border-border bg-ivory text-plum-ink",
+      destructive: "border-destructive bg-ivory text-destructive",
     },
   },
   defaultVariants: { variant: "default" },
