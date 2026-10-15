@@ -68,17 +68,16 @@ async function loadSummaries(supabase: SupabaseClient, bookingIds: string[]) {
   return out;
 }
 
-/** deposit_for(price) for each distinct price, from SQL. */
+/**
+ * deposit_for(price) for each distinct price, from SQL, in one request
+ * (deposits_for, 010_deposits_batch.sql), so the count doesn't grow with prices.
+ */
 async function depositsFor(supabase: SupabaseClient, prices: number[]) {
   const unique = [...new Set(prices)];
-  const results = await Promise.all(
-    unique.map(async (price) => {
-      const { data, error } = await supabase.rpc("deposit_for", { price });
-      if (error) throw error;
-      return [price, Number(data)] as const;
-    }),
-  );
-  return new Map(results);
+  if (unique.length === 0) return new Map<number, number>();
+  const { data, error } = await supabase.rpc("deposits_for", { prices: unique });
+  if (error) throw error;
+  return new Map(((data ?? []) as { price: number | string; deposit: number | string }[]).map((r) => [Number(r.price), Number(r.deposit)] as const));
 }
 
 /** PlanBooking.payment for each booking. Throws on a database error. */
