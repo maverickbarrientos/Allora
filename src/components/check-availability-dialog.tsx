@@ -25,6 +25,8 @@ type Props = {
   eventDate: Ymd;
   onOpenChange: (open: boolean) => void;
   onBooked: (booking: PlanBooking) => void;
+  /** Booking was refused because the date was taken meanwhile; the page can mark the vendor unavailable. */
+  onUnavailable?: (vendorId: string) => void;
 };
 
 export function CheckAvailabilityDialog(props: Props) {
@@ -32,7 +34,7 @@ export function CheckAvailabilityDialog(props: Props) {
   return props.vendor ? <AvailabilityDialog key={props.vendor.id} {...props} vendor={props.vendor} /> : null;
 }
 
-function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked }: Props & { vendor: { id: string; name: string } }) {
+function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked, onUnavailable }: Props & { vendor: { id: string; name: string } }) {
   const [month, setMonth] = useState<YearMonth>(() => monthOf(eventDate));
   const [months, setMonths] = useState<Record<string, MonthState>>(() => ({ [monthKey(monthOf(eventDate))]: { status: "loading" } }));
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +114,7 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
       const { code } = toApiError(e);
       if (code === "vendor_unavailable") {
         setError(`${vendor.name} is no longer available on ${eventDate}.`);
+        onUnavailable?.(vendor.id);
         retry();
       } else if (code === "already_booked") {
         setError(`You already have a pending or confirmed booking with ${vendor.name} for this event.`);

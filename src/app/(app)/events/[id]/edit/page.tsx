@@ -108,7 +108,7 @@ export default function EditEventPage() {
         setErrors(Object.keys(fields).length ? fields : { form: message });
       } else if (code === "date_has_confirmed_bookings") {
         // Shown next to the date; everything typed stays in the form.
-        setErrors({ date: "This event has confirmed bookings, so its date can't change." });
+        setErrors({ date: message });
       } else if (code === "budget_below_allocations") {
         setErrors({
           budget:

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse, readJson } from "@/lib/api-helpers";
+import { formatDate } from "@/lib/format";
 import {
   requireVendorRole,
   toVendorBooking,
@@ -45,7 +46,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       }
       // The confirm trigger (022): the date is taken. The hint says why.
       if (error.message === "date_unavailable") {
-        const date = error.details ?? "this date";
+        const date = error.details ? formatDate(error.details) : "this date";
         return errorResponse(
           409,
           "date_unavailable",

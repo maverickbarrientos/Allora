@@ -162,13 +162,9 @@ function VendorBookings() {
     } catch (e) {
       const { code, message } = toApiError(e);
       if (code === "date_unavailable") {
-        // The row keeps its status; declining it still works. The date is
-        // written the way the row writes it.
-        const when = formatDate(booking.event.date);
-        const text = message.startsWith("You blocked")
-          ? `You blocked ${when} on your calendar. Unblock it to accept this booking.`
-          : `You already have a confirmed booking on ${when}.`;
-        setRowErrors((prev) => ({ ...prev, [booking.id]: text }));
+        // The row keeps its status; declining it still works. The server's
+        // message already names the reason and writes the date like the row.
+        setRowErrors((prev) => ({ ...prev, [booking.id]: message }));
       } else if (code === "status_unchanged") {
         setNotice("This booking already has that status.");
         reload();
