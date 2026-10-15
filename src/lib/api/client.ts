@@ -11,18 +11,26 @@ import type {
   SignupInput,
   Vendor,
   VendorBooking,
+  VendorProfile,
 } from "./types";
+import { ApiError } from "./errors";
+import {
+  getMockSession,
+  loginWithMock,
+  logoutMock,
+} from "@/mocks/auth";
+import {
+  createMockVendorProfile,
+  decideMockVendorBooking,
+  getMockVendorProfile,
+  listMockCategories,
+  listMockVendorBookings,
+  updateMockVendorProfile,
+} from "@/mocks/vendor";
 
-/** An API error response (`{ error: { code, message } }`) with its HTTP status. */
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError } from "./errors";
+
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 /** Normalises anything thrown (including network failures) into an ApiError. */
 export function toApiError(e: unknown): ApiError {
@@ -61,9 +69,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 export const api = {
   signup: (input: SignupInput) => request<Session>("POST", "/api/auth/signup", input),
-  login: (input: LoginInput) => request<Session>("POST", "/api/auth/login", input),
-  logout: () => request<void>("POST", "/api/auth/logout"),
-  me: () => request<Session>("GET", "/api/me"),
+  login: (input: LoginInput) =>
+    USE_MOCKS ? loginWithMock(input) : request<Session>("POST", "/api/auth/login", input),
+  logout: () =>
+    USE_MOCKS ? logoutMock() : request<void>("POST", "/api/auth/logout"),
+  me: () => (USE_MOCKS ? getMockSession() : request<Session>("GET", "/api/me")),
 
   createEvent: (input: CreateEventInput) =>
     request<{ event: Event }>("POST", "/api/events", input),
@@ -86,11 +96,31 @@ export const api = {
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
 
   listVendorBookings: () =>
-    request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
+    USE_MOCKS
+      ? listMockVendorBookings()
+      : request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
   decideBooking: (id: string, status: "confirmed" | "declined") =>
-    request<{ booking: VendorBooking }>(
-      "PATCH",
-      `/api/vendor/bookings/${encodeURIComponent(id)}`,
-      { status },
-    ),
+    USE_MOCKS
+      ? decideMockVendorBooking(id, status)
+      : request<{ booking: VendorBooking }>(
+          "PATCH",
+          `/api/vendor/bookings/${encodeURIComponent(id)}`,
+          { status },
+        ),
+  listCategories: () =>
+    USE_MOCKS
+      ? listMockCategories()
+      : request<{ categories: string[] }>("GET", "/api/categories"),
+  getVendorProfile: () =>
+    USE_MOCKS
+      ? getMockVendorProfile()
+      : request<VendorProfile>("GET", "/api/vendor/profile"),
+  createVendorProfile: (input: Omit<Vendor, "id">) =>
+    USE_MOCKS
+      ? createMockVendorProfile(input)
+      : request<{ vendor: Vendor; categoryLocked: false }>("POST", "/api/vendor/profile", input),
+  updateVendorProfile: (input: Partial<Omit<Vendor, "id">>) =>
+    USE_MOCKS
+      ? updateMockVendorProfile(input)
+      : request<VendorProfile>("PATCH", "/api/vendor/profile", input),
 };
