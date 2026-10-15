@@ -1,4 +1,4 @@
-  # DESIGN.md
+# DESIGN.md
 
 Editorial invitation meets premium service. Calm, confident, generous whitespace. No purple gradients, glassmorphism, neon, emoji or clip-art icons. Light theme only.
 
