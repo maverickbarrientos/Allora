@@ -163,17 +163,21 @@ export const api = {
       `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
       { testMethod },
     ),
+  requestBookingCancellation: (bookingId: string) =>
+    request<{ booking: PlanBooking }>("POST", `/api/bookings/${encodeURIComponent(bookingId)}/cancel-request`),
   getBookingReceipt: (bookingId: string) =>
     request<{ receipt: BookingReceipt }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/receipt`),
 
   listVendorBookings: () =>
     request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
-  decideBooking: (id: string, status: "confirmed" | "declined") =>
+  decideBooking: (id: string, status: "confirmed" | "declined" | "cancelled") =>
     request<{ booking: VendorBooking }>(
       "PATCH",
       `/api/vendor/bookings/${encodeURIComponent(id)}`,
       { status },
     ),
+  keepBooking: (id: string) =>
+    request<{ booking: VendorBooking }>("POST", `/api/vendor/bookings/${encodeURIComponent(id)}/keep`),
   listCategories: () => request<{ categories: string[] }>("GET", "/api/categories"),
   getVendorProfile: () => request<VendorProfile>("GET", "/api/vendor/profile"),
   createVendorProfile: (input: VendorProfileInput) =>

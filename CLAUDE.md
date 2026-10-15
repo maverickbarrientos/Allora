@@ -28,7 +28,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - **Event**: owner (profile), type, date, budget, guestCount, area (optional)
 - **Vendor**: name, category, price, about, location, area (optional), owner (profile, optional)
 - **Vendor contact**: vendor, phone, email, website (owner and customers with a confirmed booking only)
-- **Booking**: event, vendor, category, status (pending, confirmed, declined)
+- **Booking**: event, vendor, category, status (pending, confirmed, declined, cancelled), cancelRequestedAt (optional; a customer's open request to cancel)
 - **Event service**: event, category, position (the event's own list of services; starts from its type's template)
  **Blocked date**: vendor, date
 - **Conversation**: customer, vendor (one per pair, created by the first booking)

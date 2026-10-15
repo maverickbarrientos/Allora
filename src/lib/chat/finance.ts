@@ -120,7 +120,8 @@ export function computeFinance(args: {
     };
   });
 
-  const count = (status: string) => bookings.filter((b) => b.status === status).length;
+  // A cancelled booking counts as declined.
+  const count = (...statuses: string[]) => bookings.filter((b) => statuses.includes(b.status)).length;
 
   return {
     affordability: { budget, committed, remaining, projectedMinimum: fromCents(projectedCents), verdict, rows },
@@ -129,7 +130,11 @@ export function computeFinance(args: {
       budget,
       committed,
       remaining,
-      counts: { pending: count("pending"), confirmed: count("confirmed"), declined: count("declined") },
+      counts: {
+        pending: count("pending"),
+        confirmed: count("confirmed"),
+        declined: count("declined", "cancelled"),
+      },
       rows: summaryRows,
     },
   };

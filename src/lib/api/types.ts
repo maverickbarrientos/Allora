@@ -17,7 +17,7 @@ export type LoginInput = { email: string; password: string };
 // Shapes from docs/SPEC-events-booking.md ("Shared shapes").
 
 export type EventType = "wedding" | "birthday" | "corporate";
-export type BookingStatus = "pending" | "confirmed" | "declined";
+export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
 
 export type Event = {
   id: string;
@@ -76,7 +76,7 @@ export type VendorProfileInput = {
 export type BookingContract = {
   bookingId: string;
   category: string;
-  status: "pending" | "confirmed" | "declined";
+  status: BookingStatus;
   bookedAt: string;
   event: { id: string; name: string | null; type: EventType; date: string; guestCount: number };
   vendor: { name: string; price: number };
@@ -117,6 +117,8 @@ export type PlanBooking = {
   price: number;
   status: BookingStatus;
   createdAt: string;
+  /** When the customer asked to cancel; null if no request is open (docs/SPEC-customer-cancel.md). */
+  cancelRequestedAt: string | null;
   /** docs/SPEC-payment.md. Always sent by the API; the UI still copes without it. */
   payment?: PlanPayment | null;
 };
@@ -139,6 +141,7 @@ export type VendorBooking = {
   category: string;
   status: BookingStatus;
   createdAt: string;
+  cancelRequestedAt: string | null;
   customerName: string;
   event: { type: EventType; date: string; guestCount: number; budget: number };
   /** docs/SPEC-payment.md. Always sent by the API; the UI still copes without it. */

@@ -25,6 +25,7 @@ import { calendarDays } from "@/lib/vendor-calendar";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { MonthGrid, MonthGridLegend } from "@/components/month-grid";
+import { hasOpenCancelRequest } from "@/lib/cancel-request";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -167,7 +168,7 @@ function calendarFromBookings(bookings: VendorBooking[], month: YearMonth): Vend
     to,
     blocked: [],
     bookings: bookings.flatMap((b) =>
-      b.status === "declined" ? [] : [{ bookingId: b.id, date: b.event.date, status: b.status, eventType: b.event.type, customerName: b.customerName }],
+      b.status === "declined" || b.status === "cancelled" ? [] : [{ bookingId: b.id, date: b.event.date, status: b.status, eventType: b.event.type, customerName: b.customerName }],
     ),
   };
 }
@@ -296,10 +297,12 @@ function Name({ name }: { name: string }) {
 }
 
 function Actions({ bookings }: { bookings: VendorBooking[] }) {
-  const respond = bookings.filter((b) => b.status === "pending").sort(byEventDate);
+  // A booking the customer asked to cancel is its own item, first, and not also a respond or deposit one.
+  const requests = bookings.filter(hasOpenCancelRequest).sort(byEventDate);
+  const respond = bookings.filter((b) => b.status === "pending" && !hasOpenCancelRequest(b)).sort(byEventDate);
   // Without the payment field there is no deposit status, so no deposit actions.
-  const deposit = bookings.filter((b) => b.status === "confirmed" && b.payment && b.payment.status !== "paid").sort(byEventDate);
-  if (respond.length + deposit.length === 0) return <p className="text-muted-foreground">Nothing needs your attention</p>;
+  const deposit = bookings.filter((b) => b.status === "confirmed" && !hasOpenCancelRequest(b) && b.payment && b.payment.status !== "paid").sort(byEventDate);
+  if (requests.length + respond.length + deposit.length === 0) return <p className="text-muted-foreground">Nothing needs your attention</p>;
   const row = (b: VendorBooking, text: React.ReactNode) => (
     <li key={b.id}>
       <Link href={`/vendor/bookings#booking-${encodeURIComponent(b.id)}`} className="flex min-h-11 items-center justify-between gap-3 py-2 hover:underline">
@@ -310,6 +313,14 @@ function Actions({ bookings }: { bookings: VendorBooking[] }) {
   );
   return (
     <ul className="flex flex-col divide-y divide-border">
+      {requests.map((b) =>
+        row(
+          b,
+          <>
+            <Name name={b.customerName} /> asked to cancel their {b.event.type} booking on {formatYmd(b.event.date)}
+          </>,
+        ),
+      )}
       {respond.map((b) =>
         row(
           b,

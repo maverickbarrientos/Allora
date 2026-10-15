@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     // ISO dates compare correctly as strings.
     const bookings = ((data ?? []) as VendorBookingRow[])
-      .filter((r) => r.status !== "declined" && r.event_date >= range.from && r.event_date <= range.to)
+      .filter((r) => r.status !== "declined" && r.status !== "cancelled" && r.event_date >= range.from && r.event_date <= range.to)
       .sort((a, b) => a.event_date.localeCompare(b.event_date) || a.id.localeCompare(b.id))
       .map((r) => ({
         bookingId: r.id,

@@ -70,7 +70,7 @@ Each service category gets a share of the event budget (venue and catering large
 - **Event**: owner (profile), type, date, budget, guestCount, area (optional)
 - **Vendor**: name, category, price, about, location, area (optional), owner (profile, optional), terms (optional)
 - **Vendor contact**: vendor, phone, email, website (readable by the owner and by customers with a confirmed booking)
-- **Booking**: event, vendor, category, status, termsSnapshot and termsAcceptedAt (set by the database when the booking is created, never changed; see SPEC-booking-documents.md)
+- **Booking**: event, vendor, category, status (pending, confirmed, declined, cancelled), cancelRequestedAt (see SPEC-customer-cancel.md), termsSnapshot and termsAcceptedAt (set by the database when the booking is created, never changed; see SPEC-booking-documents.md)
 - **Event service**: event, category, position (the event's own list of services; see SPEC-event-services.md)
 - **Blocked date**: vendor, date
 - **Conversation**: customer (profile), vendor, read times for each side (one per customer and vendor)

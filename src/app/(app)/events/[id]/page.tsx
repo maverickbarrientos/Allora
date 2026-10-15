@@ -18,10 +18,11 @@ import { missingCardId } from "@/components/missing-card";
 import { MissingSection } from "@/components/missing-section";
 import { PageHeader } from "@/components/page-header";
 import { MessageLink } from "@/components/message-link";
+import { CancelRequestButton } from "@/components/cancel-request-button";
 import { PlanPaymentLine } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
-import { ReplacementNotice, hasNewlyDeclined, replacementCategories } from "@/components/replacement-notice";
+import { ReplacementNotice, hasNewlyDeclined, isEnded, replacementCategories } from "@/components/replacement-notice";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -132,7 +133,7 @@ export default function PlanPage() {
 
   const planBookings = state.status === "loaded" ? state.data.bookings : null;
   const declinedVendorIds = useMemo(
-    () => new Set((planBookings ?? []).filter((b) => b.status === "declined").map((b) => b.vendorId)),
+    () => new Set((planBookings ?? []).filter(isEnded).map((b) => b.vendorId)),
     [planBookings],
   );
 
@@ -149,6 +150,20 @@ export default function PlanPage() {
           : prev,
       );
     }
+    void refreshPlan({ cards: false, queue: true });
+  }
+
+  // After a cancellation request: the row shows "Cancellation requested" at once,
+  // then the plan refreshes quietly. The request keeps the service booked, so the cards stay.
+  function onCancelRequested(booking: PlanBooking) {
+    setState((prev) =>
+      prev.status === "loaded"
+        ? {
+            status: "loaded",
+            data: { ...prev.data, bookings: prev.data.bookings.map((b) => (b.id === booking.id ? booking : b)) },
+          }
+        : prev,
+    );
     void refreshPlan({ cards: false, queue: true });
   }
 
@@ -323,6 +338,7 @@ export default function PlanPage() {
                     <span className="text-sm sm:hidden">{formatNumber(b.price)}</span>
                     <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 empty:hidden sm:col-span-3 sm:col-start-2">
                       <PlanPaymentLine booking={b} eventId={event.id} />
+                      <CancelRequestButton booking={b} onRequested={onCancelRequested} />
                       {conversations.state.status === "loaded" && conversations.state.data.bookings[b.id] && (
                         <MessageLink
                           href={`/messages/${conversations.state.data.bookings[b.id].conversationId}`}

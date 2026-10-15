@@ -14,6 +14,7 @@ import { Reveal } from "@/components/reveal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckAvailabilityDialog } from "@/components/check-availability-dialog";
+import { isEnded } from "@/components/replacement-notice";
 import { CategoryTabs, TABPANEL_ID, tabId } from "./category-tabs";
 import { VendorCard, VendorCardSkeleton } from "./vendor-card";
 
@@ -26,7 +27,7 @@ async function loadPage(eventId: string) {
     api.getPlan(eventId),
   ]);
   const booked = bookings
-    .filter((b) => b.status !== "declined")
+    .filter((b) => !isEnded(b))
     .map((b) => b.vendorId);
   return { all: vendors, event, booked };
 }
