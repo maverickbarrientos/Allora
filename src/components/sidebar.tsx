@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarPlus, ClipboardList, Loader2, Ticket, UserRound, CalendarDays, LayoutDashboard } from "lucide-react";
+import { CalendarPlus, ClipboardList, Loader2, MessageCircle, Ticket, UserRound, CalendarDays, LayoutDashboard } from "lucide-react";
 import type { Profile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,13 @@ const NAV: Record<Profile["role"], NavItem[]> = {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, prefixes: ["/dashboard"] },
     { href: "/events", label: "My events", icon: Ticket, prefixes: ["/events"] },
     { href: "/events/new", label: "New event", icon: CalendarPlus, prefixes: ["/events/new"] },
+    { href: "/messages", label: "Messages", icon: MessageCircle, prefixes: ["/messages"] },
   ],
   vendor: [
     { href: "/vendor", label: "Dashboard", icon: LayoutDashboard, prefixes: [], exact: true },
     { href: "/vendor/bookings", label: "Bookings", icon: ClipboardList, prefixes: ["/vendor/bookings"] },
     { href: "/vendor/calendar", label: "Calendar", icon: CalendarDays, prefixes: ["/vendor/calendar"] },
+    { href: "/vendor/messages", label: "Messages", icon: MessageCircle, prefixes: ["/vendor/messages"] },
     { href: "/vendor/profile", label: "Profile", icon: UserRound, prefixes: ["/vendor/profile"] },
   ],
 };

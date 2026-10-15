@@ -17,5 +17,5 @@ export default function VendorConversationPage() {
   }, [isVendor, id, router]);
 
   if (!isVendor) return null;
-  return <Conversation id={id} backHref="/vendor/bookings" backLabel="Bookings" />;
+  return <Conversation id={id} backHref="/vendor/messages" backLabel="Messages" />;
 }

@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const MESSAGE_COLUMNS = "id, body, created_at, sender_id";
 export const PAGE_SIZE = 50;
 
-type ConversationRow = {
+export type ConversationRow = {
   id: string;
   other_name: string;
   category: string;
@@ -25,6 +25,22 @@ export async function loadConversation(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase.rpc("my_conversations").eq("id", id).maybeSingle<ConversationRow>();
   if (error) return { error };
   return { conversation: data };
+}
+
+/** One row of the inbox (docs/SPEC-messages.md). Never carries ids of people or emails. */
+export function toSummary(row: ConversationRow) {
+  const last =
+    row.last_body !== null && row.last_created_at !== null
+      ? { body: row.last_body, createdAt: row.last_created_at, mine: row.last_mine === true }
+      : null;
+  return {
+    id: row.id,
+    otherName: row.other_name,
+    category: row.category,
+    open: row.open,
+    lastMessage: last,
+    unread: row.unread,
+  };
 }
 
 /** The caller's side of a message: `mine` instead of the sender's profile id. */

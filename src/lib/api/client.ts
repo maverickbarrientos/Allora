@@ -28,6 +28,7 @@ import type {
   VendorContact,
   BookingConversation,
   ConversationDetail,
+  ConversationSummary,
   Message,
 } from "./types";
 import { ApiError } from "./errors";
@@ -119,6 +120,8 @@ export const api = {
       "GET",
       `/api/vendors/${encodeURIComponent(vendorId)}${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ""}`,
     ),
+  /** The inbox: my conversations, newest activity first. */
+  listConversations: () => request<{ conversations: ConversationSummary[] }>("GET", "/api/conversations"),
   /** With `before` (a message id), the 50 messages before it. */
   getConversation: (conversationId: string, before?: string) =>
     request<ConversationDetail>(

@@ -17,5 +17,5 @@ export default function CustomerConversationPage() {
   }, [isVendor, id, router]);
 
   if (isVendor) return null;
-  return <Conversation id={id} backHref="/events" backLabel="Your events" />;
+  return <Conversation id={id} backHref="/messages" backLabel="Messages" />;
 }

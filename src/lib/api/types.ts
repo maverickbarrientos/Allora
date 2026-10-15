@@ -77,6 +77,14 @@ export type ConversationDetail = {
   messages: Message[];
   hasMore: boolean;
 };
+export type ConversationSummary = {
+  id: string;
+  otherName: string;
+  category: string;
+  open: boolean;
+  lastMessage: { body: string; createdAt: string; mine: boolean } | null;
+  unread: number;
+};
 export type BookingConversation = { conversationId: string; unread: number };
 export type PlanBooking = {
   id: string;
