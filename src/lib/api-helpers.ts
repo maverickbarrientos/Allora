@@ -30,3 +30,23 @@ export async function loadProfile(supabase: SupabaseClient, user: AuthUser) {
 }
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Loads the signed-in caller's session and profile. Returns an error response
+ * instead when logged out (401) or, if `role` is given, when the caller's role
+ * differs (403).
+ */
+export async function requireSession(supabase: SupabaseClient, role?: Role) {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    return { response: errorResponse(401, "unauthorized", "Not signed in.") };
+  }
+  const session = await loadProfile(supabase, data.user);
+  if (!session) return { response: errorResponse(401, "unauthorized", "Not signed in.") };
+  if (role && session.profile.role !== role) {
+    return { response: errorResponse(403, "forbidden", "Not allowed for this role.") };
+  }
+  return { session };
+}
