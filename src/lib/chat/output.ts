@@ -4,7 +4,7 @@ import type { EventType } from "../matching/config";
 // "Validation of the model output"). All or nothing: any problem gives the
 // whole fallback, never a partial answer.
 
-export const REPLY_MAX = 1200;
+export const REPLY_MAX = 2000;
 export const REASON_MAX = 120;
 
 export type OrderItem = { category: string; reason: string };
