@@ -27,6 +27,8 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - **Event**: owner (profile), type, date, budget, guestCount
 - **Vendor**: name, category, price, owner (profile, optional)
 - **Booking**: event, vendor, category, status (pending, confirmed, declined)
+ **Blocked date**: vendor, date
+
 
 ## Workflow rules
 - One feature at a time.

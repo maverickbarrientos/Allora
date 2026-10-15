@@ -9,7 +9,7 @@ export function Skeleton({
   return (
     <div
       aria-hidden="true"
-      className={cn("skeleton rounded-xl", className)}
+      className={cn("skeleton rounded-[calc(var(--radius)-0.25rem)]", className)}
       {...props}
     />
   );

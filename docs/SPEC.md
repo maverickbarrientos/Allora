@@ -30,6 +30,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Browse vendors by category
 - Book a vendor
 - View the plan with bookings and status (pending, confirmed, declined)
+- See a vendor's availability in a calendar when booking; a vendor can only be booked on an 
 
 **Vendor portal**
 - List of incoming bookings
@@ -37,6 +38,9 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Create and edit own vendor profile (name, category, price)
 - Change an accept or decline later (confirmed and declined, not back to pending)
 - See the customer's name and the event budget on each booking addressed to them
+- Calendar to block and unblock unavailable dates, and to see bookings by date
+ add a rule: A vendor is unavailable on dates they blocked and on dates of their confirmed bookings
+
 
 **AI 1: "What's missing" cards**
 - Compare the event to a checklist of services for its type
@@ -56,8 +60,10 @@ Each service category gets a share of the event budget (venue and catering large
 - **Event**: owner (profile), type, date, budget, guestCount
 - **Vendor**: name, category, price, owner (profile, optional)
 - **Booking**: event, vendor, category, status
+- **Blocked date**: vendor, date (a date the vendor is unavailable)
 
 A category with no pending or confirmed booking counts as a gap.
 
 ## Event Types
 Wedding, birthday, corporate.
+

@@ -24,3 +24,11 @@ export const formatTimestamp = (iso: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
+
+/** "YYYY-MM-DD" to e.g. "Feb 14, 2027" (compact cards). */
+export const formatDateShort = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });

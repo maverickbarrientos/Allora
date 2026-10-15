@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Label, serif title, optional description, then the brass hairline that
- * draws left to right (the one brass highlight on the screen).
+ * Label, serif title, optional description, then a short gradient rule
+ * (pink fading out) that draws left to right: the one highlight on the screen.
  * `action` sits on the right of the title (e.g. a button).
  */
 export function PageHeader({
@@ -19,7 +19,7 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <header className={cn("flex flex-col gap-4", className)}>
+    <header className={cn("flex flex-col gap-3", className)}>
       {label && <p className="label">{label}</p>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-h1">{title}</h1>
@@ -28,7 +28,7 @@ export function PageHeader({
       {description && (
         <p className="max-w-[65ch] text-muted-foreground">{description}</p>
       )}
-      <div aria-hidden="true" className="hairline-draw mt-2 h-px w-full bg-brass" />
+      <div aria-hidden="true" className="hairline-draw mt-1 h-px w-full bg-linear-to-r from-pink to-transparent" />
     </header>
   );
 }

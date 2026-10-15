@@ -158,8 +158,8 @@ export default function PlanPage() {
           <Skeleton className="h-12 w-2/3 max-w-sm" />
           <Skeleton className="h-5 w-1/3 max-w-xs" />
         </div>
-        <Skeleton className="h-16" />
-        <Skeleton className="h-48" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-40" />
       </div>
     );
   }
@@ -200,7 +200,7 @@ export default function PlanPage() {
   );
 
   return (
-    <div className="flex flex-col gap-14 lg:gap-24">
+    <div className="flex flex-col gap-10 lg:gap-16">
       {back}
       <PageHeader
         label="Event plan"
@@ -259,11 +259,11 @@ export default function PlanPage() {
             {bookings.map((b, i) => (
               <li key={b.id}>
                 <Reveal delay={500 + Math.min(i, 3) * 80}>
-                  <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2 py-5 sm:grid-cols-[10rem_1fr_auto_auto]">
+                  <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-1 py-3 sm:grid-cols-[9rem_1fr_auto_5.5rem]">
                     <span className="label col-span-2 sm:col-span-1">{b.category}</span>
                     <span className="min-w-0 font-display text-h2 wrap-anywhere">{b.vendorName}</span>
                     <span className="hidden text-right sm:block">{formatNumber(b.price)}</span>
-                    <StatusBadge status={b.status} />
+                    <StatusBadge status={b.status} className="justify-self-end" />
                     <span className="text-sm sm:hidden">{formatNumber(b.price)}</span>
                     <div className="col-span-2 empty:hidden sm:col-span-3 sm:col-start-2">
                       <PlanPaymentLine booking={b} eventId={event.id} />
@@ -300,7 +300,7 @@ export default function PlanPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 px-4 py-6 first:pl-0 sm:px-8">
+    <div className="flex flex-col gap-1 px-4 py-4 first:pl-0 sm:px-8">
       <dt className="label">{label}</dt>
       <dd className="font-display text-h2">{value}</dd>
     </div>

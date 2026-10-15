@@ -173,9 +173,9 @@ function VendorBookings() {
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-12 w-2/3 max-w-sm" />
         </div>
-        <Skeleton className="h-16" />
-        <Skeleton className="h-16" />
-        <Skeleton className="h-16" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
       </div>
     );
   }
@@ -196,7 +196,7 @@ function VendorBookings() {
   const { vendor, bookings } = state.data;
 
   return (
-    <div className="flex flex-col gap-14 lg:gap-24">
+    <div className="flex flex-col gap-10 lg:gap-16">
       <PageHeader
         label={capitalize(vendor.category)}
         title={vendor.name}

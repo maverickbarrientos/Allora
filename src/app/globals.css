@@ -3,24 +3,28 @@
 /* Design tokens (docs/DESIGN.md). Light theme only.
    Change these to re-skin the whole app at once. */
 :root {
-  /* Palette: hazel page, plum components (the user's palette overrides the
-     DESIGN.md colors; layout, type and motion rules still apply). */
-  --hazel: #938563;
-  --plum-light: #9e749d;
-  --plum: #6c3069;
+  /* Palette: a quiet hazel gradient page, deep plum components, rose accent. */
+  --hazel: #938563; /* contrast floor: ink text must stay 4.5:1 on any page stop */
+  --page-gradient: linear-gradient(170deg, #a89c80 0%, #9a8c6c 45%, #938563 100%);
+  --plum: #5b2a59;
+  --plum-deep: #46203f; /* gradient end for cards and header */
+  --surface-gradient: linear-gradient(160deg, var(--plum) 0%, var(--plum-deep) 100%);
+  --plum-light: #9e749d; /* do not go darker: plum-ink text needs 4.5:1 */
   --pink: #b76e79;
   --plum-ink: #140f14; /* text on plum-light and pink */
-  --ivory: #faf7f2;
-  --stone: #f1ece4;
+  --ivory: #f4efe7;
+  --stone: #ebe5db;
   --ink: #1c1b19;
   --ink-muted: #1f1c19; /* body-size text on hazel needs ink-level contrast */
   --label: #1c1b19;
-  --brass: #6c3069; /* the one hairline highlight (name kept from DESIGN.md) */
+  --brass: #b76e79; /* the one highlight per screen: dusty rose (name kept from DESIGN.md) */
   --brick: #3a0f0a; /* errors and declined, dark enough for text on hazel */
-  --hairline: rgb(28 27 25 / 0.25);
-  --radius: 1.25rem;
+  --hairline: rgb(28 27 25 / 0.22);
+  --radius: 1rem;
   --shadow-soft:
-    0 2px 4px rgb(28 27 25 / 0.2), 0 18px 40px -12px rgb(28 27 25 / 0.5);
+    0 1px 2px rgb(20 15 20 / 0.25), 0 10px 24px -10px rgb(20 15 20 / 0.45);
+  --shadow-lift:
+    0 2px 4px rgb(20 15 20 / 0.3), 0 16px 32px -10px rgb(20 15 20 / 0.55);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* shadcn theme mapping */
@@ -65,6 +69,7 @@
   --color-stone: var(--stone);
   --color-hazel: var(--hazel);
   --color-plum: var(--plum);
+  --color-plum-deep: var(--plum-deep);
   --color-plum-light: var(--plum-light);
   --color-pink: var(--pink);
   --color-plum-ink: var(--plum-ink);
@@ -72,6 +77,7 @@
   --color-brick: var(--brick);
   --radius-base: var(--radius);
   --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
@@ -79,12 +85,36 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+html {
+  background-color: var(--hazel); /* fallback if the gradient fails to parse */
+}
 body {
-  background: var(--background);
+  background-color: var(--hazel);
+  background: var(--page-gradient);
+  background-color: var(--hazel);
+  background-attachment: fixed;
+  min-height: 100vh;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 1rem;
   line-height: 1.65;
+  position: relative;
+  isolation: isolate;
+}
+/* iOS Safari does not support fixed backgrounds well: paint the gradient on a
+   fixed layer behind the page instead. */
+@supports (-webkit-touch-callout: none) {
+  body {
+    background: none;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--hazel);
+    background-image: var(--page-gradient);
+  }
 }
 
 /* Typography */
@@ -98,7 +128,8 @@ body {
   line-height: 1.1;
 }
 .text-display {
-  font-size: clamp(2.75rem, 6vw, 4.5rem);
+  font-size: clamp(2.5rem, 5.5vw, 4.25rem);
+  letter-spacing: -0.02em;
 }
 .text-h1 {
   font-size: clamp(2rem, 4vw, 3rem);
@@ -116,21 +147,48 @@ body {
   color: var(--label);
 }
 
-/* Plum surface (cards, header, auth hero): light text, pink buttons. Re-maps
-   the theme variables, so shadcn components adapt without changes. */
-.surface-plum {
-  --foreground: var(--ivory);
-  --card-foreground: var(--ivory);
-  --muted-foreground: #ecdcea;
-  --primary: var(--pink);
-  --primary-foreground: var(--plum-ink);
-  --ring: var(--ivory);
-  --border: rgb(250 247 242 / 0.25);
-  --label: #f3d6db;
-  color: var(--foreground);
+/* Plum surface: the card look (gradient fill, 40% pink border, soft shadow,
+   inner top highlight) plus the theme re-map for light text and pink buttons.
+   In the components layer so the header, auth hero and dialog can drop the
+   card chrome with utilities (rounded-none border-0 shadow-none). */
+@layer components {
+  .surface-plum {
+    --foreground: var(--ivory);
+    --card-foreground: var(--ivory);
+    --muted-foreground: #ecdcea;
+    --primary: var(--pink);
+    --primary-foreground: var(--plum-ink);
+    --ring: var(--ivory);
+    --border: rgb(244 239 231 / 0.25);
+    --label: #f3d6db;
+    color: var(--foreground);
+    background-color: var(--plum);
+    background-image: var(--surface-gradient);
+    border: 1px solid rgb(183 110 121 / 0.4);
+    border-radius: var(--radius);
+    padding: 1.125rem;
+    box-shadow:
+      var(--shadow-soft),
+      inset 0 1px 0 rgb(244 239 231 / 0.08);
+  }
+
+  .card-surface {
+    transition:
+      transform 200ms ease-out,
+      box-shadow 200ms ease-out;
+  }
 }
 
-/* Visible keyboard focus: 2px forest, 2px offset (ivory on dark surfaces) */
+@media (hover: hover) and (pointer: fine) {
+  .card-surface:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      var(--shadow-lift),
+      inset 0 1px 0 rgb(244 239 231 / 0.08);
+  }
+}
+
+/* Visible keyboard focus: 2px, 2px offset (ink on hazel, ivory on plum surfaces) */
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
@@ -181,7 +239,7 @@ body {
   background: linear-gradient(
       100deg,
       transparent 30%,
-      rgb(255 255 255 / 0.5) 50%,
+      rgb(244 239 231 / 0.14) 50%,
       transparent 70%
     )
     rgb(28 27 25 / 0.12);
@@ -206,6 +264,9 @@ body {
   }
   .reveal {
     opacity: 1;
+    transform: none;
+  }
+  .card-surface:hover {
     transform: none;
   }
 }
