@@ -27,6 +27,8 @@ export type Event = {
   budget: number;
   guestCount: number;
   notes: string | null;
+  /** docs/SPEC-event-location.md: free text, or null when not set. */
+  area: string | null;
 };
 export type Vendor = {
   id: string;
@@ -35,6 +37,8 @@ export type Vendor = {
   price: number;
   /** docs/SPEC-vendor-profiles.md: free text, or null when the vendor hasn't set one. */
   location: string | null;
+  /** docs/SPEC-event-location.md: the area the vendor serves, or null. Used to filter by event area. */
+  area: string | null;
   /** docs/SPEC-availability.md: present only when listVendors is called with an eventId. */
   availableOnEventDate?: boolean;
 };
@@ -61,6 +65,8 @@ export type VendorProfileInput = {
   price: number;
   about?: string | null;
   location?: string | null;
+  /** Free text up to 60 characters; the area the vendor serves. */
+  area?: string | null;
   terms?: string | null;
   phone?: string | null;
   email?: string | null;
@@ -244,6 +250,8 @@ export type CreateEventInput = {
   budget: number;
   guestCount: number;
   notes?: string | null;
+  /** Free text up to 60 characters; null or "" clears it. */
+  area?: string | null;
   /** The event's services in order. Omitted: the type's default list. */
   services?: string[];
 };

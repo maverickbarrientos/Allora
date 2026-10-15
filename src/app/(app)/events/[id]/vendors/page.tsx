@@ -99,6 +99,7 @@ export default function VendorsPage() {
       eventId={id}
       eventType={state.data.event.type}
       eventDate={state.data.event.date}
+      eventArea={state.data.event.area}
       all={state.data.all}
       initialBooked={state.data.booked}
       back={back}
@@ -111,6 +112,7 @@ function Browser({
   eventId,
   eventType,
   eventDate,
+  eventArea,
   all,
   initialBooked,
   back,
@@ -119,6 +121,7 @@ function Browser({
   eventId: string;
   eventType: EventType;
   eventDate: string;
+  eventArea: string | null;
   all: Vendor[];
   initialBooked: string[];
   back: React.ReactNode;
@@ -130,6 +133,9 @@ function Browser({
     wanted && all.some((v) => v.category === wanted) ? wanted : null,
   ); // null = All
   const [booked, setBooked] = useState<Set<string>>(new Set(initialBooked));
+  // On by default: only vendors in the event's area (docs/SPEC-event-location.md).
+  const [onlyArea, setOnlyArea] = useState(true);
+  const area = eventArea && onlyArea ? eventArea : null;
   // Vendors whose date was taken while the customer had the dialog open.
   const [taken, setTaken] = useState<Set<string>>(new Set());
   // Book opens "Check availability"; the booking is only sent from that dialog.
@@ -156,18 +162,43 @@ function Browser({
       <div className="flex flex-col gap-5">
         <CategoryTabs categories={categories} active={category} onChange={setCategory} />
 
+        {eventArea ? (
+          <div className="flex flex-col gap-1">
+            <label className="flex min-h-11 w-fit items-center gap-3">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-primary"
+                checked={onlyArea}
+                onChange={(e) => setOnlyArea(e.target.checked)}
+              />
+              <span>Only vendors in {eventArea}</span>
+            </label>
+            {onlyArea && (
+              <p className="text-sm text-muted-foreground">Vendors with no area set are included.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            <Link href={`/events/${eventId}/edit`} className="underline underline-offset-2">
+              Add an area to your event
+            </Link>{" "}
+            to see vendors in your area.
+          </p>
+        )}
 
         <div id={TABPANEL_ID} role="tabpanel" aria-labelledby={tabId(category)}>
           {/* key remounts the list so it shows its loading state and fades up on each tab change */}
           <VendorList
-            key={category ?? "all"}
+            key={`${category ?? "all"}|${area ?? ""}`}
             category={category}
+            area={area}
             eventId={eventId}
             eventDate={eventDate}
             booked={booked}
             taken={taken}
             onBook={setChecking}
             onShowAll={() => setCategory(null)}
+            onShowEveryArea={() => setOnlyArea(false)}
           />
         </div>
       </div>
@@ -186,23 +217,27 @@ function Browser({
 
 function VendorList({
   category,
+  area,
   eventId,
   eventDate,
   booked,
   taken,
   onBook,
   onShowAll,
+  onShowEveryArea,
 }: {
   category: string | null;
+  area: string | null;
   eventId: string;
   eventDate: string;
   booked: Set<string>;
   taken: Set<string>;
   onBook: (vendor: Vendor) => void;
   onShowAll: () => void;
+  onShowEveryArea: () => void;
 }) {
   // With eventId, each vendor carries availableOnEventDate.
-  const { state, reload } = useLoad(() => api.listVendors(category ?? undefined, eventId));
+  const { state, reload } = useLoad(() => api.listVendors(category ?? undefined, eventId, area ?? undefined));
 
   if (state.status === "loading") return <SkeletonGrid />;
   if (state.status === "error") {
@@ -217,8 +252,15 @@ function VendorList({
   if (state.data.vendors.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 py-10 text-center">
-        <p className="font-display text-h2">No vendors in this category yet</p>
-        {category !== null && (
+        <p className="font-display text-h2">
+          {area ? `No vendors in ${area} for this category` : "No vendors in this category yet"}
+        </p>
+        {area && (
+          <Button variant="outline" onClick={onShowEveryArea}>
+            Show vendors from every area
+          </Button>
+        )}
+        {!area && category !== null && (
           <Button variant="outline" onClick={onShowAll}>
             Show all vendors
           </Button>

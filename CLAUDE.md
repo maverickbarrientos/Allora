@@ -25,8 +25,8 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 
 ## Data model
 - **Profile**: id (auth user), role, name
-- **Event**: owner (profile), type, date, budget, guestCount
-- **Vendor**: name, category, price, about, location, owner (profile, optional)
+- **Event**: owner (profile), type, date, budget, guestCount, area (optional)
+- **Vendor**: name, category, price, about, location, area (optional), owner (profile, optional)
 - **Vendor contact**: vendor, phone, email, website (owner and customers with a confirmed booking only)
 - **Booking**: event, vendor, category, status (pending, confirmed, declined)
 - **Event service**: event, category, position (the event's own list of services; starts from its type's template)

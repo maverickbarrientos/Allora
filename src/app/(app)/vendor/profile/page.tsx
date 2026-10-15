@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { AREA_MAX } from "@/lib/areas";
 import { ABOUT_MAX, CONTACT_FIELDS, LOCATION_MAX, TERMS_MAX, contactValue } from "@/lib/vendor-profile";
 import { ContactFields } from "./contact-fields";
 import { TextField } from "./text-field";
@@ -24,6 +25,7 @@ type Fields = {
   price: string;
   about: string;
   location: string;
+  area: string;
   terms: string;
   phone: string;
   email: string;
@@ -40,6 +42,7 @@ const EMPTY_FIELDS: Fields = {
   price: "",
   about: "",
   location: "",
+  area: "",
   terms: "",
   phone: "",
   email: "",
@@ -51,6 +54,7 @@ const FIELD_ERRORS: Record<keyof Fields, string> = {
   price: "Enter a price above 0, up to 100,000,000, with no more than 2 decimals.",
   about: `Keep the description to ${ABOUT_MAX.toLocaleString("en-US")} characters or fewer.`,
   location: `Keep the location to ${LOCATION_MAX} characters or fewer.`,
+  area: `Keep the area to ${AREA_MAX} characters or fewer.`,
   terms: `Keep your terms to ${TERMS_MAX.toLocaleString("en-US")} characters or fewer.`,
   phone: "Use only digits, spaces and + ( ) - . (5 to 30 characters).",
   email: "Enter an email address like name@example.com.",
@@ -68,6 +72,7 @@ function fieldsFromProfile(profile: VendorProfile | null): Fields {
         price: String(profile.vendor.price),
         about: profile.vendor.about ?? "",
         location: profile.vendor.location ?? "",
+        area: profile.vendor.area ?? "",
         terms: profile.vendor.terms ?? "",
         phone: profile.contact.phone ?? "",
         email: profile.contact.email ?? "",
@@ -138,9 +143,11 @@ export default function VendorProfilePage() {
     }
     const about = fields.about.trim();
     const location = fields.location.trim();
+    const area = fields.area.trim();
     const terms = fields.terms.trim();
     if (charCount(about) > ABOUT_MAX) errors.about = FIELD_ERRORS.about;
     if (charCount(location) > LOCATION_MAX) errors.location = FIELD_ERRORS.location;
+    if (charCount(area) > AREA_MAX) errors.area = FIELD_ERRORS.area;
     if (charCount(terms) > TERMS_MAX) errors.terms = FIELD_ERRORS.terms;
     for (const field of CONTACT_FIELDS) {
       if (contactValue(field, fields[field]) === undefined) errors[field] = FIELD_ERRORS[field];
@@ -160,6 +167,7 @@ export default function VendorProfilePage() {
         price: numericPrice,
         about: about || null,
         location: location || null,
+        area: area || null,
         terms: terms || null,
         phone: fields.phone.trim() || null,
         email: fields.email.trim() || null,
@@ -313,6 +321,25 @@ export default function VendorProfilePage() {
           error={fieldErrors.location}
           onChange={(event) => setField("location", event.target.value)}
         />
+
+        <div className="flex flex-col gap-2">
+          <TextField
+            id="vendor-area"
+            label="Area you serve (optional)"
+            name="area"
+            maxLength={AREA_MAX}
+            placeholder="e.g. Makati or Cavite"
+            autoComplete="off"
+            aria-describedby={["vendor-area-hint", fieldErrors.area && "vendor-area-error"].filter(Boolean).join(" ")}
+            value={fields.area}
+            disabled={saving}
+            error={fieldErrors.area}
+            onChange={(event) => setField("area", event.target.value)}
+          />
+          <p id="vendor-area-hint" className="text-sm text-muted-foreground">
+            Customers who pick this area for their event see you in their vendor list.
+          </p>
+        </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="vendor-about">About (optional)</Label>
