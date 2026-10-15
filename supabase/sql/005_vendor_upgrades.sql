@@ -79,3 +79,39 @@ create policy "bookings: vendor decides"
 -- Column-level, as in 004: status is the only updatable column on bookings.
 revoke update on public.bookings from anon, authenticated;
 grant update (status) on public.bookings to authenticated;
+
+-- C. Customer details -------------------------------------------------
+
+-- Replaces the feature 3 function (drop and recreate: the return columns
+-- change). Adds the customer's name (profiles.name via events.owner) and the
+-- event's budget. Never returns email, profile ids, owner or budget shares.
+-- Vendors still never read events or profiles directly.
+drop function if exists public.vendor_incoming_bookings();
+create function public.vendor_incoming_bookings()
+returns table (
+  id uuid,
+  category text,
+  status text,
+  created_at timestamptz,
+  event_type text,
+  event_date date,
+  guest_count integer,
+  event_budget numeric,
+  customer_name text
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select b.id, b.category, b.status, b.created_at,
+         e.type, e.date, e.guest_count, e.budget, coalesce(p.name, '')
+  from public.bookings b
+  join public.vendors v on v.id = b.vendor_id
+  join public.events e on e.id = b.event_id
+  left join public.profiles p on p.id = e.owner
+  where v.owner = (select auth.uid())
+$$;
+
+revoke execute on function public.vendor_incoming_bookings() from public, anon;
+grant execute on function public.vendor_incoming_bookings() to authenticated;
