@@ -6,13 +6,16 @@ import { VENDOR_DETAIL_COLUMNS, toVendorDetail } from "@/lib/server/shapes";
 import { requireVendorRole } from "@/lib/vendor-portal";
 import {
   ABOUT_MAX,
+  CONTACT_FIELDS,
   LOCATION_MAX,
+  contactValue,
   invalidFields,
   isCategoryLocked,
   optionalText,
   validCategory,
   validName,
   validPrice,
+  type Contact,
   type ProfileFields,
 } from "@/lib/vendor-profile";
 
@@ -21,6 +24,58 @@ const notLinked = () =>
 
 async function loadOwnVendor(supabase: SupabaseClient, userId: string) {
   return supabase.from("vendors").select(VENDOR_DETAIL_COLUMNS).eq("owner", userId).maybeSingle();
+}
+
+const NO_CONTACT: Contact = { phone: null, email: null, website: null };
+
+/** The vendor's own contact details (all null before any are saved), or null if the query fails. */
+async function loadContact(supabase: SupabaseClient, vendorId: string): Promise<Contact | null> {
+  const { data, error } = await supabase
+    .from("vendor_contacts")
+    .select("phone, email, website")
+    .eq("vendor_id", vendorId)
+    .maybeSingle();
+  if (error) return null;
+  return data ?? NO_CONTACT;
+}
+
+/**
+ * Saves the given contact fields; the ones left out keep their value. RLS: owner only.
+ * Update first, then insert if there was no row yet. Not an upsert: that would
+ * need UPDATE on vendor_id, which 016 doesn't grant so a row can't be moved.
+ */
+async function saveContact(supabase: SupabaseClient, vendorId: string, changes: Partial<Contact>) {
+  const update = () =>
+    supabase
+      .from("vendor_contacts")
+      .update({ ...changes, updated_at: new Date().toISOString() })
+      .eq("vendor_id", vendorId)
+      .select("phone, email, website")
+      .maybeSingle();
+
+  const updated = await update();
+  if (updated.error || updated.data) return updated;
+
+  const inserted = await supabase
+    .from("vendor_contacts")
+    .insert({ vendor_id: vendorId, ...changes })
+    .select("phone, email, website")
+    .single();
+  // A simultaneous save created the row first: update it instead.
+  if (inserted.error?.code === "23505") return update();
+  return inserted;
+}
+
+/** Validates the contact fields present in the body. */
+function parseContact(body: Record<string, unknown>, bad: string[]): Partial<Contact> {
+  const changes: Partial<Contact> = {};
+  for (const field of CONTACT_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(body, field)) continue;
+    const value = contactValue(field, body[field]);
+    if (value === undefined) bad.push(field);
+    else changes[field] = value;
+  }
+  return changes;
 }
 
 /** True when the vendor has any pending or confirmed booking (RLS: own bookings only). */
@@ -44,10 +99,14 @@ export async function GET() {
     if (error) return errorResponse(500, "server_error", "Could not load vendor.");
     if (!vendor) return notLinked();
 
-    const locked = await hasActiveBooking(supabase, vendor.id);
+    const [locked, contact] = await Promise.all([
+      hasActiveBooking(supabase, vendor.id),
+      loadContact(supabase, vendor.id),
+    ]);
     if (locked === null) return errorResponse(500, "server_error", "Could not load bookings.");
+    if (contact === null) return errorResponse(500, "server_error", "Could not load contact details.");
 
-    return NextResponse.json({ vendor: toVendorDetail(vendor), categoryLocked: locked });
+    return NextResponse.json({ vendor: toVendorDetail(vendor), contact, categoryLocked: locked });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }
@@ -71,6 +130,7 @@ export async function POST(req: Request) {
     const location = body.location === undefined ? null : optionalText(body.location, LOCATION_MAX);
     if (about === undefined) bad.push("about");
     if (location === undefined) bad.push("location");
+    const contactChanges = parseContact(body, bad);
     if (bad.length) return errorResponse(400, "validation_error", invalidFields(bad));
 
     const { data: existing, error: exErr } = await loadOwnVendor(supabase, auth.userId);
@@ -98,7 +158,15 @@ export async function POST(req: Request) {
       return errorResponse(500, "server_error", "Could not create vendor profile.");
     }
 
-    return NextResponse.json({ vendor: toVendorDetail(vendor), categoryLocked: false }, { status: 201 });
+    // Everything was validated first, so this only fails on a database error.
+    let contact = NO_CONTACT;
+    if (Object.values(contactChanges).some((v) => v !== null)) {
+      const { data, error: cErr } = await saveContact(supabase, vendor.id, contactChanges);
+      if (cErr || !data) return errorResponse(500, "server_error", "Could not save contact details.");
+      contact = data;
+    }
+
+    return NextResponse.json({ vendor: toVendorDetail(vendor), contact, categoryLocked: false }, { status: 201 });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }
@@ -115,7 +183,7 @@ export async function PATCH(req: Request) {
 
     // Unknown fields, including owner, are ignored.
     const has = (k: string) => Object.prototype.hasOwnProperty.call(body, k);
-    const editable = ["name", "category", "price", "about", "location"];
+    const editable = ["name", "category", "price", "about", "location", ...CONTACT_FIELDS];
     if (!editable.some(has)) {
       return errorResponse(400, "validation_error", `Send at least one of ${editable.join(", ")}.`);
     }
@@ -146,6 +214,7 @@ export async function PATCH(req: Request) {
       if (value === undefined) bad.push(field);
       else changes[field] = value;
     }
+    const contactChanges = parseContact(body, bad);
     if (bad.length) return errorResponse(400, "validation_error", invalidFields(bad));
 
     let updated = vendor;
@@ -169,10 +238,20 @@ export async function PATCH(req: Request) {
       updated = data;
     }
 
-    const locked = await hasActiveBooking(supabase, vendor.id);
-    if (locked === null) return errorResponse(500, "server_error", "Could not load bookings.");
+    // Everything was validated first, so this only fails on a database error.
+    if (Object.keys(contactChanges).length > 0) {
+      const { error: cErr } = await saveContact(supabase, vendor.id, contactChanges);
+      if (cErr) return errorResponse(500, "server_error", "Could not save contact details.");
+    }
 
-    return NextResponse.json({ vendor: toVendorDetail(updated), categoryLocked: locked });
+    const [locked, contact] = await Promise.all([
+      hasActiveBooking(supabase, vendor.id),
+      loadContact(supabase, vendor.id),
+    ]);
+    if (locked === null) return errorResponse(500, "server_error", "Could not load bookings.");
+    if (contact === null) return errorResponse(500, "server_error", "Could not load contact details.");
+
+    return NextResponse.json({ vendor: toVendorDetail(updated), contact, categoryLocked: locked });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }

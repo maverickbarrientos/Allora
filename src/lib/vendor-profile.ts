@@ -52,6 +52,38 @@ export function optionalText(v: unknown, max: number): string | null | undefined
   return text === "" ? null : text;
 }
 
+export const CONTACT_FIELDS = ["phone", "email", "website"] as const;
+export type ContactField = (typeof CONTACT_FIELDS)[number];
+export type Contact = Record<ContactField, string | null>;
+
+// The same rules as the vendor_contacts checks in 016_vendor_contacts.sql.
+const CONTACT_RULES: Record<ContactField, (text: string) => boolean> = {
+  phone: (t) => /^[0-9+(). -]{5,30}$/.test(t),
+  // The sign-up email check, with the usual 254-character limit.
+  email: (t) => t.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t),
+  // Only http and https links, so a stored link can never run code when clicked.
+  website: (t) => {
+    if (t.length > 200 || !/^https?:\/\/\S+$/i.test(t)) return false;
+    try {
+      return ["http:", "https:"].includes(new URL(t).protocol);
+    } catch {
+      return false;
+    }
+  },
+};
+
+/**
+ * One contact field: null, or a string that passes its rule after trimming.
+ * Returns what to save (an empty string clears it to null), or undefined when invalid.
+ */
+export function contactValue(field: ContactField, v: unknown): string | null | undefined {
+  if (v === null) return null;
+  if (typeof v !== "string") return undefined;
+  const text = v.trim();
+  if (text === "") return null;
+  return CONTACT_RULES[field](text) ? text : undefined;
+}
+
 export function invalidFields(fields: string[]) {
   return `Invalid fields: ${fields.join(", ")}.`;
 }
