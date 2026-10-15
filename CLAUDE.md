@@ -37,3 +37,9 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - TypeScript throughout.
 - Tailwind and shadcn for UI.
 - Route handlers for the API.
+
+## Migrations
+- SQL files live in `supabase/sql/`, numbered (`001_profiles.sql`, `002_...`).
+
+## Communication
+- When a task is done, explain what changed in plain English.
