@@ -14,5 +14,36 @@ export type SignupInput = {
 };
 export type LoginInput = { email: string; password: string };
 
+// Shapes from docs/SPEC-events-booking.md ("Shared shapes").
+
+export type EventType = "wedding" | "birthday" | "corporate";
+export type BookingStatus = "pending" | "confirmed" | "declined";
+
+export type Event = {
+  id: string;
+  type: EventType;
+  date: string; // YYYY-MM-DD
+  budget: number;
+  guestCount: number;
+};
+export type Vendor = { id: string; name: string; category: string; price: number };
+export type PlanBooking = {
+  id: string;
+  eventId: string;
+  vendorId: string;
+  vendorName: string;
+  category: string;
+  price: number;
+  status: BookingStatus;
+  createdAt: string;
+};
+
+export type CreateEventInput = {
+  type: EventType;
+  date: string;
+  budget: number;
+  guestCount: number;
+};
+
 /** Error body for all errors: `{ error: { code, message } }`. */
 export type ErrorBody = { error: { code: string; message: string } };
