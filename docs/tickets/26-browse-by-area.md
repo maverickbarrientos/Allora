@@ -1,8 +1,8 @@
-# 18 — Customers see the vendors in their event's area
+# 26 — Customers see the vendors in their event's area
 
 **What to build:** On the vendor list for an event with a location, the customer sees only the vendors in that area (plus those with no area set), and can switch that off to see everyone.
 
-**Blocked by:** 16, 17
+**Blocked by:** 24, 25
 
 **Status:** built; empty state not exercised
 

@@ -1,4 +1,4 @@
-# 16 — Events have a location
+# 24 — Events have a location
 
 **What to build:** When creating or editing an event, a customer can pick where it takes place from a fixed list of areas, change it later or clear it. The plan shows it.
 

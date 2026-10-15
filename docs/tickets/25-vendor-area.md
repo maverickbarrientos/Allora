@@ -1,8 +1,8 @@
-# 17 — Vendors pick the area they serve
+# 25 — Vendors pick the area they serve
 
 **What to build:** A vendor's location is no longer free text: on their profile they pick the area they serve from the same list as events, or leave it unset. Existing free-text locations are mapped to an area where possible.
 
-**Blocked by:** 16
+**Blocked by:** 24
 
 **Status:** built; mapping rules not exercised
 
