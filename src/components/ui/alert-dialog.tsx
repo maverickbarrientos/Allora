@@ -35,7 +35,7 @@ export function AlertDialog({
         e.preventDefault();
         onOpenChange(false);
       }}
-      className="surface-plum m-auto w-[calc(100%-2rem)] max-w-md rounded-[var(--radius)] border border-pink/50 bg-card p-7 text-card-foreground shadow-soft backdrop:bg-black/50"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-[var(--radius)] bg-card p-7 text-card-foreground shadow-soft backdrop:bg-black/50"
     >
       {open && children}
     </dialog>
