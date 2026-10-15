@@ -1,5 +1,5 @@
--- 011_event_services: each event's own list of services (docs/SPEC-event-services.md).
--- Safe to run more than once. Run after 007 (event_budgets). Needs public.current_user_role() from 001.
+-- 012_event_services: each event's own list of services (docs/SPEC-event-services.md).
+-- Safe to run more than once. Run after 007 (event_budgets) and 011 (event delete). Needs public.current_user_role() from 001.
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 
 create table if not exists public.event_services (

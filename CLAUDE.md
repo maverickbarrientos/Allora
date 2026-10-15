@@ -20,7 +20,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - RLS on every table. No `service_role` key anywhere. Only the Supabase URL and publishable key reach the browser.
 - LLM calls are server-side only.
 - Vendor matching and ranking are deterministic. The AI only writes explanation text; it never picks or reorders vendors.
-- A category with no pending or confirmed booking counts as a gap.
+- A service on the event's own list with no pending or confirmed booking counts as a gap.
 - Dashboard data is deterministic. The dashboard never calls the LLM.
 
 ## Data model
@@ -28,6 +28,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - **Event**: owner (profile), type, date, budget, guestCount
 - **Vendor**: name, category, price, owner (profile, optional)
 - **Booking**: event, vendor, category, status (pending, confirmed, declined)
+- **Event service**: event, category, position (the event's own list of services; starts from its type's template)
  **Blocked date**: vendor, date
 
 

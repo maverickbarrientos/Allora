@@ -7,7 +7,7 @@ export type EventType = (typeof EVENT_TYPES)[number];
 /**
  * The starting service list for a new event of each type, in card order
  * (docs/SPEC-event-services.md). After that each event keeps its own list in
- * the event_services table. 011_event_services.sql backfills with the same lists.
+ * the event_services table. 012_event_services.sql backfills with the same lists.
  */
 export const DEFAULT_SERVICES: Record<EventType, readonly string[]> = {
   wedding: ["venue", "catering", "photography", "music", "decoration"],

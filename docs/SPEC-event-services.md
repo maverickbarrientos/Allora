@@ -19,13 +19,13 @@ Customer-typed (free-text) services, templates the customer can save or share, s
 - An event has at least 1 service. No duplicates. Order is the order the customer saved them in; services from a template keep template order.
 
 ## Data and tables
-New table `event_services` (SQL `011_event_services.sql`, safe to re-run):
+New table `event_services` (SQL `012_event_services.sql`, safe to re-run):
 - Columns: `event_id` (the event, removed with it), `category`, `position` (order on the list), `created_at`. One row per event and category.
 - RLS: only the event's owner may read, add and remove rows; adding also needs the customer role. Vendors and logged-out users get nothing.
 - Removing a row is refused with `service_has_active_booking` when the event has a pending or confirmed booking in that category; otherwise the matching set budget is removed too.
 - `set_event_services(event, categories)` replaces the whole list in one transaction, so a blocked removal changes nothing.
 - Backfill: every existing event gets its type's default list, so nothing changes for existing events.
-- Optional `012_seed_vendors_extra.sql`: 1 to 2 placeholder vendors per new category.
+- Optional `013_seed_vendors_extra.sql`: 1 to 2 placeholder vendors per new category.
 - No change to `vendors` or `bookings`; they have no category constraint.
 
 ## Shared shapes

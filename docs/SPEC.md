@@ -31,6 +31,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Book a vendor
 - View the plan with bookings and status (pending, confirmed, declined)
 - See a vendor's availability in a calendar when booking; a vendor can only be booked on an 
+- Choose the event's services when creating it, and add or remove them later on the plan and edit pages (more categories: florist, cake, lighting, transport, makeup)
 - Dashboard for one selected event: countdown, bookings by status, actions needed, and missing services
 
 **Vendor portal**
@@ -44,7 +45,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 
 
 **AI 1: "What's missing" cards**
-- Compare the event to a checklist of services for its type
+- Compare the event to its own list of services (it starts from its type's template; the customer can add or remove services)
 - One card per gap with a short why-it-matters note
 - Each card lists up to 3 matched vendors with a match % and a one-line reason
 - Booking from a card updates the plan and removes the card
@@ -61,9 +62,10 @@ Each service category gets a share of the event budget (venue and catering large
 - **Event**: owner (profile), type, date, budget, guestCount
 - **Vendor**: name, category, price, owner (profile, optional)
 - **Booking**: event, vendor, category, status
+- **Event service**: event, category, position (the event's own list of services; see SPEC-event-services.md)
 - **Blocked date**: vendor, date (a date the vendor is unavailable)
 
-A category with no pending or confirmed booking counts as a gap.
+A service on the event's list with no pending or confirmed booking counts as a gap.
 
 ## Event Types
 Wedding, birthday, corporate.

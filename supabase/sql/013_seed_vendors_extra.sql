@@ -1,4 +1,4 @@
--- 012_seed_vendors_extra: PLACEHOLDER vendors for the added services
+-- 013_seed_vendors_extra: PLACEHOLDER vendors for the added services
 -- (florist, cake, lighting, transport, makeup; docs/SPEC-event-services.md).
 -- Run after 003_seed_vendors.sql. Safe to re-run: a vendor is only inserted
 -- if no vendor with the same name and category exists. No table or RLS changes.
