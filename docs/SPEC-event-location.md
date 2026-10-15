@@ -45,7 +45,7 @@ SQL `017_event_location.sql`, safe to re-run. (`main` ends at 016; the availabil
 - `location` must be an area, `null` or `""`. Anything else is 400 `validation_error` naming `location`.
 
 ## UI screens and states
-- **Event form** (`/events/new`, `/events/[id]/edit`): a "Location (optional)" select after Date, with "Not set" and the areas. A template doesn't change it. The edit page sends it only when it changed.
+- **Event form** (`/events/new`, `/events/[id]/edit`): a "Location (optional)" select after Date, with "Not set" and the areas. A template leaves it unset, like the date. The edit page sends it only when it changed.
 - **Plan** (`/events/[id]`): the header line shows the location after the date when set (`Wedding · 12 June 2027 · Cavite`).
 - **Vendor browse** (`/events/[id]/vendors`):
   - Event with a location: a checkbox "Only vendors in {area}", on by default. On, the list is fetched with `location`; a short note says vendors with no area set are included. Off, every vendor shows. The choice stays when switching category tabs.

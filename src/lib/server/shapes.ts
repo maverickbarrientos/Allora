@@ -3,7 +3,7 @@
 export type EventType = "wedding" | "birthday" | "corporate";
 export type BookingStatus = "pending" | "confirmed" | "declined";
 
-export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes";
+export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes, location";
 export const VENDOR_COLUMNS = "id, name, category, price, location";
 /** A vendor with its profile text (docs/SPEC-vendor-profiles.md). */
 export const VENDOR_DETAIL_COLUMNS = "id, name, category, price, about, location";
@@ -18,6 +18,7 @@ type EventRow = {
   budget: number | string;
   guest_count: number;
   notes: string | null;
+  location: string | null;
 };
 type VendorRow = {
   id: string;
@@ -48,6 +49,7 @@ export function toEvent(row: EventRow) {
     budget: Number(row.budget),
     guestCount: row.guest_count,
     notes: row.notes ?? null,
+    location: row.location ?? null,
   };
 }
 

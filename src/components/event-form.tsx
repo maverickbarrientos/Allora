@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { AREAS } from "@/lib/areas";
 import { parseAmount } from "@/lib/amount";
 import { capitalize, formatNumber } from "@/lib/format";
 import type { CreateEventInput, Event, EventType } from "@/lib/api/types";
@@ -29,6 +30,8 @@ export type EventFormValues = {
   budget: string;
   guestCount: string;
   notes: string;
+  /** An area, or "" for not set. */
+  location: string;
 };
 type Field = keyof EventFormValues;
 export type EventFormErrors = Partial<Record<Field | "form", string>>;
@@ -40,6 +43,7 @@ export const EMPTY_EVENT_FORM: EventFormValues = {
   budget: "",
   guestCount: "",
   notes: "",
+  location: "",
 };
 
 export function valuesFromEvent(e: Omit<Event, "id">): EventFormValues {
@@ -50,6 +54,7 @@ export function valuesFromEvent(e: Omit<Event, "id">): EventFormValues {
     budget: String(e.budget),
     guestCount: String(e.guestCount),
     notes: e.notes ?? "",
+    location: e.location ?? "",
   };
 }
 
@@ -60,6 +65,7 @@ const MESSAGES = {
   budget: "Enter a budget above 0",
   guestCount: `Enter a whole number of guests, from 1 to ${formatNumber(GUESTS_MAX)}`,
   notes: `Keep notes to ${formatNumber(NOTES_MAX)} characters or fewer`,
+  location: "Choose a location from the list",
 } as const;
 
 const BUDGET_MESSAGES = {
@@ -90,6 +96,9 @@ export function validateEventForm(v: EventFormValues): {
     errors.guestCount = MESSAGES.guestCount;
   }
   if (notes.length > NOTES_MAX) errors.notes = MESSAGES.notes;
+  if (v.location !== "" && !(AREAS as readonly string[]).includes(v.location)) {
+    errors.location = MESSAGES.location;
+  }
 
   if (Object.keys(errors).length > 0 || !budget.ok) return { errors, input: null };
   return {
@@ -101,6 +110,7 @@ export function validateEventForm(v: EventFormValues): {
       budget: budget.value,
       guestCount,
       notes: notes === "" ? null : notes,
+      location: v.location === "" ? null : v.location,
     },
   };
 }
@@ -114,7 +124,7 @@ export function fieldErrorsFrom(message: string): EventFormErrors {
   return errors;
 }
 
-/** Event name, type, date, budget, guests and notes. Name is first. */
+/** Event name, type, date, location, budget, guests and notes. Name is first. */
 export function EventForm({
   values,
   onChange,
@@ -224,6 +234,26 @@ export function EventForm({
           aria-describedby={describedBy("date")}
         />
         {fieldError("date")}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="location">Location (optional)</Label>
+        <Select
+          id="location"
+          name="location"
+          value={values.location}
+          onChange={set("location")}
+          disabled={saving}
+          aria-invalid={!!errors.location}
+          aria-describedby={describedBy("location")}
+        >
+          <option value="">Not set</option>
+          {AREAS.map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </Select>
+        {fieldError("location")}
       </div>
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-2">

@@ -29,7 +29,7 @@ const WEIGHTS: Record<string, number> = { venue: 0.35, catering: 0.3, decoration
 
 function events(): Event[] {
   const today = todayYmd();
-  const e = (id: string, name: string, type: EventType, date: string, budget = 100000, guestCount = 80): Event => ({ id, name, type, date, budget, guestCount, notes: null });
+  const e = (id: string, name: string, type: EventType, date: string, budget = 100000, guestCount = 80): Event => ({ id, name, type, date, budget, guestCount, notes: null, location: null });
   return [
     e("year-ago", "Company anniversary 2025", "corporate", addDays(today, -365), 60000, 40),
     e("yesterday", "Sam's birthday dinner", "birthday", addDays(today, -1), 20000, 12),

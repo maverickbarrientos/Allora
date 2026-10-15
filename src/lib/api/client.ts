@@ -103,10 +103,11 @@ export const api = {
       "GET",
       `/api/events/${encodeURIComponent(eventId)}/plan`,
     ),
-  listVendors: (category?: string, eventId?: string) => {
+  listVendors: (category?: string, eventId?: string, location?: string) => {
     const q = new URLSearchParams();
     if (category) q.set("category", category);
     if (eventId) q.set("eventId", eventId);
+    if (location) q.set("location", location);
     const qs = q.toString();
     return request<{ vendors: Vendor[] }>("GET", qs ? `/api/vendors?${qs}` : "/api/vendors");
   },

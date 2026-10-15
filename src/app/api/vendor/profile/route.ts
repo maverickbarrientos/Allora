@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { parseLocation } from "@/lib/areas";
 import { errorResponse, readJson } from "@/lib/api-helpers";
 import { VENDOR_DETAIL_COLUMNS, toVendorDetail } from "@/lib/server/shapes";
 import { CONTACT_COLUMNS, NO_CONTACT, loadContact } from "@/lib/server/vendor-contacts";
@@ -8,7 +9,6 @@ import { requireVendorRole } from "@/lib/vendor-portal";
 import {
   ABOUT_MAX,
   CONTACT_FIELDS,
-  LOCATION_MAX,
   contactValue,
   invalidFields,
   isCategoryLocked,
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     if (!validPrice(body.price)) bad.push("price");
     // About and location are optional; left out means none.
     const about = body.about === undefined ? null : optionalText(body.about, ABOUT_MAX);
-    const location = body.location === undefined ? null : optionalText(body.location, LOCATION_MAX);
+    const location = body.location === undefined ? null : parseLocation(body.location);
     if (about === undefined) bad.push("about");
     if (location === undefined) bad.push("location");
     const contactChanges = parseContact(body, bad);
@@ -196,11 +196,15 @@ export async function PATCH(req: Request) {
       else bad.push("price");
     }
     // Empty text or null clears about and location.
-    for (const [field, max] of [["about", ABOUT_MAX], ["location", LOCATION_MAX]] as const) {
-      if (!has(field)) continue;
-      const value = optionalText(body[field], max);
-      if (value === undefined) bad.push(field);
-      else changes[field] = value;
+    if (has("about")) {
+      const value = optionalText(body.about, ABOUT_MAX);
+      if (value === undefined) bad.push("about");
+      else changes.about = value;
+    }
+    if (has("location")) {
+      const value = parseLocation(body.location);
+      if (value === undefined) bad.push("location");
+      else changes.location = value;
     }
     const contactChanges = parseContact(body, bad);
     if (bad.length) return errorResponse(400, "validation_error", invalidFields(bad));

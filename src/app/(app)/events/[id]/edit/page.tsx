@@ -32,6 +32,7 @@ function changes(saved: Event, input: Required<UpdateEventInput>): UpdateEventIn
   if (input.budget !== saved.budget) diff.budget = input.budget;
   if (input.guestCount !== saved.guestCount) diff.guestCount = input.guestCount;
   if ((input.notes ?? null) !== (saved.notes ?? null)) diff.notes = input.notes;
+  if ((input.location ?? null) !== (saved.location ?? null)) diff.location = input.location;
   return diff;
 }
 
@@ -77,7 +78,7 @@ export default function EditEventPage() {
     setNotice(null);
     if (!input) return;
 
-    const diff = changes(saved, { ...input, notes: input.notes ?? null });
+    const diff = changes(saved, { ...input, notes: input.notes ?? null, location: input.location ?? null });
     if (Object.keys(diff).length === 0) {
       setNotice("No changes to save.");
       return;
