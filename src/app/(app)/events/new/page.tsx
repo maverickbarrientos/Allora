@@ -180,7 +180,7 @@ export default function NewEventPage() {
   return (
     <div className="flex max-w-xl flex-col gap-10">
       <Link
-        href="/"
+        href="/events"
         className="inline-flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Your events

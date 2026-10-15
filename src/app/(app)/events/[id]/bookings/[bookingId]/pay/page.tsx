@@ -343,7 +343,7 @@ function NotFound({ back, headingRef }: { back: React.ReactNode; headingRef: Hea
         Booking not found
       </h1>
       <p className="text-muted-foreground">This booking doesn&apos;t exist, or it isn&apos;t yours.</p>
-      <Link href="/" className={buttonVariants({ variant: "outline" })}>
+      <Link href="/events" className={buttonVariants({ variant: "outline" })}>
         Back to your events
       </Link>
     </div>

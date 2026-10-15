@@ -43,7 +43,7 @@ export default function VendorDashboardPage() {
 
   // Customer-role users belong on /.
   useEffect(() => {
-    if (!isVendor) router.replace("/");
+    if (!isVendor) router.replace("/dashboard");
   }, [isVendor, router]);
 
   if (!isVendor) return null;

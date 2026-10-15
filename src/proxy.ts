@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const LANDING = "/";
 const AUTH_PAGES = ["/login", "/signup"];
 
 export async function proxy(request: NextRequest) {
@@ -37,11 +38,12 @@ export async function proxy(request: NextRequest) {
         { status: 401 },
       );
     }
-    if (AUTH_PAGES.includes(pathname)) return response;
+    if (pathname === LANDING || AUTH_PAGES.includes(pathname)) return response;
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (AUTH_PAGES.includes(pathname)) {
+  // Signed-in users skip the landing page and the auth pages.
+  if (pathname === LANDING || AUTH_PAGES.includes(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
   return response;

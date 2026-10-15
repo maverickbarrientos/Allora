@@ -76,7 +76,7 @@ export default function VendorProfilePage() {
   const categories = state.status === "loaded" ? state.data.categories : [];
 
   useEffect(() => {
-    if (!isVendor) router.replace("/");
+    if (!isVendor) router.replace("/dashboard");
   }, [isVendor, router]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {

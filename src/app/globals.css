@@ -144,7 +144,7 @@ body {
   outline-offset: 2px;
 }
 
-/* Paper grain, login and sign-up hero panel only */
+/* Paper grain, login and sign-up hero panel and landing hero only */
 .paper-grain {
   position: relative;
   isolation: isolate;

@@ -14,7 +14,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Supabase Auth with email and password. Sign up, log in, log out.
 - On sign up the user picks a role (customer or vendor). It is saved in a `profiles` table (`id` = auth user id, `role`, `name`).
 - A vendor user is linked to one vendor record.
-- Logged-out visitors are sent to the login page; only the login and sign-up pages are public.
+- Logged-out visitors are sent to the login page; only the landing page (`/`), login and sign-up are public. Signed-in users who open `/` go to their dashboard. The customer events list is at `/events`.
 - Row Level Security on every table, scoped to the signed-in user:
   - Customers read and write only their own events and bookings.
   - Vendors read and update (accept or decline) only bookings addressed to them.

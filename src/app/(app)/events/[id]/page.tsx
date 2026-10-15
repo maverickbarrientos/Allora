@@ -152,7 +152,7 @@ export default function PlanPage() {
 
   const back = (
     <Link
-      href="/"
+      href="/events"
       className="inline-flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
     >
       <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Your events
@@ -184,7 +184,7 @@ export default function PlanPage() {
           <p className="text-muted-foreground">
             This event doesn&apos;t exist, or it isn&apos;t yours.
           </p>
-          <Link href="/" className={buttonVariants({ variant: "outline" })}>
+          <Link href="/events" className={buttonVariants({ variant: "outline" })}>
             Back to your events
           </Link>
         </div>

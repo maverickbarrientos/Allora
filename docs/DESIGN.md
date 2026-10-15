@@ -49,17 +49,18 @@ Hazel, plum, pink and the `.surface-plum` class are removed. There are no color 
 - `prefers-reduced-motion`: no transforms or animations, content shows immediately.
 
 ## Hero and texture
-Paper grain (inline SVG noise, about 5% opacity, via a `.paper-grain` class) on the login and sign-up hero panel only.
+Paper grain (inline SVG noise, about 5% opacity, via a `.paper-grain` class) on the login and sign-up hero panel and the landing page hero only.
 
 ## Screens
 - `/login`, `/signup`: two columns from 1024px. Left hero panel: stone, grain, serif display headline, one `ImagePlaceholder`. Right: the form on ivory. On mobile the hero shrinks to a compact strip with the wordmark and one line, no image. Short, warm copy, no exclamation marks.
-- `/`: `PageHeader` ("Your events"), event cards in a 2-column grid. Each card has an `ImagePlaceholder` by event type, then type, date, budget and guests separated by hairlines.
+- `/` (landing, logged out only): top bar with the wordmark, "Log in" and "Get started". The hero is a stone panel with grain, a label, a serif display headline, a brass hairline (the screen's one brass highlight), one line of copy, the two calls to action and one `ImagePlaceholder`. Then hairline-separated sections: "How it works" (three numbered steps), "Who it is for" (host and vendor cards), event types (Weddings, Birthdays, Corporate, each with an `ImagePlaceholder`), a closing call to action and a footer.
+- `/events`: `PageHeader` ("Your events"), event cards in a 2-column grid. Each card has an `ImagePlaceholder` by event type, then type, date, budget and guests separated by hairlines.
 - `/events/[id]`: `PageHeader` with the event type and date. A stats row (budget, guests) separated by hairlines. Bookings as hairline-separated rows: category label, vendor name in serif, price right-aligned, `StatusBadge`.
 - `/events/[id]/vendors`: category tabs as plain text with a brass underline on the active one, not pills. Vendor cards with `ImagePlaceholder`, name, price and a Book button.
 - All loading, empty, error and 404 states keep their behavior and get the same styling. Prices and budgets are plain numbers with no currency symbol.
 
 ## Out of scope
-Dark theme, a landing page, dependencies, data or API changes, behavior changes.
+Dark theme, dependencies, data or API changes, behavior changes.
 
 ## Accessibility
 Body text at least 4.5:1 on ivory and on stone. Form control borders at least 3:1. Visible focus ring (2px forest, 2px offset; ivory on dark surfaces). Touch targets at least 44px. Works at 375px width.
