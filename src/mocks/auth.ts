@@ -18,6 +18,11 @@ type StoredUser = { id: string; email: string; password: string; name: string; r
 const USERS_KEY = "allora.mock.users";
 const SESSION_KEY = "allora.mock.session"; // holds the signed-in user id
 const LATENCY_MS = 400;
+// Mock vendor logins (see src/mocks/vendor.ts). Any password except wrongpass.
+const VENDOR_LOGINS: Record<string, string> = {
+  "vendor@test.com": "Aurelia Hall",
+  "unlinked@test.com": "Unlinked Vendor",
+};
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const users = (): StoredUser[] => {
@@ -77,8 +82,8 @@ function login(b: Record<string, unknown>) {
     id: crypto.randomUUID(),
     email,
     password,
-    name: email.split("@")[0],
-    role: "customer",
+    name: VENDOR_LOGINS[email] ?? email.split("@")[0],
+    role: email in VENDOR_LOGINS ? "vendor" : "customer",
   };
   if (!known) localStorage.setItem(USERS_KEY, JSON.stringify([...users(), user]));
   localStorage.setItem(SESSION_KEY, user.id);
