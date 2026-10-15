@@ -26,6 +26,13 @@ export const WEIGHTS: Record<string, number> = {
   decoration: 0.13,
   photography: 0.12,
   music: 0.1,
+  // Added services (docs/SPEC-event-services.md, placeholder weights). Not in
+  // any type's default list; a customer adds them to an event.
+  florist: 0.06,
+  cake: 0.05,
+  lighting: 0.06,
+  transport: 0.05,
+  makeup: 0.05,
 };
 
 /** Vendors shown per card. */

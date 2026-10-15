@@ -3,8 +3,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { budgetShare, roundShare, type SetBudgets } from "@/lib/matching/shares";
 import { isMoney } from "@/lib/server/event-input";
+import { CATEGORIES } from "@/lib/vendor-profile";
 
-export const MAX_ENTRIES = 10;
+/** At most one entry per known category. */
+export const MAX_ENTRIES = CATEGORIES.length;
 
 export type ServiceBudget = { category: string; amount: number | null; share: number; booked: number };
 export type BudgetSummary = { eventBudget: number; allocated: number; budgets: ServiceBudget[] };

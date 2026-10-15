@@ -11,6 +11,11 @@ const CAPTIONS: Record<string, string> = {
   photography: "Window light, quiet moment",
   music: "Evening room, warm light",
   decoration: "Table setting, natural light",
+  florist: "Fresh flowers, soft light",
+  cake: "Tiered cake, close up",
+  lighting: "String lights, evening",
+  transport: "Car at the entrance",
+  makeup: "Mirror, warm light",
 };
 const captionFor = (category: string) => CAPTIONS[category] ?? "Table setting, natural light";
 
