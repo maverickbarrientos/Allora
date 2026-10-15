@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api/client";
 import type { EventType, Vendor } from "@/lib/api/types";
@@ -124,7 +124,11 @@ function Browser({
   back: React.ReactNode;
   eventLabel: string;
 }) {
-  const [category, setCategory] = useState<string | null>(null); // null = All
+  // ?category= preselects a tab (from the dashboard); an unknown value falls back to All.
+  const wanted = useSearchParams().get("category");
+  const [category, setCategory] = useState<string | null>(() =>
+    wanted && all.some((v) => v.category === wanted) ? wanted : null,
+  ); // null = All
   const [booked, setBooked] = useState<Set<string>>(new Set(initialBooked));
   // Book opens "Check availability"; the booking is only sent from that dialog.
   const [checking, setChecking] = useState<Vendor | null>(null);

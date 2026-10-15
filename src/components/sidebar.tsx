@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarPlus, ClipboardList, Loader2, Ticket, UserRound, CalendarDays } from "lucide-react";
+import { CalendarPlus, ClipboardList, Loader2, Ticket, UserRound, CalendarDays, LayoutDashboard } from "lucide-react";
 import type { Profile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ type NavItem = {
 // Only pages that exist on main.
 const NAV: Record<Profile["role"], NavItem[]> = {
   customer: [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, prefixes: ["/dashboard"] },
     { href: "/", label: "My events", icon: Ticket, prefixes: ["/events"] },
     { href: "/events/new", label: "New event", icon: CalendarPlus, prefixes: ["/events/new"] },
   ],
