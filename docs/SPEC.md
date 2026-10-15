@@ -31,6 +31,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Book a vendor
 - View the plan with bookings and status (pending, confirmed, declined)
 - See a vendor's availability in a calendar when booking; a vendor can only be booked on an 
+- Dashboard for one selected event: countdown, bookings by status, actions needed, and missing services
 
 **Vendor portal**
 - List of incoming bookings

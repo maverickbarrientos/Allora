@@ -1,11 +1,12 @@
 // Service budgets (docs/SPEC-event-upgrades.md, part B): shapes and validation.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CHECKLISTS, type EventType } from "@/lib/matching/config";
 import { budgetShare, roundShare, type SetBudgets } from "@/lib/matching/shares";
 import { isMoney } from "@/lib/server/event-input";
+import { CATEGORIES } from "@/lib/vendor-profile";
 
-export const MAX_ENTRIES = 10;
+/** At most one entry per known category. */
+export const MAX_ENTRIES = CATEGORIES.length;
 
 export type ServiceBudget = { category: string; amount: number | null; share: number; booked: number };
 export type BudgetSummary = { eventBudget: number; allocated: number; budgets: ServiceBudget[] };
@@ -20,10 +21,10 @@ export function toSetBudgets(rows: readonly { category: string; amount: number |
 type VendorPrice = { price: number | string };
 type BookingRow = { category: string; status: string; vendor: VendorPrice | VendorPrice[] | null };
 
-/** One entry per checklist category, in checklist order. Null if a query fails. */
+/** One entry per service on the event's list, in list order. Null if a query fails. */
 export async function loadBudgetSummary(
   supabase: SupabaseClient,
-  event: { id: string; type: EventType; budget: number },
+  event: { id: string; services: readonly string[]; budget: number },
 ): Promise<BudgetSummary | null> {
   const [budgetsResult, bookingsResult] = await Promise.all([
     supabase.from("event_budgets").select("category, amount").eq("event_id", event.id),
@@ -39,10 +40,10 @@ export async function loadBudgetSummary(
     booked.set(b.category, (booked.get(b.category) ?? 0) + Number(vendor?.price ?? 0));
   }
 
-  const budgets = CHECKLISTS[event.type].map((category) => ({
+  const budgets = event.services.map((category) => ({
     category,
     amount: Object.prototype.hasOwnProperty.call(set, category) ? set[category] : null,
-    share: roundShare(budgetShare(event.type, event.budget, category, set)),
+    share: roundShare(budgetShare(event.services, event.budget, category, set)),
     booked: toCents(booked.get(category) ?? 0),
   }));
   const allocated = toCents(budgets.reduce((sum, b) => sum + (b.amount ?? 0), 0));
@@ -52,7 +53,7 @@ export async function loadBudgetSummary(
 /** Validates the PUT body. Returns the entries, or a message for a 400. */
 export function parseBudgetEntries(
   body: Record<string, unknown> | null,
-  type: EventType,
+  services: readonly string[],
   eventBudget: number,
 ): { entries: BudgetEntry[] } | { error: string } {
   const list = body?.budgets;
@@ -61,7 +62,6 @@ export function parseBudgetEntries(
     return { error: `budgets must have 1 to ${MAX_ENTRIES} entries.` };
   }
 
-  const checklist: readonly string[] = CHECKLISTS[type];
   const seen = new Set<string>();
   const entries: BudgetEntry[] = [];
   for (const raw of list) {
@@ -69,8 +69,8 @@ export function parseBudgetEntries(
       return { error: "Each entry must be an object." };
     }
     const { category, amount } = raw as Record<string, unknown>;
-    if (typeof category !== "string" || !checklist.includes(category)) {
-      return { error: `Category is not in this event's checklist: ${String(category)}.` };
+    if (typeof category !== "string" || !services.includes(category)) {
+      return { error: `Category is not one of this event's services: ${String(category)}.` };
     }
     if (seen.has(category)) return { error: `Duplicate category: ${category}.` };
     seen.add(category);

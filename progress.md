@@ -13,7 +13,12 @@ Booking and planning platform where customers create events, book vendors, and s
 | 5 | Planning chatbot | done | `feature/chatbot-backend`, `feature/chatbot-frontend`, `feature/chatbot-connect` | Knows event and bookings, ordered list of what to book first and last |
 | 5a | Vendor cancellation | done | `feature/cancellation-backend`, `feature/cancellation-frontend`, `feature/cancellation-connect` | Vendor cancels a confirmed booking (reuses declined); "Needs a replacement" notice, refresh, "Declined earlier"; needs the 005 vendor-upgrades rule |
 | 6 | Vendor upgrades | done | `feature/vendor-upgrades-backend`, `feature/vendor-upgrades-frontend`, `feature/vendor-upgrades-connect` | Vendor profile, change a decision, customer name and budget; not merged into `main` yet |
-| 7 | Polish and deploy to Vercel | not started | _tbd_ | Final polish, production deploy |
+| 7 | Mock payments | not started | _tbd_ | Demo deposit after vendor confirms; fake provider, payments table; vendor sees status |
+| 8 | Customer dashboard | not started | _tbd_ | One event at a time with a picker; countdown, bookings by status, actions needed, missing services; needs event upgrades and payments merged |
+| 9 | Polish and deploy to Vercel | not started | _tbd_ | Final polish, production deploy |
+progress.md, "Decisions and changes", dated entry:
+- Customer dashboard added as feature 8. One event at a time with a picker, a Dashboard item in the sidebar, My events stays at /. No AI, no new tables.
+
 
 ## Decisions and changes
 

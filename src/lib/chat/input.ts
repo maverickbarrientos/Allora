@@ -1,4 +1,4 @@
-import { CHECKLISTS, type EventType } from "../matching/config";
+import type { EventType } from "../matching/config";
 import { findGaps } from "../matching/gaps";
 import { budgetShare, roundShare } from "../matching/shares";
 import { HISTORY_FOR_MODEL, type ChatMessage } from "./messages";
@@ -9,7 +9,13 @@ import { REASON_MAX, REPLY_MAX } from "./output";
 // "What the model gets"). Never the event name, notes, ids, emails, the
 // customer's name or payment data.
 
-type EventFacts = { type: EventType; date: string; budget: number; guestCount: number };
+type EventFacts = {
+  type: EventType;
+  date: string;
+  budget: number;
+  guestCount: number;
+  services: readonly string[];
+};
 type BookingFacts = { category: string; vendorName: string; status: string };
 
 export const CHAT_SYSTEM_PROMPT = [
@@ -39,16 +45,16 @@ export function buildChatInput({
   bookings: readonly BookingFacts[];
   messages: readonly ChatMessage[];
 }) {
-  const missing = findGaps(event.type, bookings);
+  const missing = findGaps(event.services, bookings);
   return {
     today,
     daysUntilEvent: daysUntil(today, event.date),
     event: { type: event.type, date: event.date, budget: event.budget, guestCount: event.guestCount },
-    checklist: [...CHECKLISTS[event.type]],
+    checklist: [...event.services],
     bookings: bookings.map((b) => ({ category: b.category, vendorName: b.vendorName, status: b.status })),
     missing: missing.map((category) => ({
       category,
-      budgetShare: roundShare(budgetShare(event.type, event.budget, category)),
+      budgetShare: roundShare(budgetShare(event.services, event.budget, category)),
     })),
     appGuide: APP_GUIDE,
     conversation: messages.slice(-HISTORY_FOR_MODEL).map((m) => ({ role: m.role, content: m.content })),

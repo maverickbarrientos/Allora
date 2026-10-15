@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { UUID_RE, errorResponse, readJson, requireSession } from "@/lib/api-helpers";
-import type { EventType } from "@/lib/matching/config";
 import { loadBudgetSummary, parseBudgetEntries } from "@/lib/server/budgets";
+import { loadEventServices } from "@/lib/server/services";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -11,13 +11,15 @@ type Ctx = { params: Promise<{ id: string }> };
 async function loadEvent(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase
     .from("events")
-    .select("id, type, budget")
+    .select("id, budget")
     .eq("id", id)
     .maybeSingle();
   if (error) return { response: errorResponse(500, "server_error", "Could not load event.") };
   if (!data) return { response: errorResponse(404, "event_not_found", "Event not found.") };
+  const services = await loadEventServices(supabase, id);
+  if (!services) return { response: errorResponse(500, "server_error", "Could not load services.") };
   return {
-    event: { id: data.id as string, type: data.type as EventType, budget: Number(data.budget) },
+    event: { id: data.id as string, services, budget: Number(data.budget) },
   };
 }
 
@@ -53,7 +55,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     const found = await loadEvent(supabase, id);
     if ("response" in found) return found.response;
 
-    const parsed = parseBudgetEntries(await readJson(req), found.event.type, found.event.budget);
+    const parsed = parseBudgetEntries(await readJson(req), found.event.services, found.event.budget);
     if ("error" in parsed) return errorResponse(400, "validation_error", parsed.error);
 
     // One database function call is one transaction: all entries apply or none do.

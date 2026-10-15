@@ -1,9 +1,9 @@
 // Validation for event create and edit (docs/SPEC-event-upgrades.md, "Rules").
 // Unknown fields are ignored, and `owner` is never read from the body.
 
-import { CHECKLISTS, type EventType } from "@/lib/matching/config";
+import { EVENT_TYPES, type EventType } from "@/lib/matching/config";
 
-export const EVENT_TYPES = Object.keys(CHECKLISTS) as EventType[];
+export { EVENT_TYPES };
 
 export const NAME_MAX = 80;
 export const NOTES_MAX = 1000;
@@ -69,7 +69,7 @@ export function parseEventFields(
   }
 
   if (present("type") || required) {
-    if (typeof b.type === "string" && (EVENT_TYPES as string[]).includes(b.type)) {
+    if (typeof b.type === "string" && (EVENT_TYPES as readonly string[]).includes(b.type)) {
       fields.type = b.type as EventType;
     } else invalid.push("type");
   }

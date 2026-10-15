@@ -8,9 +8,10 @@ import { api, ApiError } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
-import type { PlanBooking } from "@/lib/api/types";
+import type { EventService, PlanBooking } from "@/lib/api/types";
 import { PlanningAssistant } from "@/components/chat/planning-assistant";
 import { BudgetSection } from "@/components/budget-section";
+import { ServicesSection } from "@/components/services-section";
 import { ErrorState } from "@/components/error-state";
 import { missingCardId } from "@/components/missing-card";
 import { MissingSection } from "@/components/missing-section";
@@ -30,6 +31,9 @@ export default function PlanPage() {
   // "Budget by service" also loads on its own; if it fails the plan still works.
   const budgets = useLoad(() => api.getBudgets(id));
   const setBudgets = budgets.setState;
+  // "Services" (the event's own list) loads on its own too.
+  const services = useLoad(() => api.getServices(id));
+  const setServices = services.setState;
   const alive = useRef(true);
 
   useEffect(() => {
@@ -73,6 +77,11 @@ export default function PlanPage() {
       api
         .getBudgets(id)
         .then((summary) => alive.current && setBudgets({ status: "loaded", data: summary }))
+        .catch(() => {});
+      // Service statuses follow the bookings too.
+      api
+        .getServices(id)
+        .then((data) => alive.current && setServices({ status: "loaded", data }))
         .catch(() => {});
     } catch {
       if (alive.current) setRefreshFailed(true);
@@ -137,6 +146,20 @@ export default function PlanPage() {
       );
     }
     void refreshPlan({ cards: false, queue: true });
+  }
+
+  // After the service list changes: the gaps and shares change, so the cards
+  // are refetched, and the plan refresh also refreshes budgets and services.
+  function onServicesSaved(data: { services: EventService[] }) {
+    if (!alive.current) return;
+    setServices({ status: "loaded", data });
+    reloadCards();
+    void refreshPlan({ cards: false, queue: true });
+  }
+
+  // A fresh list without a save (after a refused save): only the list changes.
+  function onServicesRefreshed(data: { services: EventService[] }) {
+    if (alive.current) setServices({ status: "loaded", data });
   }
 
   function removeCard(category: string) {
@@ -299,6 +322,14 @@ export default function PlanPage() {
           </ul>
         )}
       </section>
+
+      <ServicesSection
+        eventId={id}
+        state={services.state}
+        onRetry={services.reload}
+        onSaved={onServicesSaved}
+        onRefreshed={onServicesRefreshed}
+      />
 
       <BudgetSection eventId={id} state={budgets.state} onRetry={budgets.reload} />
 

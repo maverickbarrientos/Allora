@@ -17,6 +17,7 @@ import {
   type EventFormValues,
 } from "@/components/event-form";
 import { PageHeader } from "@/components/page-header";
+import { ServicePicker } from "@/components/service-picker";
 import { Reveal } from "@/components/reveal";
 import {
   AlertDialog,
@@ -32,6 +33,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 /** "blank", or the type of the template the form was filled from. */
 type Choice = "blank" | EventType;
+
+// Nothing is booked yet on a new event.
+const NO_LOCKS: ReadonlySet<string> = new Set();
 
 function valuesFromTemplate(t: EventTemplate): EventFormValues {
   return {
@@ -55,6 +59,10 @@ export default function NewEventPage() {
   const [applied, setApplied] = useState<EventFormValues>(EMPTY_EVENT_FORM);
   const [values, setValues] = useState<EventFormValues>(EMPTY_EVENT_FORM);
   const [pendingChoice, setPendingChoice] = useState<Choice | null>(null);
+  // null until the customer changes the picker; until then it follows the type.
+  const [customServices, setCustomServices] = useState<string[] | null>(null);
+  const [servicesError, setServicesError] = useState<string | null>(null);
+  const categories = useLoad(() => api.listCategories());
   const [errors, setErrors] = useState<EventFormErrors>({});
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
@@ -75,6 +83,11 @@ export default function NewEventPage() {
   }, [templates.state, router]);
 
   const templateList = templates.state.status === "loaded" ? templates.state.data.templates : [];
+  // The chosen type's template list, until the customer changes it. Empty
+  // when the templates didn't load: then nothing can be prefilled.
+  const typeTemplate = templateList.find((t) => t.type === values.type);
+  const services = customServices ?? [...(typeTemplate?.services ?? [])];
+
   const labelFor = (c: Choice) =>
     c === "blank" ? "Start blank" : (templateList.find((t) => t.type === c)?.label ?? c);
 
@@ -98,12 +111,14 @@ export default function NewEventPage() {
     if (inFlight.current) return;
     const { errors: next, input } = validateEventForm(values);
     setErrors(next);
-    if (!input) return;
+    const noServices = services.length === 0;
+    setServicesError(noServices ? "Choose at least one service" : null);
+    if (!input || noServices) return;
 
     inFlight.current = true;
     setSaving(true);
     try {
-      const { event } = await api.createEvent(input);
+      const { event } = await api.createEvent({ ...input, services });
       if (alive.current) router.push(`/events/${event.id}`);
     } catch (err) {
       if (!alive.current) return;
@@ -177,6 +192,52 @@ export default function NewEventPage() {
     </fieldset>
   );
 
+  const servicesField = (
+    <div className="flex flex-col gap-2">
+      <p className="label" aria-hidden="true">
+        Services
+      </p>
+      <p className="text-sm text-muted-foreground">
+        {customServices
+          ? "Your choice of services stays as it is when you change the type."
+          : typeTemplate
+            ? "The usual services for this type are ticked. Add or remove any before you create the event."
+            : values.type
+              ? "Pick the services you need."
+              : "Choose a type to see its usual services, or pick your own."}
+      </p>
+      {categories.state.status === "loaded" ? (
+        <ServicePicker
+          categories={categories.state.data.categories}
+          selected={services}
+          locked={NO_LOCKS}
+          disabled={saving}
+          error={servicesError}
+          onChange={(next) => {
+            setCustomServices(next);
+            if (next.length > 0) setServicesError(null);
+          }}
+        />
+      ) : categories.state.status === "error" ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p role="status" className="text-sm text-muted-foreground">
+            Couldn&apos;t load services.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={categories.reload}>
+            Retry
+          </Button>
+        </div>
+      ) : (
+        <Skeleton role="status" aria-label="Loading services" className="h-24" />
+      )}
+      {servicesError && categories.state.status !== "loaded" && (
+        <p role="alert" className="text-sm text-destructive">
+          {servicesError}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex max-w-xl flex-col gap-10">
       <Link
@@ -200,6 +261,7 @@ export default function NewEventPage() {
           submitLabel="Create event"
           savingLabel="Creating"
           onSubmit={() => void submit()}
+          afterType={servicesField}
         />
       </Reveal>
 
@@ -212,6 +274,7 @@ export default function NewEventPage() {
                 {pendingChoice === "blank"
                   ? "Starting blank clears every field, including your changes."
                   : `The ${labelFor(pendingChoice)} template fills every field with its suggestions and replaces your changes.`}
+                {customServices && " Your choice of services stays as you set it."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
