@@ -4,8 +4,9 @@ import { errorResponse, loadProfile } from "@/lib/api-helpers";
 export type VendorBooking = {
   id: string;
   category: string;
-  status: "pending" | "confirmed" | "declined" | "cancel_requested" | "cancelled";
+  status: "pending" | "confirmed" | "declined" | "cancelled";
   createdAt: string;
+  cancelRequestedAt: string | null;
   customerName: string;
   event: {
     type: "wedding" | "birthday" | "corporate";
@@ -20,6 +21,7 @@ export type VendorBookingRow = {
   category: string;
   status: VendorBooking["status"];
   created_at: string;
+  cancel_requested_at: string | null;
   event_type: VendorBooking["event"]["type"];
   event_date: string;
   guest_count: number;
@@ -35,6 +37,7 @@ export function toVendorBooking(r: VendorBookingRow): VendorBooking {
     category: r.category,
     status: r.status,
     createdAt: r.created_at,
+    cancelRequestedAt: r.cancel_requested_at ?? null,
     customerName: r.customer_name,
     event: {
       type: r.event_type,

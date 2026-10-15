@@ -1,14 +1,14 @@
 // Maps DB rows (snake_case) to the API shapes in docs/SPEC-events-booking.md.
 
 export type EventType = "wedding" | "birthday" | "corporate";
-export type BookingStatus = "pending" | "confirmed" | "declined" | "cancel_requested" | "cancelled";
+export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
 
 export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes";
 export const VENDOR_COLUMNS = "id, name, category, price, location";
 /** A vendor with its profile text (docs/SPEC-vendor-profiles.md) and terms (docs/SPEC-booking-documents.md). */
 export const VENDOR_DETAIL_COLUMNS = "id, name, category, price, about, location, terms";
 export const PLAN_BOOKING_COLUMNS =
-  "id, event_id, vendor_id, category, status, created_at, vendor:vendors(name, price)";
+  "id, event_id, vendor_id, category, status, created_at, cancel_requested_at, vendor:vendors(name, price)";
 
 type EventRow = {
   id: string;
@@ -34,6 +34,7 @@ type PlanBookingRow = {
   category: string;
   status: string;
   created_at: string;
+  cancel_requested_at: string | null;
   // A single object at runtime; typed loosely because there are no generated DB types.
   vendor: VendorJoin | VendorJoin[] | null;
 };
@@ -76,5 +77,6 @@ export function toPlanBooking(row: PlanBookingRow) {
     price: Number(vendor?.price ?? 0),
     status: row.status as BookingStatus,
     createdAt: row.created_at,
+    cancelRequestedAt: row.cancel_requested_at ?? null,
   };
 }

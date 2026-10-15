@@ -60,10 +60,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
 
     const bookingCounts = { pending: 0, confirmed: 0, declined: 0 };
-    // A cancel request is still waiting on the vendor; a cancelled booking counts as declined.
-    for (const b of bookings) {
-      bookingCounts[b.status === "cancelled" ? "declined" : b.status === "cancel_requested" ? "pending" : b.status] += 1;
-    }
+    // A cancelled booking counts as declined.
+    for (const b of bookings) bookingCounts[b.status === "cancelled" ? "declined" : b.status] += 1;
 
     const gaps = findGaps(services, bookings);
     const gapSet = new Set(gaps);

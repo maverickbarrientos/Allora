@@ -1,28 +1,39 @@
 -- 029_customer_cancel: a customer asks to cancel a booking; the vendor approves
--- or rejects (docs/SPEC-customer-cancel.md). Safe to run more than once.
+-- or keeps it (docs/SPEC-customer-cancel.md). Safe to run more than once.
 -- Run after 028. Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 --
--- New booking statuses:
---   cancel_requested  still ACTIVE (holds its category and its vendor/event pair)
---   cancelled         INACTIVE, like declined, but tells a customer cancel apart
--- Customer: pending|confirmed -> cancel_requested, only through the function below.
--- Vendor:   cancel_requested -> cancelled (approve) or confirmed (reject).
--- Shortcut: the date and contact rules (014, 016, 020, 021, 023) look at
--- status = 'confirmed' only, so while a request is open the date and the
--- contact details are treated as free. Upgrade if that matters.
+-- A request is a flag, not a status: bookings.cancel_requested_at. The booking
+-- stays pending or confirmed while the vendor decides, so every existing rule
+-- (date, contact details, event date lock, budget, one active booking per
+-- vendor and event) keeps treating it as the booking it is.
+--   Customer: request_booking_cancellation() sets the flag (pending or confirmed only).
+--   Vendor:   approve = status cancelled (the 005 policy, widened below);
+--             keep    = keep_booking() clears the flag; the status is untouched.
+-- Approving refunds a paid deposit (section 4). cancelled is inactive like
+-- declined, so its service becomes a gap again.
 
--- 1. Statuses ---------------------------------------------------------
+-- 1. Column and statuses ---------------------------------------------------
+
+alter table public.bookings add column if not exists cancel_requested_at timestamptz;
+
+-- An earlier version of this file used a cancel_requested status. Fold any
+-- such rows into the flag before the constraint stops allowing it.
+update public.bookings
+   set status = 'confirmed', cancel_requested_at = coalesce(cancel_requested_at, now())
+ where status = 'cancel_requested';
 
 alter table public.bookings drop constraint if exists bookings_status_check;
 alter table public.bookings add constraint bookings_status_check
-  check (status in ('pending', 'confirmed', 'declined', 'cancel_requested', 'cancelled'));
+  check (status in ('pending', 'confirmed', 'declined', 'cancelled'));
 
 drop index if exists public.bookings_event_vendor_active_uniq;
 create unique index bookings_event_vendor_active_uniq
   on public.bookings (event_id, vendor_id)
-  where status in ('pending', 'confirmed', 'cancel_requested');
+  where status in ('pending', 'confirmed');
 
--- 2. Vendor policy: may also set cancelled ---------------------------------
+-- 2. Vendor policy: may also set cancelled -----------------------------------
+-- Column grants stay as in 005: status is the only column a signed-in user can
+-- update. The flag changes only through the two functions below.
 
 drop policy if exists "bookings: vendor decides" on public.bookings;
 create policy "bookings: vendor decides"
@@ -36,35 +47,115 @@ create policy "bookings: vendor decides"
     and vendor_id in (select v.id from public.vendors v where v.owner = (select auth.uid()))
   );
 
--- 3. Customer request ------------------------------------------------------
--- The customer has no UPDATE right on bookings; this is the only way in.
--- Returns the new status, or null when the booking is not theirs or is not
--- pending/confirmed (the API reads null as 404 or 409 using a second read).
+-- 3. The request, the answer ---------------------------------------------------
 
-create or replace function public.request_booking_cancellation(p_booking uuid)
-returns text
+-- Returns the time of the request, or null when the booking is not the caller's,
+-- is not pending or confirmed, or already has a request open.
+-- The old function returned text, so it is dropped first.
+drop function if exists public.request_booking_cancellation(uuid);
+create function public.request_booking_cancellation(p_booking uuid)
+returns timestamptz
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  v_status text;
+  v_at timestamptz;
 begin
   update public.bookings b
-     set status = 'cancel_requested'
+     set cancel_requested_at = now()
    where b.id = p_booking
      and b.status in ('pending', 'confirmed')
+     and b.cancel_requested_at is null
      and exists (
        select 1 from public.events e
        where e.id = b.event_id and e.owner = (select auth.uid())
      )
-  returning b.status into v_status;
-  return v_status;
+  returning b.cancel_requested_at into v_at;
+  return v_at;
 end;
 $$;
 
 revoke execute on function public.request_booking_cancellation(uuid) from public, anon;
 grant execute on function public.request_booking_cancellation(uuid) to authenticated;
+
+-- The vendor keeps the booking: clears the request. Returns true if there was
+-- one. Only the booking's own vendor can do it.
+create or replace function public.keep_booking(p_booking uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  update public.bookings b
+     set cancel_requested_at = null
+   where b.id = p_booking
+     and b.cancel_requested_at is not null
+     and b.status in ('pending', 'confirmed')
+     and b.vendor_id in (select v.id from public.vendors v where v.owner = (select auth.uid()))
+  returning b.id into v_id;
+  return v_id is not null;
+end;
+$$;
+
+revoke execute on function public.keep_booking(uuid) from public, anon;
+grant execute on function public.keep_booking(uuid) to authenticated;
+
+-- A request is answered when the status changes: accepting or declining a
+-- pending booking clears it; approving (cancelled) keeps it as the record.
+create or replace function public.bookings_clear_cancel_request()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.status is distinct from old.status and new.status <> 'cancelled' then
+    new.cancel_requested_at := null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists bookings_clear_cancel_request on public.bookings;
+create trigger bookings_clear_cancel_request
+  before update of status on public.bookings
+  for each row execute function public.bookings_clear_cancel_request();
+
+-- The vendor's list (005) also returns the flag. Return type changes, so drop first.
+drop function if exists public.vendor_incoming_bookings();
+create function public.vendor_incoming_bookings()
+returns table (
+  id uuid,
+  category text,
+  status text,
+  created_at timestamptz,
+  event_type text,
+  event_date date,
+  guest_count integer,
+  event_budget numeric,
+  customer_name text,
+  cancel_requested_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select b.id, b.category, b.status, b.created_at,
+         e.type, e.date, e.guest_count, e.budget, coalesce(p.name, ''),
+         b.cancel_requested_at
+  from public.bookings b
+  join public.vendors v on v.id = b.vendor_id
+  join public.events e on e.id = b.event_id
+  left join public.profiles p on p.id = e.owner
+  where v.owner = (select auth.uid())
+$$;
+
+revoke execute on function public.vendor_incoming_bookings() from public, anon;
+grant execute on function public.vendor_incoming_bookings() to authenticated;
 
 -- 4. Refund when cancelled (008) ---------------------------------------------
 
@@ -87,7 +178,9 @@ $$;
 
 revoke execute on function public.refund_payment_on_decline() from public, anon, authenticated;
 
--- 5. cancel_requested counts as active in the existing rules ---------------------
+-- 5. Restore the rules an earlier version of this file widened ---------------------
+-- (it made cancel_requested a status). They are back to their 005 / 012 / 024 / 025
+-- bodies, which already treat only pending and confirmed as active. Safe on a fresh database too.
 
 -- 005: vendor category lock.
 create or replace function public.vendors_category_lock()
@@ -101,7 +194,7 @@ begin
      and exists (
        select 1 from public.bookings b
        where b.vendor_id = old.id
-         and b.status in ('pending', 'confirmed', 'cancel_requested')
+         and b.status in ('pending', 'confirmed')
      ) then
     raise exception 'category_locked'
       using errcode = 'P0001',
@@ -127,7 +220,7 @@ begin
     select 1 from public.bookings b
     where b.event_id = old.event_id
       and b.category = old.category
-      and b.status in ('pending', 'confirmed', 'cancel_requested')
+      and b.status in ('pending', 'confirmed')
   ) then
     raise exception 'service_has_active_booking' using detail = old.category;
   end if;
@@ -163,7 +256,7 @@ begin
       select 1 from public.bookings b
       where b.event_id = s.event_id
         and b.category = s.category
-        and b.status in ('pending', 'confirmed', 'cancel_requested')
+        and b.status in ('pending', 'confirmed')
     );
   if v_blocked is not null then
     raise exception 'service_has_active_booking' using detail = v_blocked;
@@ -197,7 +290,7 @@ begin
 
   perform 1 from public.bookings b
   where b.event_id = new.event_id and b.vendor_id = new.vendor_id
-    and b.status in ('pending', 'confirmed', 'cancel_requested')
+    and b.status in ('pending', 'confirmed')
   for update;
   if found then
     return new;
@@ -224,7 +317,7 @@ declare
 begin
   perform 1 from public.bookings b
   where b.event_id = new.event_id and b.vendor_id = new.vendor_id
-    and b.id <> new.id and b.status in ('pending', 'confirmed', 'cancel_requested')
+    and b.id <> new.id and b.status in ('pending', 'confirmed')
   for update;
   if found then
     return new;
@@ -263,6 +356,6 @@ as $$
     join public.events e on e.owner = c.customer_id
     join public.bookings b on b.event_id = e.id and b.vendor_id = c.vendor_id
     where c.id = p_conversation_id
-      and b.status in ('pending', 'confirmed', 'cancel_requested')
+      and b.status in ('pending', 'confirmed')
   )
 $$;

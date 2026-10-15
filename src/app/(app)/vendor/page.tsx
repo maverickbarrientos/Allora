@@ -167,7 +167,7 @@ function calendarFromBookings(bookings: VendorBooking[], month: YearMonth): Vend
     to,
     blocked: [],
     bookings: bookings.flatMap((b) =>
-      b.status === "declined" || b.status === "cancelled" ? [] : [{ bookingId: b.id, date: b.event.date, status: b.status === "cancel_requested" ? "pending" as const : b.status, eventType: b.event.type, customerName: b.customerName }],
+      b.status === "declined" || b.status === "cancelled" ? [] : [{ bookingId: b.id, date: b.event.date, status: b.status, eventType: b.event.type, customerName: b.customerName }],
     ),
   };
 }
