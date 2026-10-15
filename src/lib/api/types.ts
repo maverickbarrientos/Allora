@@ -65,6 +65,19 @@ export type VendorProfileInput = {
   email?: string | null;
   website?: string | null;
 };
+// Messages between a customer and a vendor (docs/SPEC-messages.md).
+export type Message = { id: string; body: string; createdAt: string; mine: boolean };
+export type ConversationDetail = {
+  id: string;
+  otherName: string;
+  category: string;
+  /** False when the pair has no pending or confirmed booking left: read-only. */
+  open: boolean;
+  /** Oldest first. */
+  messages: Message[];
+  hasMore: boolean;
+};
+export type BookingConversation = { conversationId: string; unread: number };
 export type PlanBooking = {
   id: string;
   eventId: string;

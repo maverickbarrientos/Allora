@@ -46,7 +46,7 @@ SQL `018_messages.sql`, safe to re-run.
 ## API
 Every route requires a session; logged-out requests get 401. Both roles use the same routes. "Not yours", unknown and malformed ids all give 404 `conversation_not_found`.
 - `GET /api/conversations`: 200 `{ conversations: ConversationSummary[] }`, newest activity first.
-- `GET /api/conversations/:id/messages?before=<ISO time>`: 200 `ConversationDetail` with the latest 50 messages before `before` (or the latest 50), oldest first. `hasMore` says whether older ones exist.
+- `GET /api/conversations/:id/messages?before=<message id>`: 200 `ConversationDetail` with the 50 messages before that message (by time, then id, so messages sent in the same instant are never skipped), or the latest 50, oldest first. `hasMore` says whether older ones exist.
 - `POST /api/conversations/:id/messages`, body `{ body }`:
   - 201 `{ message: Message }`
   - 400 `validation_error` for empty, too long or not text

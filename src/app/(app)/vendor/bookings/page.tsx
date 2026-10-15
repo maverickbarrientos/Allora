@@ -11,6 +11,7 @@ import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { MessageLink } from "@/components/message-link";
 import { VendorPaymentBadge } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
@@ -52,6 +53,10 @@ export default function VendorBookingsPage() {
 function VendorBookings() {
   const router = useRouter();
   const { state, setState, reload } = useLoad(() => api.listVendorBookings());
+  // Message links; the list works without them if this fails.
+  const conversations = useLoad(() => api.getBookingConversations());
+  const conversationOf = (bookingId: string) =>
+    conversations.state.status === "loaded" ? conversations.state.data.bookings[bookingId] : undefined;
   const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
@@ -252,6 +257,7 @@ function VendorBookings() {
                       <Reveal delay={Math.min(s * 3 + i, 3) * 80}>
                         <BookingRow
                           booking={b}
+                          messageHref={conversationOf(b.id) && `/vendor/messages/${conversationOf(b.id)!.conversationId}`}
                           busy={busy.has(b.id)}
                           onDecide={(st) => setPendingDecision({ booking: b, status: st })}
                           onCancel={() => {
@@ -333,11 +339,14 @@ const cancelButtonId = (bookingId: string) => `cancel-${bookingId}`;
 
 function BookingRow({
   booking,
+  messageHref,
   busy,
   onDecide,
   onCancel,
 }: {
   booking: VendorBooking;
+  /** The conversation with this customer, once it has loaded. */
+  messageHref?: string;
   busy: boolean;
   onDecide: (status: "confirmed" | "declined") => void;
   onCancel: () => void;
@@ -373,18 +382,21 @@ function BookingRow({
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Accept
           </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} />}
         </div>
       ) : booking.status === "confirmed" ? (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button id={cancelButtonId(booking.id)} variant="outline" size="sm" disabled={busy} onClick={onCancel}>
             Cancel booking
           </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} />}
         </div>
       ) : (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
             Accept instead
           </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} />}
         </div>
       )}
     </div>
