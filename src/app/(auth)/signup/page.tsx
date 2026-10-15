@@ -69,7 +69,7 @@ export default function SignupPage() {
         headline="Begin with a plan that feels like yours."
         line="Create an account to plan events or welcome bookings."
       />
-      <section className="flex items-center px-4 py-14 sm:px-6 lg:p-16">
+      <section className="flex items-center px-4 py-10 sm:px-6 lg:p-16">
         <div className="mx-auto flex w-full max-w-md flex-col gap-10">
           <PageHeader
             label="Join Allora"

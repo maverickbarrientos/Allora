@@ -10,3 +10,11 @@ export const formatDate = (iso: string) =>
   });
 
 export const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** "YYYY-MM-DD" to e.g. "Feb 14, 2027" (compact cards). */
+export const formatDateShort = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });

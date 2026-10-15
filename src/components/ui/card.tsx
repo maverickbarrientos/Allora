@@ -7,7 +7,7 @@ export function Card({ className, ...props }: DivProps) {
   return (
     <div
       className={cn(
-        "surface-plum rounded-[var(--radius)] border border-pink/50 bg-card text-card-foreground shadow-soft",
+        "surface-plum card-surface text-card-foreground",
         className,
       )}
       {...props}
@@ -16,7 +16,7 @@ export function Card({ className, ...props }: DivProps) {
 }
 
 export function CardHeader({ className, ...props }: DivProps) {
-  return <div className={cn("flex flex-col gap-1.5 p-7", className)} {...props} />;
+  return <div className={cn("flex flex-col gap-1.5 p-[1.125rem]", className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: DivProps) {
@@ -30,11 +30,11 @@ export function CardDescription({ className, ...props }: DivProps) {
 }
 
 export function CardContent({ className, ...props }: DivProps) {
-  return <div className={cn("p-7 pt-0", className)} {...props} />;
+  return <div className={cn("p-[1.125rem] pt-0", className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: DivProps) {
   return (
-    <div className={cn("flex items-center p-7 pt-0", className)} {...props} />
+    <div className={cn("flex items-center p-[1.125rem] pt-0", className)} {...props} />
   );
 }

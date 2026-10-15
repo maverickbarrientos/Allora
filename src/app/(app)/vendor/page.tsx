@@ -96,9 +96,9 @@ function VendorBookings() {
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-12 w-2/3 max-w-sm" />
         </div>
-        <Skeleton className="h-16" />
-        <Skeleton className="h-16" />
-        <Skeleton className="h-16" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
       </div>
     );
   }
@@ -126,7 +126,7 @@ function VendorBookings() {
   const { vendor, bookings } = state.data;
 
   return (
-    <div className="flex flex-col gap-14 lg:gap-24">
+    <div className="flex flex-col gap-10 lg:gap-16">
       <PageHeader
         label={capitalize(vendor.category)}
         title={vendor.name}
@@ -212,17 +212,20 @@ function BookingRow({
 }) {
   const { event } = booking;
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3 py-5 lg:grid-cols-[8rem_1fr_auto_auto]">
-      <span className="label col-span-2 lg:col-span-1">{booking.category}</span>
-      <div className="flex flex-col">
-        <span className="font-display text-h2">{capitalize(event.type)}</span>
-        <span className="text-sm text-muted-foreground">
-          {formatDate(event.date)} &middot; {formatNumber(event.guestCount)} guests
-        </span>
+    <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      {/* line 1: event type and status. line 2: category, date, guests. */}
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="font-display text-xl">{capitalize(event.type)}</span>
+          <StatusBadge status={booking.status} />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          <span className="label">{booking.category}</span> &middot; {formatDate(event.date)} &middot;{" "}
+          {formatNumber(event.guestCount)} guests
+        </p>
       </div>
-      <StatusBadge status={booking.status} />
       {booking.status === "pending" && (
-        <div className="col-span-2 flex gap-3 lg:col-span-1">
+        <div className="flex shrink-0 gap-3">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
             Decline
           </Button>

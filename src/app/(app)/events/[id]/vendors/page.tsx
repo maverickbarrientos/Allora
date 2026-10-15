@@ -3,29 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
-import type { Vendor } from "@/lib/api/types";
-import { capitalize, formatNumber } from "@/lib/format";
+import type { EventType, Vendor } from "@/lib/api/types";
 import { useLoad } from "@/lib/use-load";
 import { ErrorState } from "@/components/error-state";
-import { ImagePlaceholder } from "@/components/image-placeholder";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { CategoryTabs, TABPANEL_ID, tabId } from "./category-tabs";
+import { VendorCard, VendorCardSkeleton } from "./vendor-card";
 
-const CAPTIONS: Record<string, string> = {
-  venue: "Venue interior, morning light",
-  catering: "Long table, candlelight",
-  photography: "Window light, quiet moment",
-  music: "Evening room, warm light",
-  decoration: "Table setting, natural light",
-};
-const captionFor = (category: string) => CAPTIONS[category] ?? "Table setting, natural light";
+const GRID = "grid gap-3.5 min-[640px]:grid-cols-2 min-[1024px]:grid-cols-3";
 
 /** Initial data: all vendors (for the tabs) and the plan (for what is already booked). */
 async function loadPage(eventId: string) {
@@ -39,6 +30,16 @@ async function loadPage(eventId: string) {
   return { all: vendors, event, booked };
 }
 
+function SkeletonGrid() {
+  return (
+    <div role="status" aria-label="Loading vendors" className={GRID}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <VendorCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
 export default function VendorsPage() {
   const { id } = useParams<{ id: string }>();
   const { state, reload } = useLoad(() => loadPage(id));
@@ -46,7 +47,7 @@ export default function VendorsPage() {
   const back = (
     <Link
       href={`/events/${id}`}
-      className="inline-flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      className="inline-flex min-h-11 w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
     >
       <ArrowLeft className="h-4 w-4" strokeWidth={1.5} /> Back to plan
     </Link>
@@ -54,17 +55,13 @@ export default function VendorsPage() {
 
   if (state.status === "loading") {
     return (
-      <div role="status" aria-label="Loading" className="flex flex-col gap-10">
+      <div className="flex flex-col gap-10">
         {back}
         <div className="flex flex-col gap-4">
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-12 w-2/3 max-w-sm" />
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-80" />
-          <Skeleton className="hidden h-80 sm:block" />
-          <Skeleton className="hidden h-80 lg:block" />
-        </div>
+        <SkeletonGrid />
       </div>
     );
   }
@@ -99,6 +96,7 @@ export default function VendorsPage() {
   return (
     <Browser
       eventId={id}
+      eventType={state.data.event.type}
       all={state.data.all}
       initialBooked={state.data.booked}
       back={back}
@@ -108,11 +106,13 @@ export default function VendorsPage() {
 
 function Browser({
   eventId,
+  eventType,
   all,
   initialBooked,
   back,
 }: {
   eventId: string;
+  eventType: EventType;
   all: Vendor[];
   initialBooked: string[];
   back: React.ReactNode;
@@ -150,46 +150,31 @@ function Browser({
   }
 
   return (
-    <div className="flex flex-col gap-14 lg:gap-24">
+    <div className="flex flex-col gap-10 lg:gap-16">
       {back}
       <PageHeader
         label="Vendors"
         title="Add vendor"
-        description="Booking sends a request. It shows as pending on your plan until the vendor responds."
+        description={`Book the services for your ${eventType}.`}
       />
 
-      <div role="tablist" aria-label="Category" className="-mx-4 flex gap-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        {[null, ...categories].map((c) => {
-          const active = c === category;
-          return (
-            <button
-              key={c ?? "all"}
-              role="tab"
-              aria-selected={active}
-              onClick={() => setCategory(c)}
-              className={cn(
-                "min-h-11 whitespace-nowrap border-b-2 px-1 text-sm transition-colors",
-                active
-                  ? "border-brass font-medium text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {c ? capitalize(c) : "All"}
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-5">
+        <CategoryTabs categories={categories} active={category} onChange={setCategory} />
+
+        {bookError && <Alert variant="destructive">{bookError}</Alert>}
+
+        <div id={TABPANEL_ID} role="tabpanel" aria-labelledby={tabId(category)}>
+          {/* key remounts the list so it shows its loading state and fades up on each tab change */}
+          <VendorList
+            key={category ?? "all"}
+            category={category}
+            booked={booked}
+            booking={booking}
+            onBook={book}
+            onShowAll={() => setCategory(null)}
+          />
+        </div>
       </div>
-
-      {bookError && <Alert variant="destructive">{bookError}</Alert>}
-
-      {/* key remounts the list so it shows its loading state on each tab change */}
-      <VendorList
-        key={category ?? "all"}
-        category={category}
-        booked={booked}
-        booking={booking}
-        onBook={book}
-      />
     </div>
   );
 }
@@ -199,23 +184,17 @@ function VendorList({
   booked,
   booking,
   onBook,
+  onShowAll,
 }: {
   category: string | null;
   booked: Set<string>;
   booking: Set<string>;
   onBook: (vendorId: string) => void;
+  onShowAll: () => void;
 }) {
   const { state, reload } = useLoad(() => api.listVendors(category ?? undefined));
 
-  if (state.status === "loading") {
-    return (
-      <div role="status" aria-label="Loading" className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Skeleton className="h-80" />
-        <Skeleton className="hidden h-80 sm:block" />
-        <Skeleton className="hidden h-80 lg:block" />
-      </div>
-    );
-  }
+  if (state.status === "loading") return <SkeletonGrid />;
   if (state.status === "error") {
     return (
       <ErrorState
@@ -227,37 +206,29 @@ function VendorList({
   }
   if (state.data.vendors.length === 0) {
     return (
-      <p className="text-muted-foreground">No vendors in this category yet.</p>
+      <div className="flex flex-col items-center gap-4 py-10 text-center">
+        <p className="font-display text-h2">No vendors in this category yet</p>
+        {category !== null && (
+          <Button variant="outline" onClick={onShowAll}>
+            Show all vendors
+          </Button>
+        )}
+      </div>
     );
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {state.data.vendors.map((v, i) => {
-        const isBooked = booked.has(v.id);
-        const isBooking = booking.has(v.id);
-        return (
-          <Reveal key={v.id} delay={Math.min(i, 3) * 80}>
-            <Card className="flex h-full flex-col gap-5 p-7">
-              <ImagePlaceholder caption={captionFor(v.category)} aspect="4 / 3" />
-              <div className="flex flex-1 flex-col gap-1">
-                <p className="label">{v.category}</p>
-                <h2 className="font-display text-h2">{v.name}</h2>
-                <p className="text-muted-foreground">{formatNumber(v.price)}</p>
-              </div>
-              <Button
-                variant={isBooked ? "outline" : "default"}
-                disabled={isBooked || isBooking}
-                onClick={() => onBook(v.id)}
-                aria-label={isBooked ? `${v.name}, booked` : `Book ${v.name}`}
-              >
-                {isBooking && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isBooked ? "Booked" : isBooking ? "Booking" : "Book"}
-              </Button>
-            </Card>
-          </Reveal>
-        );
-      })}
+    <div className={GRID}>
+      {state.data.vendors.map((v, i) => (
+        <Reveal key={v.id} delay={Math.min(i, 5) * 60} className="min-w-0">
+          <VendorCard
+            vendor={v}
+            booked={booked.has(v.id)}
+            booking={booking.has(v.id)}
+            onBook={() => onBook(v.id)}
+          />
+        </Reveal>
+      ))}
     </div>
   );
 }

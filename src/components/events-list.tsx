@@ -22,17 +22,18 @@ export function EventsList() {
   const { state, reload } = useLoad(() => api.listEvents());
 
   return (
-    <div className="flex flex-col gap-14 lg:gap-24">
+    <div className="flex flex-col gap-10 lg:gap-16">
       <PageHeader label="Plans" title="Your events" action={createButton} />
 
       {state.status === "loading" && (
         <div
           role="status"
           aria-label="Loading"
-          className="grid gap-6 sm:grid-cols-2"
+          className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3"
         >
-          <Skeleton className="h-96" />
-          <Skeleton className="hidden h-96 sm:block" />
+          <EventCardSkeleton />
+          <EventCardSkeleton className="hidden sm:flex" />
+          <EventCardSkeleton className="hidden xl:flex" />
         </div>
       )}
 
@@ -57,7 +58,7 @@ export function EventsList() {
       )}
 
       {state.status === "loaded" && state.data.events.length > 0 && (
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
           {state.data.events.map((event, i) => (
             <Reveal key={event.id} delay={Math.min(i, 3) * 80}>
               <EventCard event={event} />
@@ -65,6 +66,20 @@ export function EventsList() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function EventCardSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={`surface-plum flex flex-col gap-2 ${className ?? ""}`}>
+      <Skeleton className="aspect-[16/9] w-full" />
+      <Skeleton className="h-7 w-2/5" />
+      <div className="grid grid-cols-[1.4fr_1fr_0.8fr] gap-2 border-t border-border pt-2">
+        <Skeleton className="h-8" />
+        <Skeleton className="h-8" />
+        <Skeleton className="h-8" />
+      </div>
     </div>
   );
 }

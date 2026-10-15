@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </>
         )}
       </AppHeader>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-14 sm:px-6 lg:py-24">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 lg:py-16">
         {state.status === "loading" && (
           <div role="status" aria-label="Loading" className="flex flex-col gap-4">
             <Skeleton className="h-4 w-28" />

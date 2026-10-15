@@ -58,7 +58,7 @@ export default function LoginPage() {
         headline="Your event, thoughtfully planned."
         line="Plan your event and book the people who make it."
       />
-      <section className="flex items-center px-4 py-14 sm:px-6 lg:p-16">
+      <section className="flex items-center px-4 py-10 sm:px-6 lg:p-16">
         <div className="mx-auto flex w-full max-w-md flex-col gap-10">
           <PageHeader
             label="Welcome back"
