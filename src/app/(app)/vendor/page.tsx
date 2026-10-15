@@ -295,6 +295,7 @@ function VendorBookings() {
               <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
               <AlertDialogDescription>
                 The customer will be asked to find a replacement.
+                {cancelTarget.payment?.status === "paid" && " The customer's deposit will be refunded."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             {cancelError && (
