@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api, toApiError, type ApiError } from "@/lib/api/client";
 import type { VendorCalendar } from "@/lib/api/types";
 import { capitalize } from "@/lib/format";
-import { longDate, monthKey, monthOf, monthRange, todayYmd, type YearMonth, type Ymd } from "@/lib/dates";
+import { longDate, monthKey, monthOf, monthRange, parseMonthKey, todayYmd, type YearMonth, type Ymd } from "@/lib/dates";
+import { calendarDays } from "@/lib/vendor-calendar";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
-import { MonthGrid, type DayInfo } from "@/components/month-grid";
+import { MonthGrid, MonthGridLegend } from "@/components/month-grid";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
  * Vendor calendar (docs/SPEC-availability.md), read-only: confirmed and
  * pending bookings by event date, plus any blocked dates the API returns.
  * Blocking and unblocking are not offered: those endpoints aren't on main.
+ * An optional `?month=YYYY-MM` opens that month (the dashboard links here).
  */
 export default function VendorCalendarPage() {
   const router = useRouter();
@@ -28,15 +30,22 @@ export default function VendorCalendarPage() {
     if (!isVendor) router.replace("/");
   }, [isVendor, router]);
 
-  return isVendor ? <Calendar /> : null;
+  return isVendor ? (
+    <Suspense fallback={null}>
+      <Calendar />
+    </Suspense>
+  ) : null;
 }
 
 type Load = { status: "loading" } | { status: "loaded"; data: VendorCalendar } | { status: "error"; error: ApiError };
 
 function Calendar() {
   const router = useRouter();
-  const [month, setMonth] = useState<YearMonth>(() => monthOf(todayYmd()));
-  const [loads, setLoads] = useState<Record<string, Load>>(() => ({ [monthKey(monthOf(todayYmd()))]: { status: "loading" } }));
+  const params = useSearchParams();
+  // The month to open on: ?month= when it's valid, otherwise this month. Read once.
+  const [initial] = useState<YearMonth>(() => parseMonthKey(params.get("month")) ?? monthOf(todayYmd()));
+  const [month, setMonth] = useState<YearMonth>(initial);
+  const [loads, setLoads] = useState<Record<string, Load>>(() => ({ [monthKey(initial)]: { status: "loading" } }));
   const [selected, setSelected] = useState<Ymd | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
@@ -64,12 +73,12 @@ function Calendar() {
     fetchMonth(ym);
   }
 
-  // The current month is marked loading in the initial state; fetch it once.
+  // The first month is marked loading in the initial state; fetch it once.
   const first = useRef(false);
   useEffect(() => {
     if (first.current) return;
     first.current = true;
-    fetchMonth(monthOf(todayYmd()));
+    fetchMonth(initial);
   });
 
   function changeMonth(next: YearMonth) {
@@ -81,17 +90,7 @@ function Calendar() {
 
   const current = loads[monthKey(month)];
   const data = current?.status === "loaded" ? current.data : null;
-  const blocked = new Set(data?.blocked ?? []);
-  const byDate = new Map<string, VendorCalendar["bookings"]>();
-  for (const b of data?.bookings ?? []) byDate.set(b.date, [...(byDate.get(b.date) ?? []), b]);
-
-  const dayInfo = (date: Ymd): DayInfo => {
-    const list = byDate.get(date) ?? [];
-    if (list.some((b) => b.status === "confirmed")) return { label: "Confirmed", tone: "confirmed" };
-    if (blocked.has(date)) return { label: "Blocked", tone: "blocked" };
-    if (list.length > 0) return { label: "Pending", tone: "pending" };
-    return {};
-  };
+  const { byDate, dayInfo } = calendarDays(data);
   const panel = selected ? (byDate.get(selected) ?? []) : [];
 
   return (
@@ -125,20 +124,7 @@ function Calendar() {
                 Loading bookings for this month…
               </p>
             )}
-            <ul aria-label="Legend" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-4 w-4 rounded bg-forest/10 ring-1 ring-forest/40" /> Confirmed
-              </li>
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-4 w-4 rounded border border-dashed border-brass" /> Pending
-              </li>
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-4 w-4 rounded bg-[repeating-linear-gradient(135deg,var(--hairline)_0_2px,transparent_2px_7px)] ring-1 ring-border" /> Blocked
-              </li>
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-4 w-4 rounded ring-2 ring-forest" /> Today
-              </li>
-            </ul>
+            <MonthGridLegend items={["confirmed", "pending", "blocked", "today"]} />
             <p className="text-sm text-muted-foreground">Blocking dates isn&apos;t available yet.</p>
           </div>
 

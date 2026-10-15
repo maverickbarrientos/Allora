@@ -17,9 +17,10 @@ const TONE: Record<NonNullable<DayInfo["tone"]>, string> = {
 };
 
 /**
- * Month grid, weeks starting on Sunday. Read-only unless `onDayClick` is set,
- * in which case each day is a button. Every day has an aria-label with the
- * full date and its status.
+ * Month grid, weeks starting on Sunday. Days are plain cells unless
+ * `onDayClick` is set, in which case each day is a button. `readOnly` also
+ * hides the month buttons (the page has its own month picker). Every day has
+ * an aria-label with the full date and its status.
  */
 export function MonthGrid({
   month,
@@ -30,15 +31,17 @@ export function MonthGrid({
   onDayClick,
   selectedDate,
   extraControls,
+  readOnly = false,
 }: {
   month: YearMonth;
-  onMonthChange: (next: YearMonth) => void;
+  onMonthChange?: (next: YearMonth) => void;
   dayInfo: (date: Ymd) => DayInfo;
   highlight?: Ymd;
   highlightLabel?: string;
   onDayClick?: (date: Ymd) => void;
   selectedDate?: Ymd | null;
   extraControls?: React.ReactNode;
+  readOnly?: boolean;
 }) {
   const { year, month: m } = month;
   const lead = weekdayOf(year, m, 1);
@@ -48,25 +51,27 @@ export function MonthGrid({
   const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
   const step = (delta: number) => {
     const index = year * 12 + (m - 1) + delta;
-    onMonthChange({ year: Math.floor(index / 12), month: (index % 12) + 1 });
+    onMonthChange?.({ year: Math.floor(index / 12), month: (index % 12) + 1 });
   };
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="icon" onClick={() => step(-1)} aria-label="Previous month">
-          <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
-        </Button>
-        <p className="font-display text-h2" aria-live="polite">
-          {monthLabel(month)}
-        </p>
-        <div className="flex items-center gap-1">
-          {extraControls}
-          <Button variant="ghost" size="icon" onClick={() => step(1)} aria-label="Next month">
-            <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
+      {!readOnly && (
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="ghost" size="icon" onClick={() => step(-1)} aria-label="Previous month">
+            <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
           </Button>
+          <p className="font-display text-h2" aria-live="polite">
+            {monthLabel(month)}
+          </p>
+          <div className="flex items-center gap-1">
+            {extraControls}
+            <Button variant="ghost" size="icon" onClick={() => step(1)} aria-label="Next month">
+              <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
       <table className="w-full table-fixed border-collapse text-center">
         <caption className="sr-only">{monthLabel(month)}</caption>
         <thead>
@@ -103,7 +108,7 @@ export function MonthGrid({
                 );
                 return (
                   <td key={d} className="p-0.5">
-                    {onDayClick ? (
+                    {onDayClick && !readOnly ? (
                       <button type="button" className={cls} aria-label={label} aria-pressed={selectedDate === date} onClick={() => onDayClick(date)}>
                         {inner}
                       </button>
@@ -120,5 +125,25 @@ export function MonthGrid({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Key for the day marks: a swatch with the same pattern plus the text label. */
+export function MonthGridLegend({ items }: { items: ("confirmed" | "pending" | "blocked" | "today")[] }) {
+  const swatch: Record<(typeof items)[number], string> = {
+    confirmed: "bg-forest/10 ring-1 ring-forest/40",
+    pending: "border border-dashed border-brass",
+    blocked: "bg-[repeating-linear-gradient(135deg,var(--hairline)_0_2px,transparent_2px_7px)] ring-1 ring-border",
+    today: "ring-2 ring-forest",
+  };
+  const text = { confirmed: "Confirmed", pending: "Pending", blocked: "Blocked", today: "Today" };
+  return (
+    <ul aria-label="Legend" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+      {items.map((k) => (
+        <li key={k} className="flex items-center gap-2">
+          <span aria-hidden="true" className={cn("h-4 w-4 rounded", swatch[k])} /> {text[k]}
+        </li>
+      ))}
+    </ul>
   );
 }
