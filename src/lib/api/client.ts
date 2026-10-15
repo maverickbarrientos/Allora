@@ -1,4 +1,6 @@
 import type {
+  ChatMessage,
+  ChatResponse,
   CreateEventInput,
   ErrorBody,
   Event,
@@ -78,6 +80,8 @@ export const api = {
     ),
   getMissing: (eventId: string) =>
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
+  chat: (eventId: string, messages: ChatMessage[]) =>
+    request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages }),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
 

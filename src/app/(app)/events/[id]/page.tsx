@@ -4,10 +4,11 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { api } from "@/lib/api/client";
+import { api, ApiError } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
 import type { PlanBooking } from "@/lib/api/types";
+import { PlanningAssistant } from "@/components/chat/planning-assistant";
 import { ErrorState } from "@/components/error-state";
 import { MissingSection } from "@/components/missing-section";
 import { PageHeader } from "@/components/page-header";
@@ -178,6 +179,16 @@ export default function PlanPage() {
         onRetry={missing.reload}
         onBooked={onBooked}
         onRemove={removeCard}
+      />
+
+      <PlanningAssistant
+        eventId={id}
+        onNotFound={() =>
+          setState({
+            status: "error",
+            error: new ApiError(404, "event_not_found", "Event not found"),
+          })
+        }
       />
     </div>
   );
