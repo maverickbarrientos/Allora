@@ -15,13 +15,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { ABOUT_MAX, LOCATION_MAX } from "@/lib/vendor-profile";
 
 type Fields = { name: string; category: string; price: string; about: string; location: string };
 type FieldErrors = Partial<Record<keyof Fields, string>>;
 
-const ABOUT_MAX = 1000;
 const ABOUT_COUNTER_FROM = 900;
-const LOCATION_MAX = 80;
 
 const EMPTY_FIELDS: Fields = { name: "", category: "", price: "", about: "", location: "" };
 const FIELD_ERRORS: Record<keyof Fields, string> = {
@@ -182,6 +181,13 @@ export default function VendorProfilePage() {
     );
   }
 
+  /** Updates one field of the draft, clears its error and the "Saved" note. */
+  function setField(key: keyof Fields, value: string) {
+    setFieldDraft((current) => ({ ...(current ?? fieldsFromProfile(profile)), [key]: value }));
+    setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    setSaved(false);
+  }
+
   const isEdit = profile !== null;
   const aboutCounter = charCount(fields.about) >= ABOUT_COUNTER_FROM;
 
@@ -208,14 +214,7 @@ export default function VendorProfilePage() {
             disabled={saving}
             aria-invalid={Boolean(fieldErrors.name)}
             aria-describedby={fieldErrors.name ? "vendor-name-error" : undefined}
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                name: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, name: undefined }));
-              setSaved(false);
-            }}
+            onChange={(event) => setField("name", event.target.value)}
           />
           {fieldErrors.name && <p id="vendor-name-error" className="text-sm text-destructive">{fieldErrors.name}</p>}
         </div>
@@ -235,14 +234,7 @@ export default function VendorProfilePage() {
                   ? "vendor-category-note"
                   : undefined
             }
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                category: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, category: undefined }));
-              setSaved(false);
-            }}
+            onChange={(event) => setField("category", event.target.value)}
           >
             <option value="" disabled>Choose a category</option>
             {categories.map((category) => (
@@ -273,14 +265,7 @@ export default function VendorProfilePage() {
             disabled={saving}
             aria-invalid={Boolean(fieldErrors.price)}
             aria-describedby={fieldErrors.price ? "vendor-price-error" : undefined}
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                price: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, price: undefined }));
-              setSaved(false);
-            }}
+            onChange={(event) => setField("price", event.target.value)}
           />
           {fieldErrors.price && <p id="vendor-price-error" className="text-sm text-destructive">{fieldErrors.price}</p>}
         </div>
@@ -296,14 +281,7 @@ export default function VendorProfilePage() {
             disabled={saving}
             aria-invalid={Boolean(fieldErrors.location)}
             aria-describedby={fieldErrors.location ? "vendor-location-error" : undefined}
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                location: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, location: undefined }));
-              setSaved(false);
-            }}
+            onChange={(event) => setField("location", event.target.value)}
           />
           {fieldErrors.location && (
             <p id="vendor-location-error" className="text-sm text-destructive">{fieldErrors.location}</p>
@@ -325,14 +303,7 @@ export default function VendorProfilePage() {
                 .filter(Boolean)
                 .join(" ") || undefined
             }
-            onChange={(event) => {
-              setFieldDraft((current) => ({
-                ...(current ?? fieldsFromProfile(profile)),
-                about: event.target.value,
-              }));
-              setFieldErrors((current) => ({ ...current, about: undefined }));
-              setSaved(false);
-            }}
+            onChange={(event) => setField("about", event.target.value)}
           />
           {aboutCounter && (
             <p id="vendor-about-counter" className="self-end text-xs text-muted-foreground" aria-live="polite">

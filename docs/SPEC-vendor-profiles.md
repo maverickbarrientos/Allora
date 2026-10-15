@@ -61,7 +61,7 @@ Every route requires a session; logged-out requests get 401 `unauthorized`.
 
 ## UI screens and states
 - **`/vendor/profile`** (vendor):
-  - Under the existing fields: About (textarea with a counter from 900) and Location.
+  - Under the existing fields: Location, then About (textarea with a counter from 900).
   - Then a "Contact details" section with Phone, Email and Website, and the line "Customers see these only after you confirm their booking."
   - One Save for everything. Errors appear next to each field.
 - **`/events/[id]/vendors/[vendorId]`** (customer, new):
