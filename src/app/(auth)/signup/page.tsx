@@ -46,7 +46,7 @@ export default function SignupPage() {
     setSubmitting(true);
     try {
       await api.signup({ name, email, password, role: role as Role });
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (err) {
       const { code, message } = toApiError(err);
       setErrors(

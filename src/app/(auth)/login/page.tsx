@@ -37,7 +37,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await api.login({ email, password });
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (err) {
       const { code, message } = toApiError(err);
       setErrors({
