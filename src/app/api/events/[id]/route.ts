@@ -69,3 +69,45 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return errorResponse(500, "server_error", "Unexpected error.");
   }
 }
+
+// docs/SPEC-event-delete.md. The rule lives only in the events_check_delete
+// trigger (011); this handler maps its errors and never recomputes it.
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const supabase = await createClient();
+    const auth = await requireSession(supabase, "customer");
+    if (auth.response) return auth.response;
+
+    const { id } = await params;
+    if (!UUID_RE.test(id)) return errorResponse(404, "event_not_found", "Event not found.");
+
+    // RLS limits this to the caller's own events, so others (and events
+    // already deleted) delete nothing and read as missing.
+    const { data, error } = await supabase.from("events").delete().eq("id", id).select("id");
+    if (error) {
+      if (error.message === "event_has_pending_bookings") {
+        const n = Number(error.details) || 0;
+        return errorResponse(
+          409,
+          "event_has_pending_bookings",
+          `This event has ${n} pending booking${n === 1 ? "" : "s"}. Wait for the vendors to respond first.`,
+        );
+      }
+      if (error.message === "event_not_finished") {
+        return errorResponse(
+          409,
+          "event_not_finished",
+          `This event has confirmed bookings and hasn't finished. It can be deleted after ${error.details}.`,
+        );
+      }
+      return errorResponse(500, "server_error", "Could not delete event.");
+    }
+    if (!data || data.length === 0) {
+      return errorResponse(404, "event_not_found", "Event not found.");
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch {
+    return errorResponse(500, "server_error", "Unexpected error.");
+  }
+}
