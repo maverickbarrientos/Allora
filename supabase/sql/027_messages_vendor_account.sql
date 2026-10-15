@@ -1,7 +1,7 @@
--- 020_messages_vendor_account: my_conversations() also says whether the vendor
+-- 027_messages_vendor_account: my_conversations() also says whether the vendor
 -- has an account (docs/SPEC-messages.md). A seeded vendor has no owner, so
 -- nobody reads messages sent to them; the conversation page warns the customer.
--- Run after 018_messages.sql. Safe to run more than once.
+-- Run after 025_messages.sql. Safe to run more than once.
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 
 drop function if exists public.my_conversations();

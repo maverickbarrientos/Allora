@@ -1,6 +1,6 @@
 // Conversations between a customer and a vendor (docs/SPEC-messages.md).
 // RLS on conversations and messages limits everything to the two participants;
-// the security definer functions in 018_messages.sql supply names and counts.
+// the security definer functions in 025_messages.sql supply names and counts.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 

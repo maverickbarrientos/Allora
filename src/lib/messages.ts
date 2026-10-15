@@ -1,5 +1,5 @@
 // Message rules shared by the browser and the server (docs/SPEC-messages.md).
-// The same limits as the messages_body_check constraint in 018_messages.sql.
+// The same limits as the messages_body_check constraint in 025_messages.sql.
 
 import type { Message } from "@/lib/api/types";
 

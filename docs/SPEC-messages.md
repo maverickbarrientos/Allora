@@ -18,7 +18,7 @@ Email or push notifications and rate limits on how many messages can be sent (se
 - Messages are never sent to the LLM, and the dashboard doesn't use them.
 
 ## Data and tables
-SQL `018_messages.sql`, safe to re-run.
+SQL `025_messages.sql`, safe to re-run.
 - **`conversations`**:
   - Columns: `id`, `customer_id` (profile, removed with it), `vendor_id` (vendor, removed with it), `created_at`, `last_message_at` (null until the first message), `customer_last_read_at`, `vendor_last_read_at`. Unique on (customer_id, vendor_id).
   - RLS read: the customer, or the vendor's owner.
@@ -34,8 +34,8 @@ SQL `018_messages.sql`, safe to re-run.
   - `mark_conversation_read(uuid)`: sets only the caller's own read time. Raises if the caller isn't a participant.
   - `my_conversations()`: the caller's conversations, each with its id, the other side's name, the vendor's category, `open`, the last message (body and time), `last_message_at` and `unread`.
   - `my_booking_conversations()`: the booking id, conversation id and unread count for each of the caller's bookings.
-- **Realtime** (`019_messages_realtime.sql`): `messages` is added to the `supabase_realtime` publication. Realtime applies the read policy, so each user only receives their own conversations. Logged-out users are given SELECT on `messages` too: with no policy for them they read nothing, and without the grant Realtime would send them an empty event for every insert. Never add a read policy for everyone.
-- **`020_messages_vendor_account.sql`:** `my_conversations()` also returns `vendor_has_account` (false for a seeded vendor with no owner).
+- **Realtime** (`026_messages_realtime.sql`): `messages` is added to the `supabase_realtime` publication. Realtime applies the read policy, so each user only receives their own conversations. Logged-out users are given SELECT on `messages` too: with no policy for them they read nothing, and without the grant Realtime would send them an empty event for every insert. Never add a read policy for everyone.
+- **`027_messages_vendor_account.sql`:** `my_conversations()` also returns `vendor_has_account` (false for a seeded vendor with no owner).
 
 ## Shared shapes
 - `ConversationSummary` = `{ id, otherName, category, open, lastMessage: { body, createdAt, mine } | null, unread }`

@@ -1,9 +1,9 @@
--- 019_messages_realtime: new messages are sent to open conversations instantly
--- (docs/SPEC-messages.md, ticket 21). Run after 018_messages.sql. Safe to run more than once.
+-- 026_messages_realtime: new messages are sent to open conversations instantly
+-- (docs/SPEC-messages.md, ticket 21). Run after 025_messages.sql. Safe to run more than once.
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 --
 -- Supabase Realtime sends each insert only to subscribers allowed to read the
--- row, using the "messages: participants read" policy from 018. Nobody else
+-- row, using the "messages: participants read" policy from 025. Nobody else
 -- receives anything. Only messages are published; conversations are not.
 
 do $$

@@ -1,4 +1,4 @@
--- 018_messages: conversations and messages between a customer and a vendor
+-- 025_messages: conversations and messages between a customer and a vendor
 -- (docs/SPEC-messages.md, tickets 20 to 23). Safe to run more than once.
 -- Run after 002 (events, vendors, bookings) and 005 (vendor owners).
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
