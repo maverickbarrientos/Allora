@@ -113,6 +113,8 @@ export const api = {
     ),
   getVendorCalendar: (from: string, to: string) =>
     request<VendorCalendar>("GET", `/api/vendor/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  blockDates: (dates: string[]) => request<{ changed: string[] }>("POST", "/api/vendor/availability/block", { dates }),
+  unblockDates: (dates: string[]) => request<{ changed: string[] }>("POST", "/api/vendor/availability/unblock", { dates }),
   getMissing: (eventId: string) =>
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   chat: (eventId: string, messages: ChatMessage[]) =>

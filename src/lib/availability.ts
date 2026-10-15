@@ -23,6 +23,24 @@ export function dayNumber(value: unknown): number | null {
 
 export type DateRange = { from: string; to: string };
 
+export const MAX_BLOCK_DATES = 62;
+
+/**
+ * Validates a block or unblock body: `dates` is 1 to 62 unique valid dates.
+ * Returns them sorted, or a message for a 400.
+ */
+export function parseDates(body: Record<string, unknown> | null): { dates: string[] } | { error: string } {
+  const list = body?.dates;
+  if (!Array.isArray(list)) return { error: "dates must be an array." };
+  if (list.length < 1 || list.length > MAX_BLOCK_DATES) {
+    return { error: `dates must have 1 to ${MAX_BLOCK_DATES} entries.` };
+  }
+  if (!list.every((d) => dayNumber(d) !== null)) return { error: "Every date must be a valid date (YYYY-MM-DD)." };
+  const unique = new Set(list as string[]);
+  if (unique.size !== list.length) return { error: "A date is listed twice." };
+  return { dates: [...unique].sort() };
+}
+
 /** Reads and validates ?from=&to=. Returns the range, or a message for a 400. */
 export function parseRange(params: URLSearchParams): DateRange | { error: string } {
   const from = params.get("from");

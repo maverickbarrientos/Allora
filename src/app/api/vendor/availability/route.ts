@@ -2,32 +2,32 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-helpers";
 import { parseRange } from "@/lib/availability";
-import { requireVendorRole, type VendorBookingRow } from "@/lib/vendor-portal";
+import { requireOwnVendor, type VendorBookingRow } from "@/lib/vendor-portal";
 
 // The calling vendor's own calendar: pending and confirmed bookings by event
-// date. Declined bookings are left out. `blocked` is always empty: there is no
-// blocked-dates table, availability comes from bookings only.
+// date, and the dates they blocked. Declined bookings are left out.
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
-    const auth = await requireVendorRole(supabase);
-    if ("error" in auth) return auth.error;
+    const own = await requireOwnVendor(supabase);
+    if ("error" in own) return own.error;
 
     const range = parseRange(req.nextUrl.searchParams);
     if ("error" in range) return errorResponse(400, "validation_error", range.error);
 
-    const { data: vendor, error: vErr } = await supabase
-      .from("vendors")
-      .select("id")
-      .eq("owner", auth.userId)
-      .maybeSingle();
-    if (vErr) return errorResponse(500, "server_error", "Could not load vendor.");
-    if (!vendor) {
-      return errorResponse(404, "vendor_not_linked", "Your account is not linked to a service.");
-    }
-
-    const { data, error } = await supabase.rpc("vendor_incoming_bookings");
+    const [{ data, error }, blockedResult] = await Promise.all([
+      supabase.rpc("vendor_incoming_bookings"),
+      supabase
+        .from("vendor_blocked_dates")
+        .select("date")
+        .eq("vendor_id", own.vendorId)
+        .gte("date", range.from)
+        .lte("date", range.to)
+        .order("date", { ascending: true }),
+    ]);
     if (error) return errorResponse(500, "server_error", "Could not load bookings.");
+    if (blockedResult.error) return errorResponse(500, "server_error", "Could not load blocked dates.");
+    const blocked = (blockedResult.data ?? []).map((r) => r.date as string);
 
     // ISO dates compare correctly as strings.
     const bookings = ((data ?? []) as VendorBookingRow[])
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         customerName: r.customer_name,
       }));
 
-    return NextResponse.json({ from: range.from, to: range.to, blocked: [], bookings });
+    return NextResponse.json({ from: range.from, to: range.to, blocked, bookings });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }
