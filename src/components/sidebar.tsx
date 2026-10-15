@@ -14,6 +14,8 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   /** Route prefixes that also highlight this item (the longest match wins). */
   prefixes: string[];
+  /** Highlight only on exactly `href`, never on the routes below it. */
+  exact?: boolean;
 };
 
 // Only pages that exist on main.
@@ -24,13 +26,15 @@ const NAV: Record<Profile["role"], NavItem[]> = {
     { href: "/events/new", label: "New event", icon: CalendarPlus, prefixes: ["/events/new"] },
   ],
   vendor: [
-    { href: "/vendor", label: "Bookings", icon: ClipboardList, prefixes: ["/vendor"] },
+    { href: "/vendor", label: "Dashboard", icon: LayoutDashboard, prefixes: [], exact: true },
+    { href: "/vendor/bookings", label: "Bookings", icon: ClipboardList, prefixes: ["/vendor/bookings"] },
     { href: "/vendor/calendar", label: "Calendar", icon: CalendarDays, prefixes: ["/vendor/calendar"] },
     { href: "/vendor/profile", label: "Profile", icon: UserRound, prefixes: ["/vendor/profile"] },
   ],
 };
 
 function matchLength(item: NavItem, pathname: string): number {
+  if (item.exact) return pathname === item.href ? item.href.length : -1;
   let best = item.href === "/" && pathname === "/" ? 1 : -1;
   for (const p of [item.href === "/" ? "" : item.href, ...item.prefixes]) {
     if (p && (pathname === p || pathname.startsWith(p + "/"))) best = Math.max(best, p.length);

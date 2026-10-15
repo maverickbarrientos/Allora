@@ -1,42 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
-import type { BookingStatus, VendorBooking } from "@/lib/api/types";
-import { capitalize, formatDate, formatNumber } from "@/lib/format";
-import { useLoad } from "@/lib/use-load";
+import type { PaymentStatus, VendorBooking, VendorCalendar } from "@/lib/api/types";
+import {
+  addMonths,
+  daysFrom,
+  formatYmd,
+  monthKey,
+  monthLabel,
+  monthOf,
+  monthRange,
+  parseMonthKey,
+  relativeDayText,
+  todayYmd,
+  type YearMonth,
+} from "@/lib/dates";
+import { capitalize, formatNumber } from "@/lib/format";
+import { useLoad, type Load } from "@/lib/use-load";
+import { calendarDays } from "@/lib/vendor-calendar";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
+import { MonthGrid, MonthGridLegend } from "@/components/month-grid";
 import { PageHeader } from "@/components/page-header";
-import { VendorPaymentBadge } from "@/components/payment-status";
-import { Reveal } from "@/components/reveal";
-import { StatusBadge } from "@/components/status-badge";
-import { Alert } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const SECTIONS: { status: BookingStatus; title: string }[] = [
-  { status: "pending", title: "Pending" },
-  { status: "confirmed", title: "Confirmed" },
-  { status: "declined", title: "Declined" },
-];
-
-type Decision = { booking: VendorBooking; status: "confirmed" | "declined" };
-
-export default function VendorPage() {
+/**
+ * Vendor dashboard (docs/SPEC-vendor-dashboard.md): one month at a time, kept
+ * in `?month=YYYY-MM`. Bookings come from GET /api/vendor/bookings (loaded
+ * once, filtered by the month of the event date); the mini grid comes from
+ * GET /api/vendor/availability for the month, like /vendor/calendar.
+ */
+export default function VendorDashboardPage() {
   const router = useRouter();
   const profile = useProfile();
   const isVendor = profile.role === "vendor";
@@ -46,337 +46,339 @@ export default function VendorPage() {
     if (!isVendor) router.replace("/");
   }, [isVendor, router]);
 
-  return isVendor ? <VendorBookings /> : null;
+  if (!isVendor) return null;
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <VendorDashboard />
+    </Suspense>
+  );
 }
 
-function VendorBookings() {
+const byEventDate = (a: VendorBooking, b: VendorBooking) =>
+  a.event.date.localeCompare(b.event.date) || a.createdAt.localeCompare(b.createdAt);
+
+function VendorDashboard() {
   const router = useRouter();
-  const { state, setState, reload } = useLoad(() => api.listVendorBookings());
-  const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
-  const [busy, setBusy] = useState<Set<string>>(new Set());
-  const [notice, setNotice] = useState<string | null>(null);
-  const decisionLock = useRef(false);
+  const params = useSearchParams();
+  const today = todayYmd();
+  const thisMonth = monthOf(today);
+  // An invalid or missing ?month= falls back to this month.
+  const month = parseMonthKey(params.get("month")) ?? thisMonth;
+  const key = monthKey(month);
+  const go = (next: YearMonth) => router.push(`/vendor?month=${monthKey(next)}`, { scroll: false });
 
-  // Cancelling a confirmed booking (docs/SPEC-cancellation.md). The dialog
-  // stays open while the request runs and shows any error itself.
-  const [cancelTarget, setCancelTarget] = useState<VendorBooking | null>(null);
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState<string | null>(null);
-  const cancelInFlight = useRef(false);
-  const mounted = useRef(true);
+  const bookings = useLoad(() => api.listVendorBookings());
   useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+    if (bookings.state.status === "error" && bookings.state.error.code === "vendor_not_linked") router.replace("/vendor/profile");
+  }, [bookings.state, router]);
 
-  function closeCancel() {
-    if (cancelInFlight.current) return;
-    const id = cancelTarget?.id;
-    setCancelTarget(null);
-    setCancelError(null);
-    // Give focus back to the row's Cancel booking button.
-    if (id) requestAnimationFrame(() => document.getElementById(cancelButtonId(id))?.focus());
-  }
-
-  async function confirmCancel() {
-    if (!cancelTarget || cancelInFlight.current) return;
-    cancelInFlight.current = true;
-    setCancelling(true);
-    setCancelError(null);
-    try {
-      const { booking: updated } = await api.decideBooking(cancelTarget.id, "declined");
-      if (!mounted.current) return;
-      setState((prev) =>
-        prev.status === "loaded"
-          ? {
-              status: "loaded",
-              data: {
-                ...prev.data,
-                bookings: prev.data.bookings.map((b) => (b.id === updated.id ? updated : b)),
-              },
-            }
-          : prev,
-      );
-      setCancelTarget(null);
-    } catch (e) {
-      if (!mounted.current) return;
-      const { code } = toApiError(e);
-      setCancelError(
-        code === "status_unchanged"
-          ? "This booking can't be cancelled anymore."
-          : code === "booking_not_found"
-            ? "This booking is no longer available."
-            : code === "forbidden"
-              ? "Only vendor accounts can cancel bookings."
-              : "Couldn't cancel this booking. Please try again.",
-      );
-    } finally {
-      cancelInFlight.current = false;
-      if (mounted.current) setCancelling(false);
-    }
-  }
+  // The month's calendar. Only the latest request may update the page, so
+  // fast month switching never shows another month's days; `cal.key` says
+  // which month the state belongs to, and any other month reads as loading.
+  const [cal, setCal] = useState<{ key: string | null; state: Load<VendorCalendar> }>({ key: null, state: { status: "loading" } });
+  const latest = useRef(0);
+  const fetchCal = useCallback(
+    (k: string) => {
+      const req = ++latest.current;
+      const { from, to } = monthRange(parseMonthKey(k)!);
+      api
+        .getVendorCalendar(from, to)
+        .then((data) => req === latest.current && setCal({ key: k, state: { status: "loaded", data } }))
+        .catch((e) => {
+          if (req !== latest.current) return;
+          const error = toApiError(e);
+          if (error.code === "vendor_not_linked") router.replace("/vendor/profile");
+          setCal({ key: k, state: { status: "error", error } });
+        });
+    },
+    [router],
+  );
   useEffect(() => {
-    if (state.status === "error" && state.error.code === "vendor_not_linked") {
-      router.replace("/vendor/profile");
-    }
-  }, [router, state]);
+    fetchCal(key);
+  }, [key, fetchCal]);
+  useEffect(
+    () => () => {
+      latest.current = -1; // ignore responses after leaving the page
+    },
+    [],
+  );
+  const calState: Load<VendorCalendar> = cal.key === key ? cal.state : { status: "loading" };
+  const retryCal = () => {
+    setCal({ key, state: { status: "loading" } });
+    fetchCal(key);
+  };
 
-  async function decide({ booking, status }: Decision) {
-    if (decisionLock.current) return;
-    decisionLock.current = true;
-    setPendingDecision(null);
-    setNotice(null);
-    setBusy((s) => new Set(s).add(booking.id));
-    try {
-      const { booking: updated } = await api.decideBooking(booking.id, status);
-      setState((prev) =>
-        prev.status === "loaded"
-          ? {
-              status: "loaded",
-              data: {
-                ...prev.data,
-                bookings: prev.data.bookings.map((b) => (b.id === updated.id ? updated : b)),
-              },
-            }
-          : prev,
-      );
-    } catch (e) {
-      const { code } = toApiError(e);
-      if (code === "status_unchanged") {
-        setNotice("This booking already has that status.");
-        reload();
-      } else if (code === "conflicting_booking") {
-        setNotice("Another active booking exists for this event. The list has been refreshed.");
-        reload();
-      } else if (code === "booking_not_found") {
-        setNotice("This booking is no longer available.");
-        reload();
-      } else {
-        setNotice("Couldn't update this booking. Please try again.");
-      }
-    } finally {
-      setBusy((s) => {
-        const next = new Set(s);
-        next.delete(booking.id);
-        return next;
-      });
-      decisionLock.current = false;
-    }
-  }
+  // Without the availability route (a 404), the grid falls back to the
+  // bookings list and leaves out blocked days, without showing an error.
+  const noCalendarRoute = calState.status === "error" && calState.error.status === 404;
+  const glanceState: Load<VendorCalendar> = !noCalendarRoute
+    ? calState
+    : bookings.state.status === "loaded"
+      ? { status: "loaded", data: calendarFromBookings(inMonth(bookings.state.data.bookings, key), month) }
+      : bookings.state;
 
-  if (state.status === "loading") {
-    return (
-      <div role="status" aria-label="Loading" className="flex flex-col gap-10">
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-12 w-2/3 max-w-sm" />
-        </div>
-        <Skeleton className="h-14" />
-        <Skeleton className="h-14" />
-        <Skeleton className="h-14" />
-      </div>
-    );
-  }
-
-  if (state.status === "error") {
-    if (state.error.code === "vendor_not_linked") {
-      return null;
-    }
-    return (
-      <ErrorState
-        error={state.error}
-        onRetry={reload}
-        message="Couldn't load your bookings. Please try again."
-      />
-    );
-  }
-
-  const { vendor, bookings } = state.data;
+  const vendor = bookings.state.status === "loaded" ? bookings.state.data.vendor : null;
+  const label = monthLabel(month);
 
   return (
-    <div className="flex flex-col gap-10 lg:gap-16">
+    <div className="flex flex-col gap-10 lg:gap-14">
       <PageHeader
-        label={capitalize(vendor.category)}
-        title={vendor.name}
-        description="Booking requests addressed to you."
+        label="Dashboard"
+        title={vendor?.name ?? "Your month"}
+        description="One month at a time: requests to answer, confirmed bookings and the days you're booked."
       />
 
-      <Card className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="label">Your service</p>
-          <p className="mt-1 truncate font-display text-xl">{vendor.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {capitalize(vendor.category)} <span aria-hidden="true">·</span> {formatNumber(vendor.price)}
-          </p>
-        </div>
-        <Link href="/vendor/profile" className={buttonVariants({ variant: "outline" })}>
-          Edit profile
-        </Link>
-      </Card>
+      <MonthPicker month={month} isThisMonth={key === monthKey(thisMonth)} onChange={go} thisMonth={thisMonth} />
 
-      {notice && <Alert variant="destructive">{notice}</Alert>}
-
-      {bookings.length === 0 ? (
-        <Reveal delay={400} className="flex max-w-md flex-col gap-2">
-          <p className="font-display text-h2">No bookings yet</p>
-          <p className="text-muted-foreground">
-            Requests from customers will appear here.
-          </p>
-        </Reveal>
-      ) : (
-        SECTIONS.map(({ status, title }, s) => {
-          const rows = bookings.filter((b) => b.status === status);
-          return (
-            <section key={status} className="flex flex-col gap-4" aria-labelledby={`h-${status}`}>
-              <h2 id={`h-${status}`} className="font-display text-h2">
-                {title} <span className="text-muted-foreground">({rows.length})</span>
-              </h2>
-              {rows.length === 0 ? (
-                <p className="border-y border-border py-5 text-muted-foreground">None.</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border border-y border-border">
-                  {rows.map((b, i) => (
-                    <li key={b.id}>
-                      <Reveal delay={Math.min(s * 3 + i, 3) * 80}>
-                        <BookingRow
-                          booking={b}
-                          busy={busy.has(b.id)}
-                          onDecide={(st) => setPendingDecision({ booking: b, status: st })}
-                          onCancel={() => {
-                            setCancelError(null);
-                            setCancelTarget(b);
-                          }}
-                        />
-                      </Reveal>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          );
-        })
-      )}
-
-      <AlertDialog
-        open={pendingDecision !== null}
-        onOpenChange={(open) => !open && setPendingDecision(null)}
-      >
-        {pendingDecision && (
-          <>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {pendingDecision.status === "confirmed" ? "Accept" : "Decline"} this booking?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {capitalize(pendingDecision.booking.event.type)} on{" "}
-                {formatDate(pendingDecision.booking.event.date)}. The customer will see this
-                change on their event plan.
-                {pendingDecision.status === "declined" &&
-                  pendingDecision.booking.payment?.status === "paid" &&
-                  " The customer's deposit will be refunded."}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingDecision(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => decide(pendingDecision)}>
-                {pendingDecision.status === "confirmed" ? "Accept" : "Decline"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </>
-        )}
-      </AlertDialog>
-
-      <AlertDialog open={cancelTarget !== null} onOpenChange={(open) => !open && closeCancel()}>
-        {cancelTarget && (
-          <>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
-              <AlertDialogDescription>
-                The customer will be asked to find a replacement.
-                {cancelTarget.payment?.status === "paid" && " The customer's deposit will be refunded."}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            {cancelError && (
-              <Alert variant="destructive" className="mt-4">
-                {cancelError}
-              </Alert>
-            )}
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={closeCancel} disabled={cancelling}>
-                Keep booking
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={confirmCancel} disabled={cancelling}>
-                {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
-                Cancel booking
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </>
-        )}
-      </AlertDialog>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Section title="Bookings" state={bookings.state} onRetry={bookings.reload} skeleton={<Skeleton className="h-20 w-full" />}>
+          {(d) => <Counts bookings={inMonth(d.bookings, key)} />}
+        </Section>
+        <Section title="Actions needed" state={bookings.state} onRetry={bookings.reload} skeleton={<Rows />}>
+          {(d) => <Actions bookings={inMonth(d.bookings, key)} />}
+        </Section>
+        <Section title="Confirmed this month" state={bookings.state} onRetry={bookings.reload} skeleton={<Rows />}>
+          {(d) => <Confirmed bookings={inMonth(d.bookings, key)} today={today} monthText={label} />}
+        </Section>
+        <Section
+          title="Month at a glance"
+          state={glanceState}
+          onRetry={noCalendarRoute ? bookings.reload : retryCal}
+          skeleton={<Skeleton className="h-64 w-full" />}
+          footer={
+            <Link href={`/vendor/calendar?month=${key}`} className="flex min-h-11 w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">
+              Open calendar
+              <ArrowRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+            </Link>
+          }
+        >
+          {(data) => <Glance month={month} data={data} today={today} showBlocked={!noCalendarRoute} />}
+        </Section>
+      </div>
     </div>
   );
 }
 
-const cancelButtonId = (bookingId: string) => `cancel-${bookingId}`;
+/** The month's calendar built from the bookings list: pending and confirmed bookings, no blocked days. */
+function calendarFromBookings(bookings: VendorBooking[], month: YearMonth): VendorCalendar {
+  const { from, to } = monthRange(month);
+  return {
+    from,
+    to,
+    blocked: [],
+    bookings: bookings.flatMap((b) =>
+      b.status === "declined" ? [] : [{ bookingId: b.id, date: b.event.date, status: b.status, eventType: b.event.type, customerName: b.customerName }],
+    ),
+  };
+}
 
-function BookingRow({
-  booking,
-  busy,
-  onDecide,
-  onCancel,
+/** Bookings whose event date falls in the month `key` ("YYYY-MM"). */
+function inMonth(bookings: VendorBooking[], key: string) {
+  return bookings.filter((b) => monthKey(monthOf(b.event.date)) === key);
+}
+
+function MonthPicker({
+  month,
+  thisMonth,
+  isThisMonth,
+  onChange,
 }: {
-  booking: VendorBooking;
-  busy: boolean;
-  onDecide: (status: "confirmed" | "declined") => void;
-  onCancel: () => void;
+  month: YearMonth;
+  thisMonth: YearMonth;
+  isThisMonth: boolean;
+  onChange: (next: YearMonth) => void;
 }) {
-  const { event } = booking;
   return (
-    <div className="grid min-w-0 gap-x-4 gap-y-1.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 sm:col-span-2">
-        <span className="min-w-0 max-w-full truncate font-medium" title={booking.customerName}>
-          {booking.customerName}
-        </span>
-        <span className="font-display text-xl">{capitalize(event.type)}</span>
+    <nav aria-label="Month" className="flex flex-wrap items-center gap-2">
+      <Button variant="ghost" size="icon" onClick={() => onChange(addMonths(month, -1))} aria-label={`Previous month, ${monthLabel(addMonths(month, -1))}`}>
+        <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
+      </Button>
+      <h2 className="min-w-44 text-center font-display text-h2" aria-live="polite">
+        {monthLabel(month)}
+      </h2>
+      <Button variant="ghost" size="icon" onClick={() => onChange(addMonths(month, 1))} aria-label={`Next month, ${monthLabel(addMonths(month, 1))}`}>
+        <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => onChange(thisMonth)} disabled={isThisMonth}>
+        This month
+      </Button>
+    </nav>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div role="status" aria-label="Loading" className="flex flex-col gap-6">
+      <Skeleton className="h-12 w-full max-w-sm" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Skeleton className="h-40" />
+        <Skeleton className="h-40" />
+        <Skeleton className="h-56" />
+        <Skeleton className="h-56" />
       </div>
-      <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
-        <StatusBadge status={booking.status} />
-        <VendorPaymentBadge booking={booking} />
-      </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:col-span-2">
-        <span className="label">{booking.category}</span>
-        <span>{formatDate(event.date)}</span>
-        <span>{formatNumber(event.guestCount)} guests</span>
-        <span className="inline-flex items-center gap-1">
-          <span className="label">Budget</span>
-          {formatNumber(event.budget)}
-        </span>
-      </div>
-      {booking.status === "pending" ? (
-        <div className="col-span-2 flex gap-3 lg:col-span-1">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
-            Decline
-          </Button>
-          <Button size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            Accept
-          </Button>
+    </div>
+  );
+}
+
+function Rows() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-2/3" />
+    </div>
+  );
+}
+
+/** A dashboard section with its own loading and error state; a failure never hides the other sections. */
+function Section<T>({
+  title,
+  state,
+  onRetry,
+  skeleton,
+  footer,
+  children,
+}: {
+  title: string;
+  state: Load<T>;
+  onRetry: () => void;
+  skeleton: React.ReactNode;
+  footer?: React.ReactNode;
+  children: (data: T) => React.ReactNode;
+}) {
+  const id = `section-${title.toLowerCase().replace(/\s+/g, "-")}`;
+  return (
+    <Card className="flex min-w-0 flex-col gap-4" aria-labelledby={id}>
+      <h2 id={id} className="font-display text-h2">
+        {title}
+      </h2>
+      {state.status === "loading" ? (
+        <div role="status" aria-label={`Loading ${title.toLowerCase()}`}>
+          {skeleton}
         </div>
-      ) : booking.status === "confirmed" ? (
-        <div className="col-span-2 flex gap-3 lg:col-span-1">
-          <Button id={cancelButtonId(booking.id)} variant="outline" size="sm" disabled={busy} onClick={onCancel}>
-            Cancel booking
-          </Button>
-        </div>
+      ) : state.status === "error" ? (
+        state.error.code === "vendor_not_linked" ? null : (
+          <ErrorState error={state.error} onRetry={onRetry} message={`Couldn't load ${title.toLowerCase()}. Please try again.`} />
+        )
       ) : (
-        <div className="col-span-2 flex gap-3 lg:col-span-1">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
-            Accept instead
-          </Button>
-        </div>
+        children(state.data)
       )}
+      {footer}
+    </Card>
+  );
+}
+
+function Counts({ bookings }: { bookings: VendorBooking[] }) {
+  const items: [string, number][] = [
+    ["Pending", bookings.filter((b) => b.status === "pending").length],
+    ["Confirmed", bookings.filter((b) => b.status === "confirmed").length],
+    ["Declined", bookings.filter((b) => b.status === "declined").length],
+  ];
+  return (
+    <dl className="grid grid-cols-3 divide-x divide-border">
+      {items.map(([label, n]) => (
+        <div key={label} className="flex flex-col gap-1 px-3 first:pl-0">
+          <dt className="label">{label}</dt>
+          <dd className="font-display text-h1">{formatNumber(n)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** A customer name inside a sentence: truncated, with the full name in the title. */
+function Name({ name }: { name: string }) {
+  return (
+    <span className="inline-block max-w-48 truncate align-bottom font-medium" title={name}>
+      {name}
+    </span>
+  );
+}
+
+function Actions({ bookings }: { bookings: VendorBooking[] }) {
+  const respond = bookings.filter((b) => b.status === "pending").sort(byEventDate);
+  // Without the payment field there is no deposit status, so no deposit actions.
+  const deposit = bookings.filter((b) => b.status === "confirmed" && b.payment && b.payment.status !== "paid").sort(byEventDate);
+  if (respond.length + deposit.length === 0) return <p className="text-muted-foreground">Nothing needs your attention</p>;
+  const row = (b: VendorBooking, text: React.ReactNode) => (
+    <li key={b.id}>
+      <Link href={`/vendor/bookings#booking-${encodeURIComponent(b.id)}`} className="flex min-h-11 items-center justify-between gap-3 py-2 hover:underline">
+        <span className="min-w-0 [overflow-wrap:anywhere]">{text}</span>
+        <ArrowRight className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+      </Link>
+    </li>
+  );
+  return (
+    <ul className="flex flex-col divide-y divide-border">
+      {respond.map((b) =>
+        row(
+          b,
+          <>
+            Respond to <Name name={b.customerName} />
+            &apos;s {b.event.type} booking on {formatYmd(b.event.date)}
+          </>,
+        ),
+      )}
+      {deposit.map((b) =>
+        row(
+          b,
+          <>
+            Awaiting deposit from <Name name={b.customerName} /> ({formatYmd(b.event.date)})
+          </>,
+        ),
+      )}
+    </ul>
+  );
+}
+
+const DEPOSIT_TEXT: Record<PaymentStatus, string> = {
+  paid: "Deposit paid",
+  unpaid: "Awaiting deposit",
+  refunded: "Deposit refunded",
+};
+
+function Confirmed({ bookings, today, monthText }: { bookings: VendorBooking[]; today: string; monthText: string }) {
+  const confirmed = bookings.filter((b) => b.status === "confirmed").sort(byEventDate);
+  if (confirmed.length === 0) {
+    return <p className="text-muted-foreground">{bookings.length === 0 ? `No bookings in ${monthText}` : `No confirmed bookings in ${monthText}`}</p>;
+  }
+  return (
+    <ul className="flex flex-col divide-y divide-border">
+      {confirmed.map((b) => (
+        <li key={b.id} className="flex items-center justify-between gap-3 py-3">
+          <div className="min-w-0">
+            <p className="truncate font-medium" title={b.customerName}>
+              {b.customerName}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {capitalize(b.event.type)} &middot; {formatYmd(b.event.date)}
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-medium">{relativeDayText(daysFrom(today, b.event.date))}</p>
+            {b.payment && <p className="text-sm text-muted-foreground">{DEPOSIT_TEXT[b.payment.status]}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const plural = (n: number, one: string, many: string) => `${formatNumber(n)} ${n === 1 ? one : many}`;
+
+function Glance({ month, data, today, showBlocked }: { month: YearMonth; data: VendorCalendar; today: string; showBlocked: boolean }) {
+  const { dayInfo, counts } = calendarDays(data);
+  return (
+    <div className="flex flex-col gap-4">
+      <MonthGrid month={month} dayInfo={dayInfo} highlight={today} highlightLabel="Today" readOnly />
+      <MonthGridLegend items={showBlocked ? ["confirmed", "pending", "blocked", "today"] : ["confirmed", "pending", "today"]} />
+      <p className="text-sm">
+        {[
+          plural(counts.booked, "booked day", "booked days"),
+          plural(counts.pending, "day with pending requests", "days with pending requests"),
+          ...(showBlocked ? [plural(counts.blocked, "blocked day", "blocked days")] : []),
+        ].join(", ")}
+      </p>
     </div>
   );
 }

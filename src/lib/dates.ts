@@ -88,3 +88,26 @@ export function addDays(date: Ymd, n: number): Ymd {
   const d = new Date(Date.UTC(year, month - 1, day + n));
   return ymd(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
 }
+
+/** "YYYY-MM" (a `?month=` value) to a month, or null when it isn't a valid month. */
+export function parseMonthKey(value: string | null | undefined): YearMonth | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(value ?? "");
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  return month >= 1 && month <= 12 ? { year, month } : null;
+}
+
+/** Vendor countdown (docs/SPEC-vendor-dashboard.md): "In {n} days", "Tomorrow", "Today", "Yesterday", "{n} days ago". */
+export function relativeDayText(days: number): string {
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days === -1) return "Yesterday";
+  return days > 1 ? `In ${days} days` : `${-days} days ago`;
+}
+
+/** e.g. "February 14, 2027", from the date parts only. */
+export function formatYmd(date: Ymd): string {
+  const { year, month, day } = parseYmd(date);
+  return `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
+}
