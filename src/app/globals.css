@@ -3,48 +3,42 @@
 /* Design tokens (docs/DESIGN.md). Light theme only.
    Change these to re-skin the whole app at once. */
 :root {
-  /* Palette: a quiet hazel gradient page, deep plum components, rose accent. */
-  --hazel: #938563; /* contrast floor: ink text must stay 4.5:1 on any page stop */
-  --page-gradient: linear-gradient(170deg, #a89c80 0%, #9a8c6c 45%, #938563 100%);
-  --plum: #5b2a59;
-  --plum-deep: #46203f; /* gradient end for cards and header */
-  --surface-gradient: linear-gradient(160deg, var(--plum) 0%, var(--plum-deep) 100%);
-  --plum-light: #9e749d; /* do not go darker: plum-ink text needs 4.5:1 */
-  --pink: #b76e79;
-  --plum-ink: #140f14; /* text on plum-light and pink */
-  --ivory: #f4efe7;
-  --stone: #ebe5db;
-  --ink: #1c1b19;
-  --ink-muted: #1f1c19; /* body-size text on hazel needs ink-level contrast */
-  --label: #1c1b19;
-  --brass: #b76e79; /* the one highlight per screen: dusty rose (name kept from DESIGN.md) */
-  --brick: #3a0f0a; /* errors and declined, dark enough for text on hazel */
-  --hairline: rgb(28 27 25 / 0.22);
-  --radius: 1rem;
-  --shadow-soft:
-    0 1px 2px rgb(20 15 20 / 0.25), 0 10px 24px -10px rgb(20 15 20 / 0.45);
-  --shadow-lift:
-    0 2px 4px rgb(20 15 20 / 0.3), 0 16px 32px -10px rgb(20 15 20 / 0.55);
+  /* Palette: ivory and white page, stone surfaces, deep forest accent, brass
+     for fine details. */
+  --ivory: #faf7f2; /* page background; text on forest */
+  --stone: #f1ece4; /* cards, surfaces, secondary and muted fills */
+  --ink: #1c1b19; /* text */
+  --ink-muted: #6b665e; /* secondary text (at least 4.5:1 on ivory and stone) */
+  --forest: #1f3a32; /* buttons and key elements */
+  --brass: #b08d57; /* hairlines and details only, never small text */
+  --brass-ink: #7a5f33; /* small brass labels */
+  --brick: #8a3b2e; /* errors and declined */
+  --hairline: rgb(28 27 25 / 0.12);
+  --input-border: rgb(28 27 25 / 0.48); /* form controls need 3:1 against ivory and stone (0.45 measured 2.83:1) */
+  --radius: 1.25rem;
+  --shadow-soft: 0 1px 2px rgb(28 27 25 / 0.04), 0 12px 32px -16px rgb(28 27 25 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(28 27 25 / 0.06), 0 16px 36px -16px rgb(28 27 25 / 0.2);
+  --label: var(--brass-ink);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* shadcn theme mapping */
-  --background: var(--hazel);
+  --background: var(--ivory);
   --foreground: var(--ink);
-  --card: var(--plum);
-  --card-foreground: var(--ivory);
-  --primary: var(--plum);
+  --card: var(--stone);
+  --card-foreground: var(--ink);
+  --primary: var(--forest);
   --primary-foreground: var(--ivory);
-  --secondary: var(--plum-light);
-  --secondary-foreground: var(--plum-ink);
-  --muted: var(--plum-light);
+  --secondary: var(--stone);
+  --secondary-foreground: var(--ink);
+  --muted: var(--stone);
   --muted-foreground: var(--ink-muted);
-  --accent: var(--plum-light);
-  --accent-foreground: var(--plum-ink);
+  --accent: var(--stone);
+  --accent-foreground: var(--ink);
   --destructive: var(--brick);
   --destructive-foreground: var(--ivory);
   --border: var(--hairline);
-  --input: rgb(28 27 25 / 0.45);
-  --ring: var(--ink);
+  --input: var(--input-border);
+  --ring: var(--forest);
 }
 
 @theme inline {
@@ -67,13 +61,11 @@
   --color-ring: var(--ring);
   --color-ivory: var(--ivory);
   --color-stone: var(--stone);
-  --color-hazel: var(--hazel);
-  --color-plum: var(--plum);
-  --color-plum-deep: var(--plum-deep);
-  --color-plum-light: var(--plum-light);
-  --color-pink: var(--pink);
-  --color-plum-ink: var(--plum-ink);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-forest: var(--forest);
   --color-brass: var(--brass);
+  --color-brass-ink: var(--brass-ink);
   --color-brick: var(--brick);
   --radius-base: var(--radius);
   --shadow-soft: var(--shadow-soft);
@@ -86,35 +78,19 @@
 }
 
 html {
-  background-color: var(--hazel); /* fallback if the gradient fails to parse */
+  background-color: var(--background);
 }
 body {
-  background-color: var(--hazel);
-  background: var(--page-gradient);
-  background-color: var(--hazel);
-  background-attachment: fixed;
+  background-color: var(--background);
   min-height: 100vh;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 1rem;
   line-height: 1.65;
-  position: relative;
-  isolation: isolate;
 }
-/* iOS Safari does not support fixed backgrounds well: paint the gradient on a
-   fixed layer behind the page instead. */
-@supports (-webkit-touch-callout: none) {
-  body {
-    background: none;
-  }
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background-color: var(--hazel);
-    background-image: var(--page-gradient);
-  }
+::selection {
+  background-color: rgb(176 141 87 / 0.3);
+  color: var(--ink);
 }
 
 /* Typography */
@@ -147,31 +123,7 @@ body {
   color: var(--label);
 }
 
-/* Plum surface: the card look (gradient fill, 40% pink border, soft shadow,
-   inner top highlight) plus the theme re-map for light text and pink buttons.
-   In the components layer so the header, auth hero and dialog can drop the
-   card chrome with utilities (rounded-none border-0 shadow-none). */
 @layer components {
-  .surface-plum {
-    --foreground: var(--ivory);
-    --card-foreground: var(--ivory);
-    --muted-foreground: #ecdcea;
-    --primary: var(--pink);
-    --primary-foreground: var(--plum-ink);
-    --ring: var(--ivory);
-    --border: rgb(244 239 231 / 0.25);
-    --label: #f3d6db;
-    color: var(--foreground);
-    background-color: var(--plum);
-    background-image: var(--surface-gradient);
-    border: 1px solid rgb(183 110 121 / 0.4);
-    border-radius: var(--radius);
-    padding: 1.125rem;
-    box-shadow:
-      var(--shadow-soft),
-      inset 0 1px 0 rgb(244 239 231 / 0.08);
-  }
-
   .card-surface {
     transition:
       transform 200ms ease-out,
@@ -182,13 +134,11 @@ body {
 @media (hover: hover) and (pointer: fine) {
   .card-surface:hover {
     transform: translateY(-2px);
-    box-shadow:
-      var(--shadow-lift),
-      inset 0 1px 0 rgb(244 239 231 / 0.08);
+    box-shadow: var(--shadow-lift);
   }
 }
 
-/* Visible keyboard focus: 2px, 2px offset (ink on hazel, ivory on plum surfaces) */
+/* Visible keyboard focus: 2px forest, 2px offset */
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
@@ -239,10 +189,10 @@ body {
   background: linear-gradient(
       100deg,
       transparent 30%,
-      rgb(244 239 231 / 0.14) 50%,
+      rgb(255 255 255 / 0.6) 50%,
       transparent 70%
     )
-    rgb(28 27 25 / 0.12);
+    var(--stone);
   background-size: 200% 100%;
   animation: shimmer 1.8s linear infinite;
 }

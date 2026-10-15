@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Label, serif title, optional description, then a short gradient rule
- * (pink fading out) that draws left to right: the one highlight on the screen.
+ * (brass fading out) that draws left to right: the one highlight on the screen.
  * `action` sits on the right of the title (e.g. a button).
  */
 export function PageHeader({
@@ -28,7 +28,7 @@ export function PageHeader({
       {description && (
         <p className="max-w-[65ch] text-muted-foreground">{description}</p>
       )}
-      <div aria-hidden="true" className="hairline-draw mt-1 h-px w-full bg-linear-to-r from-pink to-transparent" />
+      <div aria-hidden="true" className="hairline-draw mt-1 h-px w-full bg-linear-to-r from-brass to-transparent" />
     </header>
   );
 }

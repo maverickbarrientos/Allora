@@ -72,7 +72,7 @@ export function EventsList() {
 
 function EventCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={`surface-plum flex flex-col gap-2 ${className ?? ""}`}>
+    <div className={`rounded-[var(--radius)] bg-card p-7 text-card-foreground shadow-soft flex flex-col gap-2 ${className ?? ""}`}>
       <Skeleton className="aspect-[16/9] w-full" />
       <Skeleton className="h-7 w-2/5" />
       <div className="grid grid-cols-[1.4fr_1fr_0.8fr] gap-2 border-t border-border pt-2">
