@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     // RLS hides events the caller doesn't own, so those read as missing too.
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, type, budget, location")
+      .select("id, type, budget, area")
       .eq("id", id)
       .maybeSingle();
     if (eventError) return errorResponse(500, "server_error", "Could not load event.");
@@ -28,7 +28,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const [bookingsResult, vendorsResult, budgetsResult, services] = await Promise.all([
       supabase.from("bookings").select("category, status").eq("event_id", id),
-      supabase.from("vendors").select("id, name, category, price, location"),
+      supabase.from("vendors").select("id, name, category, price, area"),
       supabase.from("event_budgets").select("category, amount").eq("event_id", id),
       loadEventServices(supabase, id),
     ]);
@@ -38,7 +38,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const type = event.type as EventType;
     const ranked = buildCards(
-      { services, budget: Number(event.budget), location: event.location },
+      { services, budget: Number(event.budget), area: event.area },
       bookingsResult.data ?? [],
       (vendorsResult.data ?? []).map((v) => ({ ...v, price: Number(v.price) })),
       toSetBudgets(budgetsResult.data ?? []),

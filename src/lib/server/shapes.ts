@@ -3,10 +3,10 @@
 export type EventType = "wedding" | "birthday" | "corporate";
 export type BookingStatus = "pending" | "confirmed" | "declined";
 
-export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes, location";
-export const VENDOR_COLUMNS = "id, name, category, price, location";
+export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes, area";
+export const VENDOR_COLUMNS = "id, name, category, price, location, area";
 /** A vendor with its profile text (docs/SPEC-vendor-profiles.md) and terms (docs/SPEC-booking-documents.md). */
-export const VENDOR_DETAIL_COLUMNS = "id, name, category, price, about, location, terms";
+export const VENDOR_DETAIL_COLUMNS = "id, name, category, price, about, location, area, terms";
 export const PLAN_BOOKING_COLUMNS =
   "id, event_id, vendor_id, category, status, created_at, vendor:vendors(name, price)";
 
@@ -18,7 +18,7 @@ type EventRow = {
   budget: number | string;
   guest_count: number;
   notes: string | null;
-  location: string | null;
+  area: string | null;
 };
 type VendorRow = {
   id: string;
@@ -26,6 +26,7 @@ type VendorRow = {
   category: string;
   price: number | string;
   location: string | null;
+  area: string | null;
 };
 type VendorDetailRow = VendorRow & { about: string | null; terms: string | null };
 type PlanBookingRow = {
@@ -49,7 +50,7 @@ export function toEvent(row: EventRow) {
     budget: Number(row.budget),
     guestCount: row.guest_count,
     notes: row.notes ?? null,
-    location: row.location ?? null,
+    area: row.area ?? null,
   };
 }
 
@@ -60,6 +61,7 @@ export function toVendor(row: VendorRow) {
     category: row.category,
     price: Number(row.price),
     location: row.location ?? null,
+    area: row.area ?? null,
   };
 }
 

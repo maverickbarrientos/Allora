@@ -26,7 +26,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 
 ## Features
 **Customer**
-- Create an event (type, date, budget, guest count, optional location from a fixed list of areas)
+- Create an event (type, date, budget, guest count, optional area)
 - See only the vendors in the event's area when browsing, with a switch to see everyone (see SPEC-event-location.md)
 - Browse vendors by category
 - Book a vendor
@@ -63,12 +63,12 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Recommends what to book first and last, shown as an ordered list
 
 ## Smart Matching
-Each service category gets a share of the event budget (venue and catering largest). Vendors outside the event's area are left out first (vendors with no area always stay; see SPEC-event-location.md). Vendors are ranked by how close their price is to that share, and the match % comes from that distance. The AI only writes the reason text; it never picks or reorders vendors.
+Each service category gets a share of the event budget (venue and catering largest). Vendors outside the event's area are left out first (vendors with no area always stay; areas are compared as text; see SPEC-event-location.md). Vendors are ranked by how close their price is to that share, and the match % comes from that distance. The AI only writes the reason text; it never picks or reorders vendors.
 
 ## Data
 - **Profile**: id (auth user), role, name
-- **Event**: owner (profile), type, date, budget, guestCount, location (an area, optional)
-- **Vendor**: name, category, price, about, location (an area, optional), owner (profile, optional), terms (optional)
+- **Event**: owner (profile), type, date, budget, guestCount, area (optional)
+- **Vendor**: name, category, price, about, location, area (optional), owner (profile, optional), terms (optional)
 - **Vendor contact**: vendor, phone, email, website (readable by the owner and by customers with a confirmed booking)
 - **Booking**: event, vendor, category, status, termsSnapshot and termsAcceptedAt (set by the database when the booking is created, never changed; see SPEC-booking-documents.md)
 - **Event service**: event, category, position (the event's own list of services; see SPEC-event-services.md)

@@ -1,19 +1,17 @@
-# 24 — Events have a location
+# 24 — Events have an area
 
-**What to build:** When creating or editing an event, a customer can pick where it takes place from a fixed list of areas, change it later or clear it. The plan shows it.
+**What to build:** When creating or editing an event, a customer can type the area where it takes place, change it later or clear it. The plan shows it.
 
 **Blocked by:** None
 
 **Status:** done
 
-- [x] The create and edit forms have a "Location (optional)" select with "Not set" and every area; a template leaves it unset, like the date
-- [x] The location is saved, changed and cleared; the edit page sends it only when it changed
-- [x] A value that isn't an area is refused with the error naming `location`, and nothing is saved
-- [x] The database itself refuses a location outside the list
-- [x] The plan header shows the location after the date when it is set
-- [x] Existing events keep working with no location
+- [x] The create and edit forms have an "Area (optional)" text field (up to 60 characters); a template leaves it empty, like the date
+- [x] The area is saved, changed and cleared; the edit page sends it only when it changed
+- [x] An area over 60 characters is refused with the error naming `area`, and nothing is saved
+- [x] The database itself refuses an area over 60 characters
+- [x] The plan header shows the area after the date when it is set
+- [x] Events that already have an area keep it; events with none keep working
 - [x] Works at phone width
 
-**Notes (2026-10-16):** SQL `028_event_location.sql` run on the live project (twice, no errors). 44 API checks passed on a local production build against the live database (create, trim, change, clear with empty text and null, a field left out stays, bad values `Mars`, a number, wrong case, an object and an array refused with `location` named, location on the list, plan and dashboard, vendor 403, logged out 401, and the database refusing `Mars` through the Supabase client). Throwaway accounts and the test vendor deleted afterwards. Not checked in a browser yet: the form select on create and edit, the plan header line, and phone width. The edit page's only-send-what-changed logic is code only so far.
-
-**Browser check (2026-10-16):** 39 checks in headless Chrome against a production build and the live project, all passing; throwaway accounts, vendors and events deleted afterwards. Create: the select has Not set and 11 areas, the wedding template leaves it unset, a created event shows `Wedding · date · Laguna`. Edit: the saved area is preselected, changing and clearing save and show on the plan, an unchanged form says "No changes to save". 375px: no horizontal overflow on create, edit, vendor list and plan; Tab reaches the select after the date and the focus ring shows.
+**Tests (2026-10-16):** `028_event_area.sql` run on the live project twice with no errors; existing `area` data unchanged (2 events, 1 vendor). 58 API checks on a local production build against the live database and 41 checks in headless Chrome, all passing; my throwaway accounts, vendors and events deleted afterwards. Create form: text input with a 60-character limit, label and hint, the wedding template leaves it empty, a created event shows `Wedding · date · Laguna`. Edit: the saved area is shown, change and clear save and show on the plan, an unchanged form says "No changes to save". API: 60 characters (accented) accepted; 61, numbers, objects, arrays and booleans refused naming `area`; trimmed; a field left out stays; clear with "" and null; area on the list, plan and dashboard; vendor 403; logged out 401; and the database refusing 61 characters through the Supabase client. 375px: no overflow on create, edit, vendor list and plan.

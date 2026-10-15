@@ -99,7 +99,7 @@ export default function VendorsPage() {
       eventId={id}
       eventType={state.data.event.type}
       eventDate={state.data.event.date}
-      eventLocation={state.data.event.location}
+      eventArea={state.data.event.area}
       all={state.data.all}
       initialBooked={state.data.booked}
       back={back}
@@ -112,7 +112,7 @@ function Browser({
   eventId,
   eventType,
   eventDate,
-  eventLocation,
+  eventArea,
   all,
   initialBooked,
   back,
@@ -121,7 +121,7 @@ function Browser({
   eventId: string;
   eventType: EventType;
   eventDate: string;
-  eventLocation: string | null;
+  eventArea: string | null;
   all: Vendor[];
   initialBooked: string[];
   back: React.ReactNode;
@@ -135,7 +135,7 @@ function Browser({
   const [booked, setBooked] = useState<Set<string>>(new Set(initialBooked));
   // On by default: only vendors in the event's area (docs/SPEC-event-location.md).
   const [onlyArea, setOnlyArea] = useState(true);
-  const area = eventLocation && onlyArea ? eventLocation : null;
+  const area = eventArea && onlyArea ? eventArea : null;
   // Vendors whose date was taken while the customer had the dialog open.
   const [taken, setTaken] = useState<Set<string>>(new Set());
   // Book opens "Check availability"; the booking is only sent from that dialog.
@@ -162,7 +162,7 @@ function Browser({
       <div className="flex flex-col gap-5">
         <CategoryTabs categories={categories} active={category} onChange={setCategory} />
 
-        {eventLocation ? (
+        {eventArea ? (
           <div className="flex flex-col gap-1">
             <label className="flex min-h-11 w-fit items-center gap-3">
               <input
@@ -171,7 +171,7 @@ function Browser({
                 checked={onlyArea}
                 onChange={(e) => setOnlyArea(e.target.checked)}
               />
-              <span>Only vendors in {eventLocation}</span>
+              <span>Only vendors in {eventArea}</span>
             </label>
             {onlyArea && (
               <p className="text-sm text-muted-foreground">Vendors with no area set are included.</p>
@@ -180,7 +180,7 @@ function Browser({
         ) : (
           <p className="text-sm text-muted-foreground">
             <Link href={`/events/${eventId}/edit`} className="underline underline-offset-2">
-              Add a location to your event
+              Add an area to your event
             </Link>{" "}
             to see vendors in your area.
           </p>

@@ -1,43 +1,30 @@
-// PLACEHOLDER area list (docs/SPEC-event-location.md, "Rules").
-// Events and vendors pick their location from this list. The same list is in
-// the check constraints of 028_event_location.sql; change both together.
+// An event's or vendor's area (docs/SPEC-event-location.md): free text of 1 to
+// 60 characters, matched ignoring case, accents and extra spaces.
 
-export const AREAS = [
-  "Metro Manila",
-  "Bulacan",
-  "Pampanga",
-  "Rizal",
-  "Cavite",
-  "Laguna",
-  "Batangas",
-  "Benguet",
-  "Cebu",
-  "Iloilo",
-  "Davao",
-] as const;
-export type Area = (typeof AREAS)[number];
-
-export function isArea(value: unknown): value is Area {
-  return typeof value === "string" && (AREAS as readonly string[]).includes(value);
-}
+export const AREA_MAX = 60;
 
 /**
- * A location field (event or vendor): null, or an area after trimming.
- * Returns what to save (an empty string clears it to null), or undefined when invalid.
+ * An optional area field: null, or text of at most AREA_MAX characters after
+ * trimming. Returns what to save (an empty string clears it to null), or
+ * undefined when invalid.
  */
-export function parseLocation(value: unknown): Area | null | undefined {
+export function parseArea(value: unknown): string | null | undefined {
   if (value === null) return null;
   if (typeof value !== "string") return undefined;
   const text = value.trim();
-  if (text === "") return null;
-  return isArea(text) ? text : undefined;
+  if ([...text].length > AREA_MAX) return undefined;
+  return text === "" ? null : text;
+}
+
+/** "Parañaque " and "paranaque" are the same area. */
+export function normalizeArea(area: string): string {
+  return area.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 /**
- * True when a vendor is in an event's area: the event has no location, the
- * vendor has none, or both are the same area. Vendors with no location are
- * never left out.
+ * True when a vendor is in an event's area: the event has no area, the vendor
+ * has none, or both name the same area. Vendors with no area are never left out.
  */
-export function inArea(vendorLocation: string | null, eventLocation: string | null): boolean {
-  return eventLocation === null || vendorLocation === null || vendorLocation === eventLocation;
+export function inArea(vendorArea: string | null, eventArea: string | null): boolean {
+  return eventArea === null || vendorArea === null || normalizeArea(vendorArea) === normalizeArea(eventArea);
 }

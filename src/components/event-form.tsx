@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { AREAS } from "@/lib/areas";
+import { AREA_MAX } from "@/lib/areas";
 import { parseAmount } from "@/lib/amount";
 import { capitalize, formatNumber } from "@/lib/format";
 import type { CreateEventInput, Event, EventType } from "@/lib/api/types";
@@ -30,8 +30,8 @@ export type EventFormValues = {
   budget: string;
   guestCount: string;
   notes: string;
-  /** An area, or "" for not set. */
-  location: string;
+  /** Free text, or "" for not set. */
+  area: string;
 };
 type Field = keyof EventFormValues;
 export type EventFormErrors = Partial<Record<Field | "form", string>>;
@@ -43,7 +43,7 @@ export const EMPTY_EVENT_FORM: EventFormValues = {
   budget: "",
   guestCount: "",
   notes: "",
-  location: "",
+  area: "",
 };
 
 export function valuesFromEvent(e: Omit<Event, "id">): EventFormValues {
@@ -54,7 +54,7 @@ export function valuesFromEvent(e: Omit<Event, "id">): EventFormValues {
     budget: String(e.budget),
     guestCount: String(e.guestCount),
     notes: e.notes ?? "",
-    location: e.location ?? "",
+    area: e.area ?? "",
   };
 }
 
@@ -65,7 +65,7 @@ const MESSAGES = {
   budget: "Enter a budget above 0",
   guestCount: `Enter a whole number of guests, from 1 to ${formatNumber(GUESTS_MAX)}`,
   notes: `Keep notes to ${formatNumber(NOTES_MAX)} characters or fewer`,
-  location: "Choose a location from the list",
+  area: `Keep the area to ${AREA_MAX} characters or fewer`,
 } as const;
 
 const BUDGET_MESSAGES = {
@@ -96,9 +96,7 @@ export function validateEventForm(v: EventFormValues): {
     errors.guestCount = MESSAGES.guestCount;
   }
   if (notes.length > NOTES_MAX) errors.notes = MESSAGES.notes;
-  if (v.location !== "" && !(AREAS as readonly string[]).includes(v.location)) {
-    errors.location = MESSAGES.location;
-  }
+  if ([...v.area.trim()].length > AREA_MAX) errors.area = MESSAGES.area;
 
   if (Object.keys(errors).length > 0 || !budget.ok) return { errors, input: null };
   return {
@@ -110,7 +108,7 @@ export function validateEventForm(v: EventFormValues): {
       budget: budget.value,
       guestCount,
       notes: notes === "" ? null : notes,
-      location: v.location === "" ? null : v.location,
+      area: v.area.trim() === "" ? null : v.area.trim(),
     },
   };
 }
@@ -124,7 +122,7 @@ export function fieldErrorsFrom(message: string): EventFormErrors {
   return errors;
 }
 
-/** Event name, type, date, location, budget, guests and notes. Name is first. */
+/** Event name, type, date, area, budget, guests and notes. Name is first. */
 export function EventForm({
   values,
   onChange,
@@ -236,24 +234,23 @@ export function EventForm({
         {fieldError("date")}
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="location">Location (optional)</Label>
-        <Select
-          id="location"
-          name="location"
-          value={values.location}
-          onChange={set("location")}
+        <Label htmlFor="area">Area (optional)</Label>
+        <Input
+          id="area"
+          name="area"
+          maxLength={AREA_MAX}
+          placeholder="e.g. Makati or Cavite"
+          autoComplete="off"
+          value={values.area}
+          onChange={set("area")}
           disabled={saving}
-          aria-invalid={!!errors.location}
-          aria-describedby={describedBy("location")}
-        >
-          <option value="">Not set</option>
-          {AREAS.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </Select>
-        {fieldError("location")}
+          aria-invalid={!!errors.area}
+          aria-describedby={describedBy("area", "area-hint")}
+        />
+        <p id="area-hint" className="text-sm text-muted-foreground">
+          Used to show vendors that serve your area.
+        </p>
+        {fieldError("area")}
       </div>
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-2">

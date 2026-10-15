@@ -1,7 +1,7 @@
 // Validation for event create and edit (docs/SPEC-event-upgrades.md, "Rules").
 // Unknown fields are ignored, and `owner` is never read from the body.
 
-import { parseLocation } from "@/lib/areas";
+import { parseArea } from "@/lib/areas";
 import { EVENT_TYPES, type EventType } from "@/lib/matching/config";
 
 export { EVENT_TYPES };
@@ -19,7 +19,7 @@ export type EventFields = {
   budget?: number;
   guest_count?: number;
   notes?: string | null;
-  location?: string | null;
+  area?: string | null;
 };
 
 export function isValidDate(value: unknown): value is string {
@@ -52,7 +52,7 @@ export function isMoney(value: unknown, max: number): value is number {
 
 /**
  * Validates the event fields in `body`. On create every field except notes and
- * location is required; on update only the fields present are checked.
+ * area is required; on update only the fields present are checked.
  */
 export function parseEventFields(
   body: Record<string, unknown> | null,
@@ -102,11 +102,11 @@ export function parseEventFields(
     } else invalid.push("notes");
   }
 
-  // One of the areas, or null / "" to clear (docs/SPEC-event-location.md).
-  if (present("location")) {
-    const location = parseLocation(b.location);
-    if (location === undefined) invalid.push("location");
-    else fields.location = location;
+  // Free text up to AREA_MAX characters, or null / "" to clear (docs/SPEC-event-location.md).
+  if (present("area")) {
+    const area = parseArea(b.area);
+    if (area === undefined) invalid.push("area");
+    else fields.area = area;
   }
 
   return { fields, invalid };
