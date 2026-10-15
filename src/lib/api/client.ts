@@ -6,9 +6,11 @@ import type {
   Event,
   LoginInput,
   MissingResponse,
+  Payment,
   PlanBooking,
   Session,
   SignupInput,
+  TestMethod,
   Vendor,
   VendorBooking,
 } from "./types";
@@ -59,6 +61,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+// TEMPORARY: payments UI built against mocks (src/mocks/). Remove when connected.
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+
 export const api = {
   signup: (input: SignupInput) => request<Session>("POST", "/api/auth/signup", input),
   login: (input: LoginInput) => request<Session>("POST", "/api/auth/login", input),
@@ -68,11 +73,13 @@ export const api = {
   createEvent: (input: CreateEventInput) =>
     request<{ event: Event }>("POST", "/api/events", input),
   listEvents: () => request<{ events: Event[] }>("GET", "/api/events"),
-  getPlan: (eventId: string) =>
-    request<{ event: Event; bookings: PlanBooking[] }>(
-      "GET",
-      `/api/events/${encodeURIComponent(eventId)}/plan`,
-    ),
+  getPlan: async (eventId: string) =>
+    USE_MOCKS
+      ? (await import("@/mocks/plan")).getPlan(eventId)
+      : request<{ event: Event; bookings: PlanBooking[] }>(
+          "GET",
+          `/api/events/${encodeURIComponent(eventId)}/plan`,
+        ),
   listVendors: (category?: string) =>
     request<{ vendors: Vendor[] }>(
       "GET",
@@ -84,13 +91,25 @@ export const api = {
     request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages }),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
+  payBooking: async (bookingId: string, testMethod: TestMethod) =>
+    USE_MOCKS
+      ? (await import("@/mocks/payments")).payBooking(bookingId, testMethod)
+      : request<{ payment: Payment; booking: PlanBooking }>(
+          "POST",
+          `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
+          { testMethod },
+        ),
 
-  listVendorBookings: () =>
-    request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
-  decideBooking: (id: string, status: "confirmed" | "declined") =>
-    request<{ booking: VendorBooking }>(
-      "PATCH",
-      `/api/vendor/bookings/${encodeURIComponent(id)}`,
-      { status },
-    ),
+  listVendorBookings: async () =>
+    USE_MOCKS
+      ? (await import("@/mocks/vendor")).listVendorBookings()
+      : request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
+  decideBooking: async (id: string, status: "confirmed" | "declined") =>
+    USE_MOCKS
+      ? (await import("@/mocks/vendor")).decideBooking(id, status)
+      : request<{ booking: VendorBooking }>(
+          "PATCH",
+          `/api/vendor/bookings/${encodeURIComponent(id)}`,
+          { status },
+        ),
 };

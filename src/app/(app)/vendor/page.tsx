@@ -10,6 +10,7 @@ import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { VendorPaymentBadge } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert } from "@/components/ui/alert";
@@ -71,7 +72,7 @@ function VendorBookings() {
       );
     } catch (e) {
       const { code } = toApiError(e);
-      if (code === "already_decided") {
+      if (code === "already_decided" || code === "status_unchanged") {
         setNotice("This booking was already decided.");
         reload();
       } else if (code === "booking_not_found") {
@@ -184,8 +185,13 @@ function VendorBookings() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {capitalize(pendingDecision.booking.event.type)} on{" "}
-                {formatDate(pendingDecision.booking.event.date)}. This decision is final. You
-                can&apos;t change it later.
+                {formatDate(pendingDecision.booking.event.date)}.{" "}
+                {pendingDecision.booking.status === "pending"
+                  ? "This decision is final. You can't change it later."
+                  : "The customer will see the change on their plan."}
+                {pendingDecision.status === "declined" &&
+                  pendingDecision.booking.payment?.status === "paid" &&
+                  " The customer's deposit will be refunded."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -220,7 +226,18 @@ function BookingRow({
           {formatDate(event.date)} &middot; {formatNumber(event.guestCount)} guests
         </span>
       </div>
-      <StatusBadge status={booking.status} />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <StatusBadge status={booking.status} />
+        <VendorPaymentBadge booking={booking} />
+      </div>
+      {booking.status === "confirmed" && (
+        <div className="col-span-2 flex gap-3 lg:col-span-1">
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            Decline instead
+          </Button>
+        </div>
+      )}
       {booking.status === "pending" && (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
