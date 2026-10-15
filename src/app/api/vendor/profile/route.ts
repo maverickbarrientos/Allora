@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse, readJson } from "@/lib/api-helpers";
 import { VENDOR_DETAIL_COLUMNS, toVendorDetail } from "@/lib/server/shapes";
+import { CONTACT_COLUMNS, NO_CONTACT, loadContact } from "@/lib/server/vendor-contacts";
 import { requireVendorRole } from "@/lib/vendor-portal";
 import {
   ABOUT_MAX,
@@ -26,19 +27,6 @@ async function loadOwnVendor(supabase: SupabaseClient, userId: string) {
   return supabase.from("vendors").select(VENDOR_DETAIL_COLUMNS).eq("owner", userId).maybeSingle();
 }
 
-const NO_CONTACT: Contact = { phone: null, email: null, website: null };
-
-/** The vendor's own contact details (all null before any are saved), or null if the query fails. */
-async function loadContact(supabase: SupabaseClient, vendorId: string): Promise<Contact | null> {
-  const { data, error } = await supabase
-    .from("vendor_contacts")
-    .select("phone, email, website")
-    .eq("vendor_id", vendorId)
-    .maybeSingle();
-  if (error) return null;
-  return data ?? NO_CONTACT;
-}
-
 /**
  * Saves the given contact fields; the ones left out keep their value. RLS: owner only.
  * Update first, then insert if there was no row yet. Not an upsert: that would
@@ -50,7 +38,7 @@ async function saveContact(supabase: SupabaseClient, vendorId: string, changes: 
       .from("vendor_contacts")
       .update({ ...changes, updated_at: new Date().toISOString() })
       .eq("vendor_id", vendorId)
-      .select("phone, email, website")
+      .select(CONTACT_COLUMNS)
       .maybeSingle();
 
   const updated = await update();
@@ -59,7 +47,7 @@ async function saveContact(supabase: SupabaseClient, vendorId: string, changes: 
   const inserted = await supabase
     .from("vendor_contacts")
     .insert({ vendor_id: vendorId, ...changes })
-    .select("phone, email, website")
+    .select(CONTACT_COLUMNS)
     .single();
   // A simultaneous save created the row first: update it instead.
   if (inserted.error?.code === "23505") return update();

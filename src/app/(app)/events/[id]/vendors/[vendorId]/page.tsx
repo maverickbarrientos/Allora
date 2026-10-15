@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, Globe, Mail, MapPin, Phone } from "lucide-react";
 import { api } from "@/lib/api/client";
+import type { VendorContact } from "@/lib/api/types";
 import { eventName } from "@/lib/event-name";
 import { formatNumber } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
@@ -18,13 +19,68 @@ import { captionFor } from "../vendor-card";
 
 /** The vendor (with availability on the event's date) and the plan (for the event and what is booked). */
 async function loadPage(eventId: string, vendorId: string) {
-  const [{ vendor }, { event, bookings }] = await Promise.all([
+  const [{ vendor, contact }, { event, bookings }] = await Promise.all([
     api.getVendor(vendorId, eventId),
     api.getPlan(eventId),
   ]);
   // Booked when this event already has a pending or confirmed booking with the vendor.
   const booked = bookings.some((b) => b.vendorId === vendor.id && b.status !== "declined");
-  return { vendor, event, booked };
+  return { vendor, contact, event, booked };
+}
+
+const LINK = "inline-flex min-h-11 items-center gap-3 underline-offset-4 hover:underline [overflow-wrap:anywhere]";
+
+/**
+ * Contact details, sent by the API only after the vendor has confirmed one of
+ * this customer's bookings (docs/SPEC-vendor-profiles.md). Plain text and
+ * plain links; the website is always http(s) (checked by the API and the database).
+ */
+function ContactSection({ vendorName, contact }: { vendorName: string; contact: VendorContact | null }) {
+  const icon = "h-4 w-4 shrink-0 text-muted-foreground";
+  const items = contact
+    ? [
+        contact.phone && (
+          <a key="phone" href={`tel:${contact.phone.replace(/[^0-9+]/g, "")}`} className={LINK}>
+            <Phone aria-hidden="true" className={icon} strokeWidth={1.5} />
+            {contact.phone}
+          </a>
+        ),
+        contact.email && (
+          <a key="email" href={`mailto:${contact.email}`} className={LINK}>
+            <Mail aria-hidden="true" className={icon} strokeWidth={1.5} />
+            {contact.email}
+          </a>
+        ),
+        contact.website && /^https?:\/\//i.test(contact.website) && (
+          <a key="website" href={contact.website} target="_blank" rel="noopener noreferrer" className={LINK}>
+            <Globe aria-hidden="true" className={icon} strokeWidth={1.5} />
+            {contact.website}
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        ),
+      ].filter(Boolean)
+    : [];
+
+  return (
+    <section aria-labelledby="contact-heading" className="flex max-w-[65ch] flex-col gap-3">
+      <h2 id="contact-heading" className="font-display text-h2">
+        Contact
+      </h2>
+      {contact === null ? (
+        <p className="text-muted-foreground [overflow-wrap:anywhere]">
+          Contact details appear here once {vendorName} confirms your booking.
+        </p>
+      ) : items.length === 0 ? (
+        <p className="text-muted-foreground">This vendor hasn&apos;t added contact details yet.</p>
+      ) : (
+        <ul className="flex flex-col">
+          {items.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 function NotFound({ what, eventId }: { what: "vendor" | "event"; eventId: string }) {
@@ -99,7 +155,7 @@ export default function VendorProfilePage() {
     );
   }
 
-  const { vendor, event } = state.data;
+  const { vendor, contact, event } = state.data;
   const booked = state.data.booked || bookedNow;
   const available = vendor.availableOnEventDate;
 
@@ -156,6 +212,10 @@ export default function VendorProfilePage() {
             {vendor.about ?? "No description yet."}
           </p>
         </section>
+      </Reveal>
+
+      <Reveal delay={160}>
+        <ContactSection vendorName={vendor.name} contact={contact} />
       </Reveal>
 
       <CheckAvailabilityDialog

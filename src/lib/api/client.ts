@@ -24,6 +24,7 @@ import type {
   VendorProfile,
   VendorProfileInput,
   VendorDetail,
+  VendorContact,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -110,7 +111,7 @@ export const api = {
   },
   /** One vendor's profile; with eventId it also says whether they are free on the event's date. */
   getVendor: (vendorId: string, eventId?: string) =>
-    request<{ vendor: VendorDetail }>(
+    request<{ vendor: VendorDetail; contact: VendorContact | null; contactVisible: boolean }>(
       "GET",
       `/api/vendors/${encodeURIComponent(vendorId)}${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ""}`,
     ),
