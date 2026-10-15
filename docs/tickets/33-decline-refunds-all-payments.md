@@ -4,11 +4,11 @@
 
 **Blocked by:** 32
 
-**Status:** todo
+**Status:** done
 
-- [ ] Declining a deposit-and-balance booking marks both payments refunded in one step
-- [ ] Declining a fully paid (full amount) booking refunds it
-- [ ] The customer sees "Deposit refunded" and the vendor sees "Refunded"
-- [ ] After confirming again, the customer can pay a deposit or the full amount
-- [ ] A vendor declining while the customer pays never leaves a paid payment on a declined booking
-- [ ] Works on the live URL
+- [x] Declining a deposit-and-balance booking marks both payments refunded in one step
+- [x] Declining a fully paid (full amount) booking refunds it
+- [x] The customer sees "Deposit refunded" and the vendor sees "Refunded"
+- [x] After confirming again, the customer can pay a deposit or the full amount
+- [x] A vendor declining while the customer pays never leaves a paid payment on a declined booking
+- [x] Works on the live URL
