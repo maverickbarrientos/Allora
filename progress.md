@@ -1,0 +1,36 @@
+# Allora — Progress
+
+Booking and planning platform where customers create events, book vendors, and see AI-powered gaps in their plan, while vendors manage bookings in a portal.
+
+## Features (in build order)
+
+| # | Feature | Status | Branch | Notes |
+|---|---------|--------|--------|-------|
+| 1 | Setup and auth | not started | _tbd_ | Supabase Auth, `profiles` with role, route protection, RLS |
+| 2 | Events, vendor browsing and booking | not started | _tbd_ | Create event, browse vendors by category, book, view plan with status |
+| 3 | Vendor portal | not started | _tbd_ | Incoming bookings, accept or decline, status shows on customer plan |
+| 4 | Smart matching and "What's missing" cards | not started | _tbd_ | Deterministic budget-share ranking, AI writes reason text only |
+| 5 | Planning chatbot | not started | _tbd_ | Knows event and bookings, ordered list of what to book first and last |
+| 6 | Polish and deploy to Vercel | not started | _tbd_ | Final polish, production deploy |
+
+## Decisions and changes
+
+_No entries yet. Add dated entries (YYYY-MM-DD) below._
+
+## Open questions
+
+Things `SPEC.md` leaves unclear. None have been guessed at.
+
+1. **Deploy timing.** The old workshop rules said to deploy to Vercel before any feature work. The build order here puts deploy last. Which applies? (The old rules are saved in `docs/WORKSHOP-RULES.md`.)
+2. **Service categories.** The spec doesn't list the categories (only that venue and catering get the largest budget share).
+3. **Checklist per event type.** Which services are expected for wedding, birthday, and corporate events?
+4. **Budget shares.** What percentage of the budget goes to each category?
+5. **Match % formula.** The spec says it comes from price distance to the category share, but not how distance maps to a percentage.
+6. **Vendor data.** How do vendors get created? On vendor sign-up, or seeded? What currency is `price`, and is it a single flat price?
+7. **Vendor linking.** How is a vendor user linked to a vendor record (created at sign-up, or chosen)? Bookings for vendors with no owner can't be seen by anyone; is that intended?
+8. **Booking rules.** Can a customer book several vendors in one category, cancel a booking, or re-book after a decline? Declined bookings leave the category a gap per the rule; is that the full behaviour?
+9. **Events.** Can events be edited or deleted? Can a customer have several events?
+10. **Chatbot.** Is chat history stored, or per session only? Is "first and last" a single ordered list of categories or of specific vendors?
+11. **LLM provider.** Which "provided LLM API" is it, and what env var holds its key?
+12. **Branch naming.** Preferred convention for separate frontend and backend branches (e.g. `feature/<name>-frontend` and `feature/<name>-backend`)?
+13. **Existing CLAUDE.md.** I replaced the earlier workshop CLAUDE.md as asked and kept a copy at `docs/WORKSHOP-RULES.md`. Should any of it (e.g. commands, `supabase/sql/` migration convention, "explain changes in plain English") be carried into the new file?
