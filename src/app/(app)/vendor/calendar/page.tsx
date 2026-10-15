@@ -27,7 +27,7 @@ export default function VendorCalendarPage() {
 
   // Customer-role users belong on /.
   useEffect(() => {
-    if (!isVendor) router.replace("/");
+    if (!isVendor) router.replace("/dashboard");
   }, [isVendor, router]);
 
   return isVendor ? (

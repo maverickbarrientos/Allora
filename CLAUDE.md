@@ -12,7 +12,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - Two roles: **customer** (creates events, books vendors, views the plan) and **vendor** (sees incoming bookings, accepts or declines).
 - Supabase Auth, email and password. On sign up the user picks a role, saved in `profiles` (`id` = auth user id, `role`, `name`).
 - A vendor user is linked to one vendor record.
-- Only the login and sign-up pages are public; logged-out visitors go to login.
+- Only the landing page (`/`), login and sign-up are public; logged-out visitors go to login. Signed-in users at `/` go to `/dashboard`.
 - RLS: customers access only their own events and bookings; vendors read and update only bookings addressed to them; any signed-in user reads vendors; users read and update only their own profile.
 - vendors insert and update only their own vendor record
 

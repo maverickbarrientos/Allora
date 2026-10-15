@@ -43,7 +43,7 @@ export default function VendorBookingsPage() {
 
   // Customer-role users belong on /.
   useEffect(() => {
-    if (!isVendor) router.replace("/");
+    if (!isVendor) router.replace("/dashboard");
   }, [isVendor, router]);
 
   return isVendor ? <VendorBookings /> : null;

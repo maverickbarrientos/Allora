@@ -161,7 +161,7 @@ function DashboardView() {
           <p className="label">404</p>
           <h2 className="font-display text-h1">Event not found</h2>
           <p className="text-muted-foreground">This event doesn&apos;t exist, or it isn&apos;t yours. Choose another one above.</p>
-          <Link href="/" className={buttonVariants({ variant: "outline" })}>
+          <Link href="/events" className={buttonVariants({ variant: "outline" })}>
             Back to your events
           </Link>
         </div>

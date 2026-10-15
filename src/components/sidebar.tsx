@@ -22,7 +22,7 @@ type NavItem = {
 const NAV: Record<Profile["role"], NavItem[]> = {
   customer: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, prefixes: ["/dashboard"] },
-    { href: "/", label: "My events", icon: Ticket, prefixes: ["/events"] },
+    { href: "/events", label: "My events", icon: Ticket, prefixes: ["/events"] },
     { href: "/events/new", label: "New event", icon: CalendarPlus, prefixes: ["/events/new"] },
   ],
   vendor: [
@@ -35,9 +35,9 @@ const NAV: Record<Profile["role"], NavItem[]> = {
 
 function matchLength(item: NavItem, pathname: string): number {
   if (item.exact) return pathname === item.href ? item.href.length : -1;
-  let best = item.href === "/" && pathname === "/" ? 1 : -1;
-  for (const p of [item.href === "/" ? "" : item.href, ...item.prefixes]) {
-    if (p && (pathname === p || pathname.startsWith(p + "/"))) best = Math.max(best, p.length);
+  let best = -1;
+  for (const p of [item.href, ...item.prefixes]) {
+    if (pathname === p || pathname.startsWith(p + "/")) best = Math.max(best, p.length);
   }
   return best;
 }
