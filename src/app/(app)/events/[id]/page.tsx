@@ -320,6 +320,15 @@ export default function PlanPage() {
                     <div className="col-span-2 empty:hidden sm:col-span-3 sm:col-start-2">
                       <PlanPaymentLine booking={b} eventId={event.id} />
                     </div>
+                    <div className="col-span-2 flex flex-wrap gap-x-4 text-sm sm:col-span-3 sm:col-start-2">
+                      <Link
+                        href={`/events/${event.id}/bookings/${b.id}/contract`}
+                        className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
+                        aria-label={`Contract for ${b.vendorName}`}
+                      >
+                        Contract
+                      </Link>
+                      </div>
                   </div>
                 </Reveal>
               </li>

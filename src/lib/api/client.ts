@@ -13,6 +13,7 @@ import type {
   LoginInput,
   MissingResponse,
   Payment,
+  BookingContract,
   PlanBooking,
   Session,
   SignupInput,
@@ -130,6 +131,8 @@ export const api = {
   /** agreedTerms: the vendor terms the customer ticked "I agree" to; leave out when the vendor has none. */
   createBooking: (input: { eventId: string; vendorId: string; agreedTerms?: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
+  getBookingContract: (bookingId: string) =>
+    request<{ contract: BookingContract }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/contract`),
   payBooking: (bookingId: string, testMethod: TestMethod) =>
     request<{ payment: Payment; booking: PlanBooking }>(
       "POST",

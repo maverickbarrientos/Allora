@@ -65,12 +65,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // descendants (e.g. sr-only labels), so overflow-hidden clips them too.
     // Without it they escape the clip and scroll the whole window once main
     // is scrolled to the bottom.
-    <div className="relative flex min-h-screen flex-col lg:h-screen lg:flex-row lg:overflow-hidden">
-      <aside className="hidden w-64 shrink-0 border-r border-border bg-stone lg:block">
+    // print: only the page content is printed (the booking documents use this).
+    <div className="relative flex min-h-screen flex-col lg:h-screen lg:flex-row lg:overflow-hidden print:block print:h-auto print:min-h-0 print:overflow-visible">
+      <aside className="hidden w-64 shrink-0 border-r border-border bg-stone lg:block print:hidden">
         <SidebarContent {...sidebarProps} />
       </aside>
 
-      <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-stone px-2 lg:hidden">
+      <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-stone px-2 lg:hidden print:hidden">
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -85,8 +86,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <span className="font-display text-2xl">Allora</span>
       </div>
 
-      <main className="min-w-0 flex-1 lg:overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:py-16">
+      <main className="min-w-0 flex-1 lg:overflow-y-auto print:overflow-visible">
+        <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:py-16 print:max-w-none print:p-0">
           {state.status === "loading" && (
             <div role="status" aria-label="Loading" className="flex flex-col gap-4">
               <Skeleton className="h-4 w-28" />

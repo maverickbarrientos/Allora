@@ -66,6 +66,19 @@ export type VendorProfileInput = {
   email?: string | null;
   website?: string | null;
 };
+/** docs/SPEC-booking-documents.md: a booking's contract, for the event's customer only. */
+export type BookingContract = {
+  bookingId: string;
+  category: string;
+  status: "pending" | "confirmed" | "declined";
+  bookedAt: string;
+  event: { id: string; name: string | null; type: EventType; date: string; guestCount: number };
+  vendor: { name: string; price: number };
+  customerName: string;
+  /** The vendor's terms as the customer agreed to them; null when the vendor had none. */
+  terms: string | null;
+  agreedAt: string | null;
+};
 export type PlanBooking = {
   id: string;
   eventId: string;
