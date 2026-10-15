@@ -8,7 +8,7 @@ import { api, ApiError } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
-import type { PlanBooking } from "@/lib/api/types";
+import type { EventService, PlanBooking } from "@/lib/api/types";
 import { PlanningAssistant } from "@/components/chat/planning-assistant";
 import { BudgetSection } from "@/components/budget-section";
 import { ServicesSection } from "@/components/services-section";
@@ -146,6 +146,17 @@ export default function PlanPage() {
       );
     }
     void refreshPlan({ cards: false, queue: true });
+  }
+
+  // After the service list changes: the gaps and shares change, so the cards
+  // are refetched and the budgets refreshed quietly.
+  function onServicesSaved(data: { services: EventService[] }) {
+    setServices({ status: "loaded", data });
+    reloadCards();
+    api
+      .getBudgets(id)
+      .then((summary) => alive.current && setBudgets({ status: "loaded", data: summary }))
+      .catch(() => {});
   }
 
   function removeCard(category: string) {
@@ -309,7 +320,12 @@ export default function PlanPage() {
         )}
       </section>
 
-      <ServicesSection state={services.state} onRetry={services.reload} />
+      <ServicesSection
+        eventId={id}
+        state={services.state}
+        onRetry={services.reload}
+        onSaved={onServicesSaved}
+      />
 
       <BudgetSection eventId={id} state={budgets.state} onRetry={budgets.reload} />
 

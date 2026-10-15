@@ -1,6 +1,7 @@
 // An event's own service list (docs/SPEC-event-services.md).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { CATEGORIES } from "@/lib/vendor-profile";
 
 export type EventService = { category: string; status: "pending" | "confirmed" | null };
 
@@ -16,6 +17,25 @@ export async function loadEventServices(
     .order("position", { ascending: true });
   if (error) return null;
   return (data ?? []).map((r) => r.category as string);
+}
+
+/**
+ * Validates `body.services`: 1 or more known categories, no duplicates.
+ * Returns the list in the order given, or a message for a 400.
+ */
+export function parseServices(body: Record<string, unknown> | null): { services: string[] } | { error: string } {
+  const list = body?.services;
+  if (!Array.isArray(list)) return { error: "services must be an array." };
+  if (list.length < 1 || list.length > CATEGORIES.length) {
+    return { error: `services must have 1 to ${CATEGORIES.length} entries.` };
+  }
+  const seen = new Set<string>();
+  for (const c of list) {
+    if (typeof c !== "string" || !CATEGORIES.includes(c)) return { error: `Unknown service: ${String(c)}.` };
+    if (seen.has(c)) return { error: `Duplicate service: ${c}.` };
+    seen.add(c);
+  }
+  return { services: [...seen] };
 }
 
 /** Each service with its strongest active booking: confirmed over pending, or null for a gap. */

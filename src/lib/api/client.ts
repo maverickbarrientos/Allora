@@ -90,6 +90,10 @@ export const api = {
     request<BudgetSummary>("PUT", `/api/events/${encodeURIComponent(eventId)}/budgets`, { budgets }),
   getServices: (eventId: string) =>
     request<{ services: EventService[] }>("GET", `/api/events/${encodeURIComponent(eventId)}/services`),
+  saveServices: (eventId: string, services: string[]) =>
+    request<{ services: EventService[] }>("PUT", `/api/events/${encodeURIComponent(eventId)}/services`, {
+      services,
+    }),
   getPlan: (eventId: string) =>
     request<{ event: Event; bookings: PlanBooking[] }>(
       "GET",
