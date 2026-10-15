@@ -1,4 +1,6 @@
 import type {
+  BudgetEntry,
+  BudgetSummary,
   ChatMessage,
   ChatResponse,
   CreateEventInput,
@@ -70,6 +72,10 @@ export const api = {
   listEventTemplates: () => request<{ templates: EventTemplate[] }>("GET", "/api/event-templates"),
   updateEvent: (eventId: string, input: UpdateEventInput) =>
     request<{ event: Event }>("PATCH", `/api/events/${encodeURIComponent(eventId)}`, input),
+  getBudgets: (eventId: string) =>
+    request<BudgetSummary>("GET", `/api/events/${encodeURIComponent(eventId)}/budgets`),
+  saveBudgets: (eventId: string, budgets: BudgetEntry[]) =>
+    request<BudgetSummary>("PUT", `/api/events/${encodeURIComponent(eventId)}/budgets`, { budgets }),
   getPlan: (eventId: string) =>
     request<{ event: Event; bookings: PlanBooking[] }>(
       "GET",

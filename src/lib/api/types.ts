@@ -145,5 +145,13 @@ export type EventTemplate = {
 /** Only the fields present are changed. `notes: null` clears the notes. */
 export type UpdateEventInput = Partial<CreateEventInput>;
 
+// Budgets by service (GET and PUT /api/events/:id/budgets). One entry per
+// checklist service, in checklist order. `amount` is null when no budget is set;
+// `share` is the set amount, or the suggested share when none is set.
+export type ServiceBudget = { category: string; amount: number | null; share: number; booked: number };
+export type BudgetSummary = { eventBudget: number; allocated: number; budgets: ServiceBudget[] };
+/** `amount: null` clears that service's budget. */
+export type BudgetEntry = { category: string; amount: number | null };
+
 /** Error body for all errors: `{ error: { code, message } }`. */
 export type ErrorBody = { error: { code: string; message: string } };
