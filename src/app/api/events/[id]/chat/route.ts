@@ -55,7 +55,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         messages: parsed.messages,
       }),
       timeoutMs: CHAT_TIMEOUT_MS,
-      maxTokens: 1000,
+      maxTokens: 600,
       strictJson: true,
     });
 
