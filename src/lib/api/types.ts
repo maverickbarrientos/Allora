@@ -120,6 +120,31 @@ export type ChatResponse = {
   reply: string;
   order: OrderItem[] | null;
   source: "ai" | "fallback";
+  affordability?: Affordability;
+  summary?: PlanSummary;
+};
+export type ChatIntent = "affordability" | "summary";
+export type Verdict = "within_budget" | "tight" | "cannot_cover_all" | "over_budget";
+export type Affordability = {
+  budget: number;
+  committed: number;
+  remaining: number;
+  projectedMinimum: number;
+  verdict: Verdict;
+  rows: { category: string; share: number; booked: number; difference: number; lowestPrice: number | null }[];
+};
+export type PlanSummary = {
+  daysUntilEvent: number;
+  budget: number;
+  committed: number;
+  remaining: number;
+  counts: { pending: number; confirmed: number; declined: number };
+  rows: {
+    category: string;
+    state: "confirmed" | "pending" | "needs_replacement" | "missing";
+    vendorName: string | null;
+    amount: number;
+  }[];
 };
 
 // Shapes from docs/SPEC-dashboard.md.

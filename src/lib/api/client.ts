@@ -1,6 +1,7 @@
 import type {
   BudgetEntry,
   BudgetSummary,
+  ChatIntent,
   ChatMessage,
   ChatResponse,
   CreateEventInput,
@@ -108,8 +109,8 @@ export const api = {
     request<VendorCalendar>("GET", `/api/vendor/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
   getMissing: (eventId: string) =>
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
-  chat: (eventId: string, messages: ChatMessage[]) =>
-    request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages }),
+  chat: (eventId: string, messages: ChatMessage[], intent?: ChatIntent) =>
+    request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages, intent }),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
   payBooking: (bookingId: string, testMethod: TestMethod) =>
