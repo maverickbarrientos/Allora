@@ -1,107 +1,181 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
-import type { EventType } from "@/lib/api/types";
+import { formatNumber } from "@/lib/format";
+import { useLoad } from "@/lib/use-load";
+import type { EventTemplate, EventType } from "@/lib/api/types";
+import {
+  EMPTY_EVENT_FORM,
+  EventForm,
+  fieldErrorsFrom,
+  validateEventForm,
+  type EventFormErrors,
+  type EventFormValues,
+} from "@/components/event-form";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
-import { Alert } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type Errors = {
-  name?: string;
-  type?: string;
-  date?: string;
-  budget?: string;
-  guestCount?: string;
-  form?: string;
-};
+/** "blank", or the type of the template the form was filled from. */
+type Choice = "blank" | EventType;
 
-const TYPES: EventType[] = ["wedding", "birthday", "corporate"];
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-const NAME_MAX = 80;
-const NAME_COUNTER_FROM = 70;
-
-const FIELD_MESSAGES = {
-  name: `Enter an event name (up to ${NAME_MAX} characters)`,
-  type: "Choose an event type",
-  date: "Choose a valid date",
-  budget: "Enter a budget above 0",
-  guestCount: "Enter a whole number of guests above 0",
-} as const;
-
-/** The server's validation_error message names the bad fields ("Invalid fields: budget, guestCount."). */
-function fieldErrorsFrom(message: string): Errors {
-  const errors: Errors = {};
-  for (const field of Object.keys(FIELD_MESSAGES) as (keyof typeof FIELD_MESSAGES)[]) {
-    if (new RegExp(`\\b${field}\\b`).test(message)) errors[field] = FIELD_MESSAGES[field];
-  }
-  return errors;
+function valuesFromTemplate(t: EventTemplate): EventFormValues {
+  return {
+    name: t.name,
+    type: t.type,
+    date: "",
+    budget: String(t.budget),
+    guestCount: String(t.guestCount),
+    notes: t.notes,
+  };
 }
+
+const sameValues = (a: EventFormValues, b: EventFormValues) =>
+  (Object.keys(a) as (keyof EventFormValues)[]).every((k) => a[k] === b[k]);
 
 export default function NewEventPage() {
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Errors>({});
-  const [name, setName] = useState("");
+  const templates = useLoad(() => api.listEventTemplates());
+  const [choice, setChoice] = useState<Choice>("blank");
+  // What the current choice filled in, to tell whether the customer has typed since.
+  const [applied, setApplied] = useState<EventFormValues>(EMPTY_EVENT_FORM);
+  const [values, setValues] = useState<EventFormValues>(EMPTY_EVENT_FORM);
+  const [pendingChoice, setPendingChoice] = useState<Choice | null>(null);
+  const [errors, setErrors] = useState<EventFormErrors>({});
+  const [saving, setSaving] = useState(false);
+  const inFlight = useRef(false);
+  const alive = useRef(true);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    const trimmedName = name.trim();
-    const type = String(f.get("type") ?? "");
-    const date = String(f.get("date") ?? "");
-    const budgetRaw = String(f.get("budget") ?? "").trim();
-    const guestRaw = String(f.get("guestCount") ?? "").trim();
-    const budget = Number(budgetRaw);
-    const guestCount = Number(guestRaw);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
-    // Mirrors the server rules so each field shows its own message.
-    const next: Errors = {};
-    if (trimmedName.length < 1 || trimmedName.length > NAME_MAX) next.name = FIELD_MESSAGES.name;
-    if (!TYPES.includes(type as EventType)) next.type = FIELD_MESSAGES.type;
-    if (!DATE_RE.test(date)) next.date = FIELD_MESSAGES.date;
-    if (!budgetRaw || !Number.isFinite(budget) || budget <= 0) next.budget = FIELD_MESSAGES.budget;
-    if (!guestRaw || !Number.isInteger(guestCount) || guestCount <= 0) {
-      next.guestCount = FIELD_MESSAGES.guestCount;
+  // Templates are for customers only; a vendor session gets 403.
+  useEffect(() => {
+    if (templates.state.status === "error" && templates.state.error.code === "forbidden") {
+      router.replace("/vendor");
     }
-    setErrors(next);
-    if (Object.keys(next).length) return;
+  }, [templates.state, router]);
 
-    setSubmitting(true);
+  const templateList = templates.state.status === "loaded" ? templates.state.data.templates : [];
+  const labelFor = (c: Choice) =>
+    c === "blank" ? "Start blank" : (templateList.find((t) => t.type === c)?.label ?? c);
+
+  function apply(c: Choice) {
+    const t = templateList.find((x) => x.type === c);
+    const next = c === "blank" || !t ? EMPTY_EVENT_FORM : valuesFromTemplate(t);
+    setChoice(c);
+    setApplied(next);
+    setValues(next);
+    setErrors({});
+  }
+
+  function choose(c: Choice) {
+    if (c === choice || saving) return;
+    // Never replace what the customer typed without asking.
+    if (!sameValues(values, applied)) setPendingChoice(c);
+    else apply(c);
+  }
+
+  async function submit() {
+    if (inFlight.current) return;
+    const { errors: next, input } = validateEventForm(values);
+    setErrors(next);
+    if (!input) return;
+
+    inFlight.current = true;
+    setSaving(true);
     try {
-      const { event } = await api.createEvent({
-        name: trimmedName,
-        type: type as EventType,
-        date,
-        budget,
-        guestCount,
-      });
-      router.push(`/events/${event.id}`);
+      const { event } = await api.createEvent(input);
+      if (alive.current) router.push(`/events/${event.id}`);
     } catch (err) {
+      if (!alive.current) return;
       const { code, message } = toApiError(err);
       if (code === "validation_error") {
         const fields = fieldErrorsFrom(message);
         setErrors(Object.keys(fields).length ? fields : { form: message });
-        setSubmitting(false);
-        return;
-      }
-      setErrors({
-        form:
-          code === "forbidden"
+      } else {
+        setErrors({
+          form:
+            code === "forbidden"
               ? "Only customers can create events."
               : "Something went wrong. Please try again.",
-      });
-      setSubmitting(false);
+        });
+      }
+      inFlight.current = false;
+      setSaving(false);
     }
   }
+
+  const option = (c: Choice, title: string, detail: string) => (
+    <label
+      key={c}
+      className="flex min-h-11 cursor-pointer flex-col gap-1 rounded-xl border border-border bg-background p-4 has-checked:border-primary has-checked:bg-secondary has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2 has-disabled:cursor-not-allowed"
+    >
+      <span className="flex items-center gap-3">
+        <input
+          type="radio"
+          name="start"
+          value={c}
+          checked={choice === c}
+          onChange={() => choose(c)}
+          disabled={saving}
+          className="h-4 w-4 accent-primary focus:outline-none"
+        />
+        <span className="font-medium">{title}</span>
+      </span>
+      <span className="pl-7 text-sm text-muted-foreground">{detail}</span>
+    </label>
+  );
+
+  const picker = (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="label mb-3">Start from</legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {option("blank", "Start blank", "Empty fields")}
+        {templates.state.status === "loading" &&
+          [0, 1, 2].map((i) => <Skeleton key={i} className="h-[4.75rem] rounded-xl" />)}
+        {templateList.map((t) =>
+          option(
+            t.type,
+            t.label,
+            `${formatNumber(t.guestCount)} guests · budget ${formatNumber(t.budget)}`,
+          ),
+        )}
+      </div>
+      {templates.state.status === "error" && templates.state.error.code !== "forbidden" && (
+        <div className="flex flex-wrap items-center gap-3">
+          <p role="status" className="text-sm text-muted-foreground">
+            Couldn&apos;t load templates. You can still start blank.
+          </p>
+          <Button variant="outline" size="sm" onClick={templates.reload}>
+            Retry
+          </Button>
+        </div>
+      )}
+      <p role="status" aria-live="polite" className="text-sm text-muted-foreground empty:hidden">
+        {choice !== "blank" &&
+          `Filled in from the ${labelFor(choice)} template. These are suggestions: check each field and change anything you like.`}
+      </p>
+    </fieldset>
+  );
 
   return (
     <div className="flex max-w-xl flex-col gap-10">
@@ -114,72 +188,46 @@ export default function NewEventPage() {
       <PageHeader
         label="New plan"
         title="Create event"
-        description="Tell us about the occasion. You can add vendors next."
+        description="Start from a template or from scratch. You can add vendors next."
       />
-      <Reveal delay={700}>
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6">
-          {errors.form && <Alert variant="destructive">{errors.form}</Alert>}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Event name</Label>
-            <Input
-              id="name"
-              name="name"
-              required
-              maxLength={NAME_MAX}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={submitting}
-              aria-invalid={!!errors.name}
-              aria-describedby={[errors.name ? "name-error" : "", name.length >= NAME_COUNTER_FROM ? "name-counter" : ""].filter(Boolean).join(" ") || undefined}
-            />
-            {name.length >= NAME_COUNTER_FROM && (
-              <p id="name-counter" className="self-end text-xs text-muted-foreground" aria-live="polite">
-                {name.length} / {NAME_MAX}
-              </p>
-            )}
-            {errors.name && (
-              <p id="name-error" className="text-sm text-destructive">
-                {errors.name}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="type">Type</Label>
-            <Select id="type" name="type" defaultValue="" disabled={submitting} aria-invalid={!!errors.type}>
-              <option value="" disabled>
-                Choose a type
-              </option>
-              {TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </option>
-              ))}
-            </Select>
-            {errors.type && <p className="text-sm text-destructive">{errors.type}</p>}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="date">Date</Label>
-            <Input id="date" name="date" type="date" disabled={submitting} aria-invalid={!!errors.date} />
-            {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
-          </div>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="budget">Budget</Label>
-              <Input id="budget" name="budget" type="number" inputMode="decimal" step="any" disabled={submitting} aria-invalid={!!errors.budget} />
-              {errors.budget && <p className="text-sm text-destructive">{errors.budget}</p>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="guestCount">Guests</Label>
-              <Input id="guestCount" name="guestCount" type="number" inputMode="numeric" disabled={submitting} aria-invalid={!!errors.guestCount} />
-              {errors.guestCount && <p className="text-sm text-destructive">{errors.guestCount}</p>}
-            </div>
-          </div>
-          <Button type="submit" disabled={submitting} className="w-fit">
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {submitting ? "Creating" : "Create event"}
-          </Button>
-        </form>
+      <Reveal delay={700} className="flex flex-col gap-10">
+        {picker}
+        <EventForm
+          values={values}
+          onChange={setValues}
+          errors={errors}
+          saving={saving}
+          submitLabel="Create event"
+          savingLabel="Creating"
+          onSubmit={() => void submit()}
+        />
       </Reveal>
+
+      <AlertDialog open={pendingChoice !== null} onOpenChange={(open) => !open && setPendingChoice(null)}>
+        {pendingChoice && (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Replace what you&apos;ve typed?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingChoice === "blank"
+                  ? "Starting blank clears every field, including your changes."
+                  : `The ${labelFor(pendingChoice)} template fills every field with its suggestions and replaces your changes.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingChoice(null)}>Keep my changes</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  apply(pendingChoice);
+                  setPendingChoice(null);
+                }}
+              >
+                Replace
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        )}
+      </AlertDialog>
     </div>
   );
 }

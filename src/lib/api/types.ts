@@ -128,7 +128,22 @@ export type CreateEventInput = {
   date: string;
   budget: number;
   guestCount: number;
+  notes?: string | null;
 };
+
+// Event upgrades (the merged backend: GET /api/event-templates, PATCH /api/events/:id).
+
+/** Placeholder defaults for the create form, one per event type. */
+export type EventTemplate = {
+  type: EventType;
+  label: string;
+  name: string;
+  guestCount: number;
+  budget: number;
+  notes: string;
+};
+/** Only the fields present are changed. `notes: null` clears the notes. */
+export type UpdateEventInput = Partial<CreateEventInput>;
 
 /** Error body for all errors: `{ error: { code, message } }`. */
 export type ErrorBody = { error: { code: string; message: string } };

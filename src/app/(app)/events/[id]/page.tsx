@@ -194,10 +194,15 @@ export default function PlanPage() {
   }
 
   const { event, bookings } = state.data;
-  const addVendor = (
-    <Link href={`/events/${event.id}/vendors`} className={buttonVariants()}>
-      Add vendor
-    </Link>
+  const actions = (
+    <div className="flex flex-wrap gap-3">
+      <Link href={`/events/${event.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+        Edit event
+      </Link>
+      <Link href={`/events/${event.id}/vendors`} className={buttonVariants()}>
+        Add vendor
+      </Link>
+    </div>
   );
 
   return (
@@ -207,7 +212,7 @@ export default function PlanPage() {
         label="Event plan"
         title={<span className="[overflow-wrap:anywhere]">{eventName(event)}</span>}
         description={`${capitalize(event.type)} · ${formatDate(event.date)}`}
-        action={addVendor}
+        action={actions}
       />
 
       <Reveal delay={400}>
@@ -216,6 +221,15 @@ export default function PlanPage() {
           <Stat label="Guests" value={formatNumber(event.guestCount)} />
         </dl>
       </Reveal>
+
+      {event.notes && (
+        <section className="flex flex-col gap-2" aria-labelledby="notes-heading">
+          <h2 id="notes-heading" className="label">
+            Notes
+          </h2>
+          <p className="max-w-[65ch] whitespace-pre-line wrap-anywhere">{event.notes}</p>
+        </section>
+      )}
 
       <ReplacementNotice
         categories={replacementCategories(bookings)}

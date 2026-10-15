@@ -4,6 +4,7 @@ import type {
   CreateEventInput,
   ErrorBody,
   Event,
+  EventTemplate,
   LoginInput,
   MissingResponse,
   Payment,
@@ -11,6 +12,7 @@ import type {
   Session,
   SignupInput,
   TestMethod,
+  UpdateEventInput,
   Vendor,
   VendorAvailability,
   VendorBooking,
@@ -65,6 +67,9 @@ export const api = {
   createEvent: (input: CreateEventInput) =>
     request<{ event: Event }>("POST", "/api/events", input),
   listEvents: () => request<{ events: Event[] }>("GET", "/api/events"),
+  listEventTemplates: () => request<{ templates: EventTemplate[] }>("GET", "/api/event-templates"),
+  updateEvent: (eventId: string, input: UpdateEventInput) =>
+    request<{ event: Event }>("PATCH", `/api/events/${encodeURIComponent(eventId)}`, input),
   getPlan: (eventId: string) =>
     request<{ event: Event; bookings: PlanBooking[] }>(
       "GET",
