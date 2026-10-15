@@ -11,6 +11,7 @@ import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { VendorPaymentBadge } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert } from "@/components/ui/alert";
@@ -55,6 +56,67 @@ function VendorBookings() {
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
   const decisionLock = useRef(false);
+
+  // Cancelling a confirmed booking (docs/SPEC-cancellation.md). The dialog
+  // stays open while the request runs and shows any error itself.
+  const [cancelTarget, setCancelTarget] = useState<VendorBooking | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const cancelInFlight = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  function closeCancel() {
+    if (cancelInFlight.current) return;
+    const id = cancelTarget?.id;
+    setCancelTarget(null);
+    setCancelError(null);
+    // Give focus back to the row's Cancel booking button.
+    if (id) requestAnimationFrame(() => document.getElementById(cancelButtonId(id))?.focus());
+  }
+
+  async function confirmCancel() {
+    if (!cancelTarget || cancelInFlight.current) return;
+    cancelInFlight.current = true;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const { booking: updated } = await api.decideBooking(cancelTarget.id, "declined");
+      if (!mounted.current) return;
+      setState((prev) =>
+        prev.status === "loaded"
+          ? {
+              status: "loaded",
+              data: {
+                ...prev.data,
+                bookings: prev.data.bookings.map((b) => (b.id === updated.id ? updated : b)),
+              },
+            }
+          : prev,
+      );
+      setCancelTarget(null);
+    } catch (e) {
+      if (!mounted.current) return;
+      const { code } = toApiError(e);
+      setCancelError(
+        code === "status_unchanged"
+          ? "This booking can't be cancelled anymore."
+          : code === "booking_not_found"
+            ? "This booking is no longer available."
+            : code === "forbidden"
+              ? "Only vendor accounts can cancel bookings."
+              : "Couldn't cancel this booking. Please try again.",
+      );
+    } finally {
+      cancelInFlight.current = false;
+      if (mounted.current) setCancelling(false);
+    }
+  }
   useEffect(() => {
     if (state.status === "error" && state.error.code === "vendor_not_linked") {
       router.replace("/vendor/profile");
@@ -182,6 +244,10 @@ function VendorBookings() {
                           booking={b}
                           busy={busy.has(b.id)}
                           onDecide={(st) => setPendingDecision({ booking: b, status: st })}
+                          onCancel={() => {
+                            setCancelError(null);
+                            setCancelTarget(b);
+                          }}
                         />
                       </Reveal>
                     </li>
@@ -207,6 +273,9 @@ function VendorBookings() {
                 {capitalize(pendingDecision.booking.event.type)} on{" "}
                 {formatDate(pendingDecision.booking.event.date)}. The customer will see this
                 change on their event plan.
+                {pendingDecision.status === "declined" &&
+                  pendingDecision.booking.payment?.status === "paid" &&
+                  " The customer's deposit will be refunded."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -218,18 +287,50 @@ function VendorBookings() {
           </>
         )}
       </AlertDialog>
+
+      <AlertDialog open={cancelTarget !== null} onOpenChange={(open) => !open && closeCancel()}>
+        {cancelTarget && (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The customer will be asked to find a replacement.
+                {cancelTarget.payment?.status === "paid" && " The customer's deposit will be refunded."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {cancelError && (
+              <Alert variant="destructive" className="mt-4">
+                {cancelError}
+              </Alert>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={closeCancel} disabled={cancelling}>
+                Keep booking
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={confirmCancel} disabled={cancelling}>
+                {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
+                Cancel booking
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        )}
+      </AlertDialog>
     </div>
   );
 }
+
+const cancelButtonId = (bookingId: string) => `cancel-${bookingId}`;
 
 function BookingRow({
   booking,
   busy,
   onDecide,
+  onCancel,
 }: {
   booking: VendorBooking;
   busy: boolean;
   onDecide: (status: "confirmed" | "declined") => void;
+  onCancel: () => void;
 }) {
   const { event } = booking;
   return (
@@ -240,8 +341,9 @@ function BookingRow({
         </span>
         <span className="font-display text-xl">{capitalize(event.type)}</span>
       </div>
-      <div className="sm:justify-self-end">
+      <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
         <StatusBadge status={booking.status} />
+        <VendorPaymentBadge booking={booking} />
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:col-span-2">
         <span className="label">{booking.category}</span>
@@ -262,15 +364,16 @@ function BookingRow({
             Accept
           </Button>
         </div>
+      ) : booking.status === "confirmed" ? (
+        <div className="col-span-2 flex gap-3 lg:col-span-1">
+          <Button id={cancelButtonId(booking.id)} variant="outline" size="sm" disabled={busy} onClick={onCancel}>
+            Cancel booking
+          </Button>
+        </div>
       ) : (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => onDecide(booking.status === "confirmed" ? "declined" : "confirmed")}
-          >
-            {booking.status === "confirmed" ? "Decline instead" : "Accept instead"}
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
+            Accept instead
           </Button>
         </div>
       )}

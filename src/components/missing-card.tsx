@@ -12,6 +12,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const FADE_MS = 300;
 
+/** DOM id of a category's card, used by "See replacements" to scroll to and focus it. */
+export const missingCardId = (category: string) => `missing-card-${category}`;
+
 /**
  * One gap in the plan: why it matters, the suggested budget share and up to
  * three vendors. All API text is rendered as plain text.
@@ -23,11 +26,14 @@ export function MissingCardView({
   eventId,
   onBooked,
   onRemove,
+  declinedVendorIds,
 }: {
   card: MissingCard;
   eventId: string;
   onBooked: (booking?: PlanBooking) => void;
   onRemove: (category: string) => void;
+  /** Vendors with a declined booking on this event: shown with "Declined earlier". */
+  declinedVendorIds?: ReadonlySet<string>;
 }) {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +85,8 @@ export function MissingCardView({
 
   return (
     <Card
+      id={missingCardId(card.category)}
+      tabIndex={-1}
       className={cn(
         "min-w-0 transition-opacity duration-300",
         leaving && "pointer-events-none opacity-0",
@@ -122,6 +130,9 @@ export function MissingCardView({
                     <span>{formatNumber(v.price)}</span>
                     <span className="text-sm text-muted-foreground">{v.matchPercent}% match</span>
                   </div>
+                  {declinedVendorIds?.has(v.id) && (
+                    <p className="mt-1 text-xs font-medium">Declined earlier</p>
+                  )}
                   <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
                     {v.reason}
                   </p>

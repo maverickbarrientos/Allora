@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-helpers";
 import { requireVendorRole, toVendorBooking, type VendorBookingRow } from "@/lib/vendor-portal";
+import { withVendorPayments } from "@/lib/payments/status";
 
 export async function GET() {
   try {
@@ -24,6 +25,13 @@ export async function GET() {
       .order("created_at", { ascending: false });
     if (error) return errorResponse(500, "server_error", "Could not load bookings.");
 
+    let bookings;
+    try {
+      bookings = await withVendorPayments(supabase, ((rows ?? []) as VendorBookingRow[]).map(toVendorBooking));
+    } catch {
+      return errorResponse(500, "server_error", "Could not load payments.");
+    }
+
     return NextResponse.json({
       vendor: {
         id: vendor.id,
@@ -31,7 +39,7 @@ export async function GET() {
         category: vendor.category,
         price: Number(vendor.price),
       },
-      bookings: ((rows ?? []) as VendorBookingRow[]).map(toVendorBooking),
+      bookings,
     });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");

@@ -6,9 +6,11 @@ import type {
   Event,
   LoginInput,
   MissingResponse,
+  Payment,
   PlanBooking,
   Session,
   SignupInput,
+  TestMethod,
   Vendor,
   VendorBooking,
   VendorProfile,
@@ -77,6 +79,12 @@ export const api = {
     request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages }),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
+  payBooking: (bookingId: string, testMethod: TestMethod) =>
+    request<{ payment: Payment; booking: PlanBooking }>(
+      "POST",
+      `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
+      { testMethod },
+    ),
 
   listVendorBookings: () =>
     request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
