@@ -37,11 +37,11 @@ function baselineFor(email: string): MockVendorData | null {
     return {
       vendor: { id: "mock-venue", name: "Aurelia Hall", category: "venue", price: 8500 },
       bookings: [
-        booking("pending-1", "pending", "wedding", "venue"),
-        booking("same", "confirmed", "corporate", "venue"),
-        booking("conflict", "declined", "birthday", "venue"),
-        booking("missing", "declined", "wedding", "venue"),
-        booking("network-failure", "confirmed", "corporate", "venue"),
+        booking("pending-1", "pending", "wedding", "venue", "Avery Chen", 84000),
+        booking("same", "confirmed", "corporate", "venue", "<img src=x onerror=alert(1)>", 100000000),
+        booking("conflict", "declined", "birthday", "venue", "Jordan Williams-Summers-Montgomery", 275000),
+        booking("missing", "declined", "wedding", "venue", "Morgan Ellis", 180000),
+        booking("network-failure", "confirmed", "corporate", "venue", "Taylor Reed", 62000),
       ],
     };
   }
@@ -54,7 +54,7 @@ function baselineFor(email: string): MockVendorData | null {
         price: 4200,
       },
       bookings: [
-        booking("declined-1", "declined", "birthday", "catering"),
+        booking("declined-1", "declined", "birthday", "catering", "Riley Morgan", 12000),
       ],
     };
   }
@@ -66,16 +66,20 @@ function booking(
   status: BookingStatus,
   type: EventType,
   category: string,
+  customerName: string,
+  budget: number,
 ): VendorBooking {
   return {
     id,
     category,
     status,
     createdAt: "2026-10-15T09:00:00.000Z",
+    customerName,
     event: {
       type,
       date: "2027-06-12",
       guestCount: 120,
+      budget,
     },
   };
 }
@@ -115,6 +119,7 @@ function categoryLocked(bookings: VendorBooking[]) {
 
 function validate(
   input: Partial<Omit<Vendor, "id">>,
+  current: Vendor | null,
   creating: boolean,
 ) {
   const errors: string[] = [];
@@ -123,7 +128,10 @@ function validate(
       errors.push("name");
     }
   }
-  if (creating || "category" in input) {
+  if (
+    creating ||
+    ("category" in input && input.category !== current?.category)
+  ) {
     if (typeof input.category !== "string" || !CATEGORIES.includes(input.category)) {
       errors.push("category");
     }
@@ -168,13 +176,16 @@ export async function createMockVendorProfile(
   input: Omit<Vendor, "id">,
 ): Promise<{ vendor: Vendor; categoryLocked: false }> {
   const session = currentVendor();
+  if (!input || typeof input !== "object") {
+    throw new ApiError(400, "validation_error", "Profile fields are required.");
+  }
   if (dataFor(session.user.email)) {
     throw new ApiError(409, "profile_exists", "A vendor profile already exists.");
   }
   if (typeof input.name === "string" && input.name.trim() === "fail") {
     throw new ApiError(500, "server_error", "Could not create vendor profile.");
   }
-  validate(input, true);
+  validate(input, null, true);
   if (input.price === 0) {
     throw new ApiError(400, "validation_error", "Invalid fields: price.");
   }
@@ -195,21 +206,28 @@ export async function updateMockVendorProfile(
   const session = currentVendor();
   const data = dataFor(session.user.email);
   if (!data) throw new ApiError(404, "vendor_not_linked", "Vendor profile not found.");
-  if (Object.keys(input).length === 0) {
+  if (!input || typeof input !== "object") {
     throw new ApiError(400, "validation_error", "At least one profile field is required.");
   }
-  if (typeof input.name === "string" && input.name.trim() === "fail") {
+  const fields: Partial<Omit<Vendor, "id">> = {};
+  if ("name" in input) fields.name = input.name;
+  if ("category" in input) fields.category = input.category;
+  if ("price" in input) fields.price = input.price;
+  if (Object.keys(fields).length === 0) {
+    throw new ApiError(400, "validation_error", "At least one profile field is required.");
+  }
+  if (typeof fields.name === "string" && fields.name.trim() === "fail") {
     throw new ApiError(500, "server_error", "Could not update vendor profile.");
   }
-  validate(input, false);
+  validate(fields, data.vendor, false);
   if (
-    input.category !== undefined &&
-    input.category !== data.vendor.category &&
+    fields.category !== undefined &&
+    fields.category !== data.vendor.category &&
     categoryLocked(data.bookings)
   ) {
     throw new ApiError(409, "category_locked", "Category cannot change while bookings are active.");
   }
-  const vendor = { ...data.vendor, ...input };
+  const vendor = { ...data.vendor, ...fields };
   if (typeof vendor.name === "string") vendor.name = vendor.name.trim();
   writeStored(`${PROFILE_PREFIX}${session.user.email}`, vendor);
   return { vendor, categoryLocked: categoryLocked(data.bookings) };
@@ -244,7 +262,7 @@ export async function decideMockVendorBooking(
   if (id === "same") {
     throw new ApiError(409, "status_unchanged", "This booking already has that status.");
   }
-  if (id === "conflict" && status === "confirmed") {
+  if (id === "conflict") {
     throw new ApiError(
       409,
       "conflicting_booking",

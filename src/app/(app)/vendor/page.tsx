@@ -233,15 +233,25 @@ function BookingRow({
 }) {
   const { event } = booking;
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3 py-5 lg:grid-cols-[8rem_1fr_auto_auto]">
-      <span className="label col-span-2 lg:col-span-1">{booking.category}</span>
-      <div className="flex flex-col">
-        <span className="font-display text-h2">{capitalize(event.type)}</span>
-        <span className="text-sm text-muted-foreground">
-          {formatDate(event.date)} &middot; {formatNumber(event.guestCount)} guests
+    <div className="grid min-w-0 gap-x-4 gap-y-1.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 sm:col-span-2">
+        <span className="min-w-0 max-w-full truncate font-medium" title={booking.customerName}>
+          {booking.customerName}
+        </span>
+        <span className="font-display text-xl">{capitalize(event.type)}</span>
+      </div>
+      <div className="sm:justify-self-end">
+        <StatusBadge status={booking.status} />
+      </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:col-span-2">
+        <span className="label">{booking.category}</span>
+        <span>{formatDate(event.date)}</span>
+        <span>{formatNumber(event.guestCount)} guests</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="label">Budget</span>
+          {formatNumber(event.budget)}
         </span>
       </div>
-      <StatusBadge status={booking.status} />
       {booking.status === "pending" ? (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
