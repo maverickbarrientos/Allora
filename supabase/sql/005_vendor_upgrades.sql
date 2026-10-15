@@ -56,3 +56,26 @@ drop trigger if exists vendors_category_lock on public.vendors;
 create trigger vendors_category_lock
   before update of category on public.vendors
   for each row execute function public.vendors_category_lock();
+
+-- B. Change a decision ------------------------------------------------
+
+-- Replaces the feature 3 policy "bookings: vendor decides pending": a vendor
+-- may update any of their own bookings (any current status), but only to
+-- confirmed or declined, never back to pending. The partial unique index
+-- bookings_event_vendor_active_uniq (002) still blocks a second active booking.
+drop policy if exists "bookings: vendor decides pending" on public.bookings;
+drop policy if exists "bookings: vendor decides" on public.bookings;
+create policy "bookings: vendor decides"
+  on public.bookings for update
+  to authenticated
+  using (
+    vendor_id in (select v.id from public.vendors v where v.owner = (select auth.uid()))
+  )
+  with check (
+    status in ('confirmed', 'declined')
+    and vendor_id in (select v.id from public.vendors v where v.owner = (select auth.uid()))
+  );
+
+-- Column-level, as in 004: status is the only updatable column on bookings.
+revoke update on public.bookings from anon, authenticated;
+grant update (status) on public.bookings to authenticated;
