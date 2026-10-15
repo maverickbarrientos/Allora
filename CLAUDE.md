@@ -21,6 +21,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - LLM calls are server-side only.
 - Vendor matching and ranking are deterministic. The AI only writes explanation text; it never picks or reorders vendors.
 - A category with no pending or confirmed booking counts as a gap.
+- Dashboard data is deterministic. The dashboard never calls the LLM.
 
 ## Data model
 - **Profile**: id (auth user), role, name

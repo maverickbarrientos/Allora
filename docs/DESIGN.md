@@ -35,6 +35,7 @@ Hazel, plum, pink and the `.surface-plum` class are removed. There are no color 
 - Content max-width 72rem. Section spacing 6rem desktop, 3.5rem mobile.
 - 1px hairline dividers instead of boxes. Cards: stone, `--radius`, `--shadow-soft`, no heavy borders, 1.75rem padding.
 - Header: ivory, "Allora" wordmark in serif, user name and log out on the right, hairline below.
+- Customer items become: Dashboard (/dashboard), My events (/), New event (/events/new).
 
 ## Components (shared, build once)
 - `PageHeader`: label, serif title, optional description, hairline below.
@@ -57,6 +58,7 @@ Paper grain (inline SVG noise, about 5% opacity, via a `.paper-grain` class) on 
 - `/events/[id]`: `PageHeader` with the event type and date. A stats row (budget, guests) separated by hairlines. Bookings as hairline-separated rows: category label, vendor name in serif, price right-aligned, `StatusBadge`.
 - `/events/[id]/vendors`: category tabs as plain text with a brass underline on the active one, not pills. Vendor cards with `ImagePlaceholder`, name, price and a Book button.
 - All loading, empty, error and 404 states keep their behavior and get the same styling. Prices and budgets are plain numbers with no currency symbol.
+- `/dashboard`: PageHeader with the selected event's name, an event picker (shadcn Select) beside it, a countdown card (large serif number and "days to go"), a row of three booking counts (pending, confirmed, declined, with StatusBadge text), an "Actions needed" list as hairline-separated rows (label, vendor and category, link), and a "Missing services" list (category, budget share, link). Cards stone, one brass highlight at most.
 
 ## Out of scope
 Dark theme, a landing page, dependencies, data or API changes, behavior changes.
