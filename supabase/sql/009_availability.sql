@@ -1,5 +1,5 @@
--- 006_availability: read-only vendor availability, derived from bookings.
--- Safe to run more than once. Run AFTER 002 (events, bookings) and 004/005.
+-- 009_availability: read-only vendor availability, derived from bookings.
+-- Safe to run more than once. Run AFTER 002 (events, bookings), 004 and 005 (vendor_incoming_bookings).
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 --
 -- No new table, trigger or policy. A vendor is unavailable on a date when they
