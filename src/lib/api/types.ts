@@ -67,6 +67,15 @@ export type MissingResponse = {
   cards: MissingCard[];
 };
 
+// Shapes from docs/SPEC-chatbot.md ("Shared shapes").
+export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type OrderItem = { category: string; reason: string };
+export type ChatResponse = {
+  reply: string;
+  order: OrderItem[] | null;
+  source: "ai" | "fallback";
+};
+
 export type CreateEventInput = {
   type: EventType;
   date: string;

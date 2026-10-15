@@ -15,6 +15,8 @@ type JsonRequest = {
   input: unknown;
   timeoutMs?: number;
   maxTokens?: number;
+  /** Reply must be exactly one JSON value; no code fence or other text around it. */
+  strictJson?: boolean;
 };
 
 /**
@@ -27,6 +29,7 @@ export async function requestJson({
   input,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   maxTokens = 1500,
+  strictJson = false,
 }: JsonRequest): Promise<unknown | null> {
   const key = process.env.LLM_API_KEY;
   if (!key) return null;
@@ -58,7 +61,7 @@ export async function requestJson({
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== "string" || content.trim() === "") return null;
-    return parseJson(content);
+    return parseJson(content, strictJson);
   } catch {
     console.warn(`LLM call failed: ${controller.signal.aborted ? "timeout" : "network or parse error"}`);
     return null;
@@ -67,9 +70,10 @@ export async function requestJson({
   }
 }
 
-/** Parses a JSON reply, tolerating a surrounding ```json fence. */
-function parseJson(content: string): unknown | null {
-  const text = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+/** Parses a JSON reply. Unless strict, a surrounding ```json fence is tolerated. */
+function parseJson(content: string, strict: boolean): unknown | null {
+  const trimmed = content.trim();
+  const text = strict ? trimmed : trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   try {
     return JSON.parse(text);
   } catch {
