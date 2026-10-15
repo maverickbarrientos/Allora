@@ -1,44 +1,40 @@
 @import "tailwindcss";
 
-/* Design tokens. Change these to re-skin the whole app at once —
-   every component below reads from them. */
+/* Design tokens (docs/DESIGN.md). Light theme only.
+   Change these to re-skin the whole app at once. */
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --primary: #1a1a1a;
-  --primary-foreground: #fafafa;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #1a1a1a;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --destructive: #dc2626;
-  --destructive-foreground: #fafafa;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #0a0a0a;
-  --radius: 0.625rem;
-}
+  --ivory: #faf7f2;
+  --stone: #f1ece4;
+  --ink: #1c1b19;
+  --ink-muted: #6b665e;
+  --forest: #1f3a32;
+  --brass: #b08d57; /* hairlines and details only, never small text */
+  --brass-ink: #7a5f33; /* small brass labels */
+  --brick: #8a3b2e; /* errors and declined */
+  --hairline: rgb(28 27 25 / 0.12);
+  --radius: 1.25rem;
+  --shadow-soft:
+    0 1px 2px rgb(28 27 25 / 0.04), 0 12px 32px -16px rgb(28 27 25 / 0.14);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-    --card: #141414;
-    --card-foreground: #fafafa;
-    --primary: #fafafa;
-    --primary-foreground: #1a1a1a;
-    --secondary: #27272a;
-    --secondary-foreground: #fafafa;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --destructive: #ef4444;
-    --destructive-foreground: #fafafa;
-    --border: #27272a;
-    --input: #3f3f46;
-    --ring: #d4d4d8;
-  }
+  /* shadcn theme mapping */
+  --background: var(--ivory);
+  --foreground: var(--ink);
+  --card: var(--stone);
+  --card-foreground: var(--ink);
+  --primary: var(--forest);
+  --primary-foreground: var(--ivory);
+  --secondary: var(--stone);
+  --secondary-foreground: var(--ink);
+  --muted: var(--stone);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--stone);
+  --accent-foreground: var(--ink);
+  --destructive: var(--brick);
+  --destructive-foreground: var(--ivory);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--forest);
 }
 
 @theme inline {
@@ -52,13 +48,25 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-ivory: var(--ivory);
+  --color-stone: var(--stone);
+  --color-forest: var(--forest);
+  --color-brass: var(--brass);
+  --color-brass-ink: var(--brass-ink);
+  --color-brick: var(--brick);
   --radius-base: var(--radius);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --shadow-soft: var(--shadow-soft);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
+    serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
@@ -66,4 +74,118 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+/* Typography */
+.font-display,
+.text-display,
+.text-h1,
+.text-h2 {
+  font-family: var(--font-serif);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.text-display {
+  font-size: clamp(2.75rem, 6vw, 4.5rem);
+}
+.text-h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+.text-h2 {
+  font-size: 1.5rem;
+  line-height: 1.15;
+}
+.label {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 500;
+  color: var(--brass-ink);
+}
+
+/* Visible keyboard focus: 2px forest, 2px offset (ivory on dark surfaces) */
+:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+.on-dark :focus-visible {
+  outline-color: var(--ivory);
+}
+
+/* Paper grain, login and sign-up hero panel only */
+.paper-grain {
+  position: relative;
+  isolation: isolate;
+}
+.paper-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.8%27 numOctaves=%272%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E");
+}
+
+/* Motion */
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 600ms var(--ease-out),
+    transform 600ms var(--ease-out);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.hairline-draw {
+  transform-origin: left;
+  animation: hairline-draw 900ms var(--ease-out) both;
+}
+@keyframes hairline-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgb(255 255 255 / 0.5) 50%,
+      transparent 70%
+    )
+    var(--stone);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }

@@ -7,7 +7,7 @@ export function Card({ className, ...props }: DivProps) {
   return (
     <div
       className={cn(
-        "rounded-[var(--radius)] border border-border bg-card text-card-foreground shadow-sm",
+        "rounded-[var(--radius)] bg-card text-card-foreground shadow-soft",
         className,
       )}
       {...props}
@@ -16,16 +16,11 @@ export function Card({ className, ...props }: DivProps) {
 }
 
 export function CardHeader({ className, ...props }: DivProps) {
-  return <div className={cn("flex flex-col gap-1.5 p-6", className)} {...props} />;
+  return <div className={cn("flex flex-col gap-1.5 p-7", className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: DivProps) {
-  return (
-    <h3
-      className={cn("text-lg font-semibold leading-tight tracking-tight", className)}
-      {...props}
-    />
-  );
+  return <h3 className={cn("font-display text-h2", className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: DivProps) {
@@ -35,11 +30,11 @@ export function CardDescription({ className, ...props }: DivProps) {
 }
 
 export function CardContent({ className, ...props }: DivProps) {
-  return <div className={cn("p-6 pt-0", className)} {...props} />;
+  return <div className={cn("p-7 pt-0", className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: DivProps) {
   return (
-    <div className={cn("flex items-center p-6 pt-0", className)} {...props} />
+    <div className={cn("flex items-center p-7 pt-0", className)} {...props} />
   );
 }
