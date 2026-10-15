@@ -49,8 +49,8 @@ export type VendorCalendarBooking = {
   customerName: string;
 };
 export type VendorCalendar = { from: string; to: string; blocked: string[]; bookings: VendorCalendarBooking[] };
-/** docs/SPEC-vendor-profiles.md: a vendor with its profile text. */
-export type VendorDetail = Vendor & { about: string | null };
+/** docs/SPEC-vendor-profiles.md: a vendor with its profile text; terms from docs/SPEC-booking-documents.md. */
+export type VendorDetail = Vendor & { about: string | null; terms: string | null };
 /** Contact details; shown to customers only after the vendor confirms their booking. */
 export type VendorContact = { phone: string | null; email: string | null; website: string | null };
 export type VendorProfile = { vendor: VendorDetail; contact: VendorContact; categoryLocked: boolean };
@@ -61,6 +61,7 @@ export type VendorProfileInput = {
   price: number;
   about?: string | null;
   location?: string | null;
+  terms?: string | null;
   phone?: string | null;
   email?: string | null;
   website?: string | null;

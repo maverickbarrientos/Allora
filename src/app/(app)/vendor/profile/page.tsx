@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { ABOUT_MAX, CONTACT_FIELDS, LOCATION_MAX, contactValue } from "@/lib/vendor-profile";
+import { ABOUT_MAX, CONTACT_FIELDS, LOCATION_MAX, TERMS_MAX, contactValue } from "@/lib/vendor-profile";
 import { ContactFields } from "./contact-fields";
 import { TextField } from "./text-field";
 
@@ -24,6 +24,7 @@ type Fields = {
   price: string;
   about: string;
   location: string;
+  terms: string;
   phone: string;
   email: string;
   website: string;
@@ -31,6 +32,7 @@ type Fields = {
 type FieldErrors = Partial<Record<keyof Fields, string>>;
 
 const ABOUT_COUNTER_FROM = 900;
+const TERMS_COUNTER_FROM = 3600;
 
 const EMPTY_FIELDS: Fields = {
   name: "",
@@ -38,6 +40,7 @@ const EMPTY_FIELDS: Fields = {
   price: "",
   about: "",
   location: "",
+  terms: "",
   phone: "",
   email: "",
   website: "",
@@ -48,6 +51,7 @@ const FIELD_ERRORS: Record<keyof Fields, string> = {
   price: "Enter a price above 0, up to 100,000,000, with no more than 2 decimals.",
   about: `Keep the description to ${ABOUT_MAX.toLocaleString("en-US")} characters or fewer.`,
   location: `Keep the location to ${LOCATION_MAX} characters or fewer.`,
+  terms: `Keep your terms to ${TERMS_MAX.toLocaleString("en-US")} characters or fewer.`,
   phone: "Use only digits, spaces and + ( ) - . (5 to 30 characters).",
   email: "Enter an email address like name@example.com.",
   website: "Enter a link that starts with http:// or https://.",
@@ -64,6 +68,7 @@ function fieldsFromProfile(profile: VendorProfile | null): Fields {
         price: String(profile.vendor.price),
         about: profile.vendor.about ?? "",
         location: profile.vendor.location ?? "",
+        terms: profile.vendor.terms ?? "",
         phone: profile.contact.phone ?? "",
         email: profile.contact.email ?? "",
         website: profile.contact.website ?? "",
@@ -133,8 +138,10 @@ export default function VendorProfilePage() {
     }
     const about = fields.about.trim();
     const location = fields.location.trim();
+    const terms = fields.terms.trim();
     if (charCount(about) > ABOUT_MAX) errors.about = FIELD_ERRORS.about;
     if (charCount(location) > LOCATION_MAX) errors.location = FIELD_ERRORS.location;
+    if (charCount(terms) > TERMS_MAX) errors.terms = FIELD_ERRORS.terms;
     for (const field of CONTACT_FIELDS) {
       if (contactValue(field, fields[field]) === undefined) errors[field] = FIELD_ERRORS[field];
     }
@@ -153,6 +160,7 @@ export default function VendorProfilePage() {
         price: numericPrice,
         about: about || null,
         location: location || null,
+        terms: terms || null,
         phone: fields.phone.trim() || null,
         email: fields.email.trim() || null,
         website: fields.website.trim() || null,
@@ -221,6 +229,7 @@ export default function VendorProfilePage() {
 
   const isEdit = profile !== null;
   const aboutCounter = charCount(fields.about) >= ABOUT_COUNTER_FROM;
+  const termsCounter = charCount(fields.terms) >= TERMS_COUNTER_FROM;
 
   return (
     <div className="flex max-w-xl flex-col gap-10">
@@ -328,6 +337,34 @@ export default function VendorProfilePage() {
             </p>
           )}
           {fieldErrors.about && <p id="vendor-about-error" className="text-sm text-destructive">{fieldErrors.about}</p>}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="vendor-terms">Terms (optional)</Label>
+          <p id="vendor-terms-note" className="text-sm text-muted-foreground">
+            Customers must agree to these before booking you. Each booking keeps the terms as they were when the customer agreed.
+          </p>
+          <Textarea
+            id="vendor-terms"
+            name="terms"
+            rows={6}
+            placeholder="Cancellation rules, deposit, and what's included."
+            value={fields.terms}
+            disabled={saving}
+            aria-invalid={Boolean(fieldErrors.terms)}
+            aria-describedby={
+              ["vendor-terms-note", fieldErrors.terms && "vendor-terms-error", termsCounter && "vendor-terms-counter"]
+                .filter(Boolean)
+                .join(" ")
+            }
+            onChange={(event) => setField("terms", event.target.value)}
+          />
+          {termsCounter && (
+            <p id="vendor-terms-counter" className="self-end text-xs text-muted-foreground" aria-live="polite">
+              {charCount(fields.terms).toLocaleString("en-US")} / {TERMS_MAX.toLocaleString("en-US")}
+            </p>
+          )}
+          {fieldErrors.terms && <p id="vendor-terms-error" className="text-sm text-destructive">{fieldErrors.terms}</p>}
         </div>
 
         <ContactFields

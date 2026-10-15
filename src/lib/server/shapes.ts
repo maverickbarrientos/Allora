@@ -5,8 +5,8 @@ export type BookingStatus = "pending" | "confirmed" | "declined";
 
 export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes";
 export const VENDOR_COLUMNS = "id, name, category, price, location";
-/** A vendor with its profile text (docs/SPEC-vendor-profiles.md). */
-export const VENDOR_DETAIL_COLUMNS = "id, name, category, price, about, location";
+/** A vendor with its profile text (docs/SPEC-vendor-profiles.md) and terms (docs/SPEC-booking-documents.md). */
+export const VENDOR_DETAIL_COLUMNS = "id, name, category, price, about, location, terms";
 export const PLAN_BOOKING_COLUMNS =
   "id, event_id, vendor_id, category, status, created_at, vendor:vendors(name, price)";
 
@@ -26,7 +26,7 @@ type VendorRow = {
   price: number | string;
   location: string | null;
 };
-type VendorDetailRow = VendorRow & { about: string | null };
+type VendorDetailRow = VendorRow & { about: string | null; terms: string | null };
 type PlanBookingRow = {
   id: string;
   event_id: string;
@@ -62,7 +62,7 @@ export function toVendor(row: VendorRow) {
 }
 
 export function toVendorDetail(row: VendorDetailRow) {
-  return { ...toVendor(row), about: row.about ?? null };
+  return { ...toVendor(row), about: row.about ?? null, terms: row.terms ?? null };
 }
 
 export function toPlanBooking(row: PlanBookingRow) {
