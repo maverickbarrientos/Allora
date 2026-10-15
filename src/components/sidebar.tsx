@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarPlus, ClipboardList, Loader2, Ticket } from "lucide-react";
+import { CalendarPlus, ClipboardList, Loader2, Ticket, UserRound } from "lucide-react";
 import type { Profile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,10 @@ const NAV: Record<Profile["role"], NavItem[]> = {
     { href: "/", label: "My events", icon: Ticket, prefixes: ["/events"] },
     { href: "/events/new", label: "New event", icon: CalendarPlus, prefixes: ["/events/new"] },
   ],
-  vendor: [{ href: "/vendor", label: "Bookings", icon: ClipboardList, prefixes: ["/vendor"] }],
+  vendor: [
+    { href: "/vendor", label: "Bookings", icon: ClipboardList, prefixes: ["/vendor"] },
+    { href: "/vendor/profile", label: "Profile", icon: UserRound, prefixes: ["/vendor/profile"] },
+  ],
 };
 
 function matchLength(item: NavItem, pathname: string): number {
