@@ -1,7 +1,7 @@
 import type { EventType } from "./config";
 import { findGaps } from "./gaps";
 import { rankVendors, type RankedVendor } from "./rank";
-import { budgetShare, roundShare } from "./shares";
+import { budgetShare, roundShare, type SetBudgets } from "./shares";
 
 /** A card before any text is attached. Everything here is deterministic. */
 export type RankedCard = { category: string; budgetShare: number; vendors: RankedVendor[] };
@@ -13,9 +13,10 @@ export function buildCards(
   event: { type: EventType; budget: number },
   bookings: readonly { category: string; status: string }[],
   vendors: readonly VendorRow[],
+  setBudgets: SetBudgets = {},
 ): RankedCard[] {
   return findGaps(event.type, bookings).map((category) => {
-    const share = budgetShare(event.type, event.budget, category);
+    const share = budgetShare(event.type, event.budget, category, setBudgets);
     return {
       category,
       budgetShare: roundShare(share),

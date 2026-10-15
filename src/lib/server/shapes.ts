@@ -3,12 +3,20 @@
 export type EventType = "wedding" | "birthday" | "corporate";
 export type BookingStatus = "pending" | "confirmed" | "declined";
 
-export const EVENT_COLUMNS = "id, type, date, budget, guest_count";
+export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes";
 export const VENDOR_COLUMNS = "id, name, category, price";
 export const PLAN_BOOKING_COLUMNS =
   "id, event_id, vendor_id, category, status, created_at, vendor:vendors(name, price)";
 
-type EventRow = { id: string; type: string; date: string; budget: number | string; guest_count: number };
+type EventRow = {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+  budget: number | string;
+  guest_count: number;
+  notes: string | null;
+};
 type VendorRow = { id: string; name: string; category: string; price: number | string };
 type PlanBookingRow = {
   id: string;
@@ -25,10 +33,12 @@ type VendorJoin = { name: string; price: number | string };
 export function toEvent(row: EventRow) {
   return {
     id: row.id,
+    name: row.name,
     type: row.type as EventType,
     date: row.date,
     budget: Number(row.budget),
     guestCount: row.guest_count,
+    notes: row.notes ?? null,
   };
 }
 
