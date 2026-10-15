@@ -38,6 +38,15 @@ export type PlanBooking = {
   createdAt: string;
 };
 
+// Shape from docs/SPEC-vendor-portal.md ("Shared shapes").
+export type VendorBooking = {
+  id: string;
+  category: string;
+  status: BookingStatus;
+  createdAt: string;
+  event: { type: EventType; date: string; guestCount: number };
+};
+
 // Shapes from docs/SPEC-matching.md ("Shared shapes" and API).
 export type MatchedVendor = {
   id: string;

@@ -21,6 +21,8 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
   - Everyone signed in can read vendors.
   - Users read and update only their own profile.
 - Only the Supabase URL and publishable key reach the browser. No `service_role` key.
+- Vendors insert and update only their own vendor record.
+
 
 ## Features
 **Customer**
@@ -32,6 +34,9 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 **Vendor portal**
 - List of incoming bookings
 - Accept or decline; status shows on the customer's plan
+- Create and edit own vendor profile (name, category, price)
+- Change an accept or decline later (confirmed and declined, not back to pending)
+- See the customer's name and the event budget on each booking addressed to them
 
 **AI 1: "What's missing" cards**
 - Compare the event to a checklist of services for its type

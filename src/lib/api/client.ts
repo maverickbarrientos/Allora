@@ -8,6 +8,7 @@ import type {
   Session,
   SignupInput,
   Vendor,
+  VendorBooking,
 } from "./types";
 
 /** An API error response (`{ error: { code, message } }`) with its HTTP status. */
@@ -27,30 +28,13 @@ export function toApiError(e: unknown): ApiError {
   return new ApiError(0, "server_error", "Something went wrong");
 }
 
-// Mocks are TEMPORARY, see src/mocks/auth.ts. NEXT_PUBLIC_ vars are inlined at
-// build time, so the dynamic import is dropped when the flag is not "true".
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
-
 async function send(method: string, path: string, body?: unknown) {
-  const init: RequestInit = {
+  return fetch(path, {
     method,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: "same-origin",
-  };
-  if (USE_MOCKS) {
-    if (path.startsWith("/api/auth/") || path === "/api/me") {
-      const { mockFetch } = await import("@/mocks/auth");
-      return mockFetch(path, init);
-    }
-    if (/^\/api\/events\/[^/]+\/missing$/.test(path)) {
-      const { mockFetch } = await import("@/mocks/missing");
-      return mockFetch(path, init);
-    }
-    const { mockFetch } = await import("@/mocks/events");
-    return mockFetch(path, init);
-  }
-  return fetch(path, init);
+  });
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -96,4 +80,13 @@ export const api = {
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
+
+  listVendorBookings: () =>
+    request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
+  decideBooking: (id: string, status: "confirmed" | "declined") =>
+    request<{ booking: VendorBooking }>(
+      "PATCH",
+      `/api/vendor/bookings/${encodeURIComponent(id)}`,
+      { status },
+    ),
 };
