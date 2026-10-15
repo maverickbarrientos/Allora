@@ -27,6 +27,7 @@ export type Event = {
   guestCount: number;
 };
 export type Vendor = { id: string; name: string; category: string; price: number };
+export type VendorProfile = { vendor: Vendor; categoryLocked: boolean };
 export type PlanBooking = {
   id: string;
   eventId: string;

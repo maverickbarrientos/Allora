@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
@@ -22,7 +23,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const SECTIONS: { status: BookingStatus; title: string }[] = [
@@ -47,10 +49,16 @@ export default function VendorPage() {
 }
 
 function VendorBookings() {
+  const router = useRouter();
   const { state, setState, reload } = useLoad(() => api.listVendorBookings());
   const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (state.status === "error" && state.error.code === "vendor_not_linked") {
+      router.replace("/vendor/profile");
+    }
+  }, [router, state]);
 
   async function decide({ booking, status }: Decision) {
     setPendingDecision(null);
@@ -105,14 +113,7 @@ function VendorBookings() {
 
   if (state.status === "error") {
     if (state.error.code === "vendor_not_linked") {
-      return (
-        <Reveal className="flex max-w-md flex-col items-start gap-4">
-          <h1 className="font-display text-h1">Your account isn&apos;t linked to a service yet</h1>
-          <p className="text-muted-foreground">
-            Contact the Allora team and we&apos;ll connect your account to your service.
-          </p>
-        </Reveal>
-      );
+      return null;
     }
     return (
       <ErrorState
@@ -132,6 +133,19 @@ function VendorBookings() {
         title={vendor.name}
         description="Booking requests addressed to you."
       />
+
+      <Card className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="label">Your service</p>
+          <p className="mt-1 truncate font-display text-xl">{vendor.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {capitalize(vendor.category)} <span aria-hidden="true">·</span> {formatNumber(vendor.price)}
+          </p>
+        </div>
+        <Link href="/vendor/profile" className={buttonVariants({ variant: "outline" })}>
+          Edit profile
+        </Link>
+      </Card>
 
       {notice && <Alert variant="destructive">{notice}</Alert>}
 
