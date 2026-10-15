@@ -16,6 +16,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
 const COUNTER_FROM = 1800;
+/** Messages from the same side within this gap share one time stamp, under the last of them. */
+const GROUP_GAP_MS = 5 * 60 * 1000;
+
+const showsTime = (messages: Message[], i: number) => {
+  const next = messages[i + 1];
+  return !next || next.mine !== messages[i].mine || Date.parse(next.createdAt) - Date.parse(messages[i].createdAt) > GROUP_GAP_MS;
+};
 
 /**
  * One conversation between a customer and a vendor (docs/SPEC-messages.md),
@@ -158,9 +165,9 @@ function Thread({
       {detail.messages.length === 0 ? (
         <p className="text-muted-foreground">No messages yet. Say hello and share the details of your event.</p>
       ) : (
-        <ol className="flex flex-col gap-3" aria-label="Messages">
-          {detail.messages.map((m) => (
-            <MessageItem key={m.id} message={m} />
+        <ol className="flex flex-col gap-2" aria-label="Messages">
+          {detail.messages.map((m, i) => (
+            <MessageItem key={m.id} message={m} showTime={showsTime(detail.messages, i)} />
           ))}
         </ol>
       )}
@@ -227,10 +234,11 @@ function Thread({
   );
 }
 
-function MessageItem({ message }: { message: Message }) {
+function MessageItem({ message, showTime }: { message: Message; showTime: boolean }) {
   return (
     <li className={cn("flex flex-col gap-1", message.mine ? "items-end" : "items-start")}>
       <p
+        title={formatTimestamp(message.createdAt)}
         className={cn(
           "max-w-[85%] whitespace-pre-line rounded-2xl px-4 py-2.5 [overflow-wrap:anywhere]",
           message.mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
@@ -239,9 +247,13 @@ function MessageItem({ message }: { message: Message }) {
         <span className="sr-only">{message.mine ? "You: " : "Them: "}</span>
         {message.body}
       </p>
-      <time dateTime={message.createdAt} className="text-xs text-muted-foreground">
-        {formatTimestamp(message.createdAt)}
-      </time>
+      {showTime ? (
+        <time dateTime={message.createdAt} className="text-xs text-muted-foreground">
+          {formatTimestamp(message.createdAt)}
+        </time>
+      ) : (
+        <span className="sr-only">{formatTimestamp(message.createdAt)}</span>
+      )}
     </li>
   );
 }
