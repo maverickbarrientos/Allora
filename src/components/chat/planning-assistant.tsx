@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, toApiError } from "@/lib/api/client";
 import type { ChatMessage } from "@/lib/api/types";
-import { CHAT_INPUT_ID, ChatInput } from "@/components/chat/chat-input";
+import { CHAT_INPUT_ID, ChatInput, MAX_CHARS } from "@/components/chat/chat-input";
 import { MessageList, type Entry } from "@/components/chat/message-list";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -20,17 +20,21 @@ const HISTORY_LIMIT = 20;
 export function toHistory(entries: Entry[]): ChatMessage[] {
   return entries
     .map((e): ChatMessage =>
-      e.role === "user"
-        ? { role: "user", content: e.content }
-        : {
-            role: "assistant",
-            content:
-              e.order && e.order.length > 0
-                ? `${e.content}\nSuggested order: ${e.order.map((o) => o.category).join(" > ")}`
-                : e.content,
-          },
+      e.role === "user" ? { role: "user", content: e.content } : { role: "assistant", content: assistantContent(e) },
     )
     .slice(-HISTORY_LIMIT);
+}
+
+/**
+ * The server accepts at most MAX_CHARS per message, but a reply can be up to
+ * 1,200 characters. A long reply is shortened so the next request still fits;
+ * the "Suggested order" line is always kept.
+ */
+function assistantContent(e: Extract<Entry, { role: "assistant" }>): string {
+  const line = e.order && e.order.length > 0 ? `\nSuggested order: ${e.order.map((o) => o.category).join(" > ")}` : "";
+  const room = MAX_CHARS - line.length;
+  const text = e.content.length > room ? e.content.slice(0, room).trimEnd() : e.content;
+  return text + line;
 }
 
 type Status = "idle" | "sending" | "error" | "forbidden";
