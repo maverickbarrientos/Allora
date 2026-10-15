@@ -13,18 +13,11 @@ import type {
   TestMethod,
   Vendor,
   VendorBooking,
+  VendorProfile,
 } from "./types";
+import { ApiError } from "./errors";
 
-/** An API error response (`{ error: { code, message } }`) with its HTTP status. */
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError } from "./errors";
 
 /** Normalises anything thrown (including network failures) into an ApiError. */
 export function toApiError(e: unknown): ApiError {
@@ -101,4 +94,10 @@ export const api = {
       `/api/vendor/bookings/${encodeURIComponent(id)}`,
       { status },
     ),
+  listCategories: () => request<{ categories: string[] }>("GET", "/api/categories"),
+  getVendorProfile: () => request<VendorProfile>("GET", "/api/vendor/profile"),
+  createVendorProfile: (input: Omit<Vendor, "id">) =>
+    request<{ vendor: Vendor; categoryLocked: false }>("POST", "/api/vendor/profile", input),
+  updateVendorProfile: (input: Partial<Omit<Vendor, "id">>) =>
+    request<VendorProfile>("PATCH", "/api/vendor/profile", input),
 };

@@ -27,6 +27,7 @@ export type Event = {
   guestCount: number;
 };
 export type Vendor = { id: string; name: string; category: string; price: number };
+export type VendorProfile = { vendor: Vendor; categoryLocked: boolean };
 export type PlanBooking = {
   id: string;
   eventId: string;
@@ -46,7 +47,8 @@ export type VendorBooking = {
   category: string;
   status: BookingStatus;
   createdAt: string;
-  event: { type: EventType; date: string; guestCount: number };
+  customerName: string;
+  event: { type: EventType; date: string; guestCount: number; budget: number };
   /** docs/SPEC-payment.md. Always sent by the API; the UI still copes without it. */
   payment?: VendorPayment | null;
 };

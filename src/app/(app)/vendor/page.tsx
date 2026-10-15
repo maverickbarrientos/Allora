@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
@@ -23,7 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const SECTIONS: { status: BookingStatus; title: string }[] = [
@@ -48,12 +50,21 @@ export default function VendorPage() {
 }
 
 function VendorBookings() {
+  const router = useRouter();
   const { state, setState, reload } = useLoad(() => api.listVendorBookings());
   const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
+  const decisionLock = useRef(false);
+  useEffect(() => {
+    if (state.status === "error" && state.error.code === "vendor_not_linked") {
+      router.replace("/vendor/profile");
+    }
+  }, [router, state]);
 
   async function decide({ booking, status }: Decision) {
+    if (decisionLock.current) return;
+    decisionLock.current = true;
     setPendingDecision(null);
     setNotice(null);
     setBusy((s) => new Set(s).add(booking.id));
@@ -72,8 +83,11 @@ function VendorBookings() {
       );
     } catch (e) {
       const { code } = toApiError(e);
-      if (code === "already_decided" || code === "status_unchanged") {
-        setNotice("This booking was already decided.");
+      if (code === "status_unchanged") {
+        setNotice("This booking already has that status.");
+        reload();
+      } else if (code === "conflicting_booking") {
+        setNotice("Another active booking exists for this event. The list has been refreshed.");
         reload();
       } else if (code === "booking_not_found") {
         setNotice("This booking is no longer available.");
@@ -87,6 +101,7 @@ function VendorBookings() {
         next.delete(booking.id);
         return next;
       });
+      decisionLock.current = false;
     }
   }
 
@@ -106,14 +121,7 @@ function VendorBookings() {
 
   if (state.status === "error") {
     if (state.error.code === "vendor_not_linked") {
-      return (
-        <Reveal className="flex max-w-md flex-col items-start gap-4">
-          <h1 className="font-display text-h1">Your account isn&apos;t linked to a service yet</h1>
-          <p className="text-muted-foreground">
-            Contact the Allora team and we&apos;ll connect your account to your service.
-          </p>
-        </Reveal>
-      );
+      return null;
     }
     return (
       <ErrorState
@@ -133,6 +141,19 @@ function VendorBookings() {
         title={vendor.name}
         description="Booking requests addressed to you."
       />
+
+      <Card className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="label">Your service</p>
+          <p className="mt-1 truncate font-display text-xl">{vendor.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {capitalize(vendor.category)} <span aria-hidden="true">·</span> {formatNumber(vendor.price)}
+          </p>
+        </div>
+        <Link href="/vendor/profile" className={buttonVariants({ variant: "outline" })}>
+          Edit profile
+        </Link>
+      </Card>
 
       {notice && <Alert variant="destructive">{notice}</Alert>}
 
@@ -185,10 +206,8 @@ function VendorBookings() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {capitalize(pendingDecision.booking.event.type)} on{" "}
-                {formatDate(pendingDecision.booking.event.date)}.{" "}
-                {pendingDecision.booking.status === "pending"
-                  ? "This decision is final. You can't change it later."
-                  : "The customer will see the change on their plan."}
+                {formatDate(pendingDecision.booking.event.date)}. The customer will see this
+                change on their event plan.
                 {pendingDecision.status === "declined" &&
                   pendingDecision.booking.payment?.status === "paid" &&
                   " The customer's deposit will be refunded."}
@@ -218,27 +237,27 @@ function BookingRow({
 }) {
   const { event } = booking;
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3 py-5 lg:grid-cols-[8rem_1fr_auto_auto]">
-      <span className="label col-span-2 lg:col-span-1">{booking.category}</span>
-      <div className="flex flex-col">
-        <span className="font-display text-h2">{capitalize(event.type)}</span>
-        <span className="text-sm text-muted-foreground">
-          {formatDate(event.date)} &middot; {formatNumber(event.guestCount)} guests
+    <div className="grid min-w-0 gap-x-4 gap-y-1.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 sm:col-span-2">
+        <span className="min-w-0 max-w-full truncate font-medium" title={booking.customerName}>
+          {booking.customerName}
         </span>
+        <span className="font-display text-xl">{capitalize(event.type)}</span>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
         <StatusBadge status={booking.status} />
         <VendorPaymentBadge booking={booking} />
       </div>
-      {booking.status === "confirmed" && (
-        <div className="col-span-2 flex gap-3 lg:col-span-1">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            Decline instead
-          </Button>
-        </div>
-      )}
-      {booking.status === "pending" && (
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:col-span-2">
+        <span className="label">{booking.category}</span>
+        <span>{formatDate(event.date)}</span>
+        <span>{formatNumber(event.guestCount)} guests</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="label">Budget</span>
+          {formatNumber(event.budget)}
+        </span>
+      </div>
+      {booking.status === "pending" ? (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
             Decline
@@ -246,6 +265,17 @@ function BookingRow({
           <Button size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Accept
+          </Button>
+        </div>
+      ) : (
+        <div className="col-span-2 flex gap-3 lg:col-span-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => onDecide(booking.status === "confirmed" ? "declined" : "confirmed")}
+          >
+            {booking.status === "confirmed" ? "Decline instead" : "Accept instead"}
           </Button>
         </div>
       )}
