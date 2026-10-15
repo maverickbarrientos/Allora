@@ -1,29 +1,19 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useProfile } from "@/components/app-shell";
 import { EventsList } from "@/components/events-list";
-import { PageHeader } from "@/components/page-header";
-import { Reveal } from "@/components/reveal";
 
 export default function HomePage() {
+  const router = useRouter();
   const profile = useProfile();
+  const isVendor = profile.role === "vendor";
 
-  // Vendor-role users keep the feature 1 placeholder.
-  if (profile.role === "vendor") {
-    return (
-      <Reveal>
-        <PageHeader
-          label="Your account"
-          title={`Hi, ${profile.name}`}
-          description={
-            <>
-              Signed in as a <span className="font-medium text-foreground">{profile.role}</span>.
-            </>
-          }
-        />
-      </Reveal>
-    );
-  }
+  // Vendor-role users belong on /vendor.
+  useEffect(() => {
+    if (isVendor) router.replace("/vendor");
+  }, [isVendor, router]);
 
-  return <EventsList />;
+  return isVendor ? null : <EventsList />;
 }

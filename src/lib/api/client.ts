@@ -7,6 +7,7 @@ import type {
   Session,
   SignupInput,
   Vendor,
+  VendorBooking,
 } from "./types";
 
 /** An API error response (`{ error: { code, message } }`) with its HTTP status. */
@@ -40,6 +41,10 @@ async function send(method: string, path: string, body?: unknown) {
   if (USE_MOCKS) {
     if (path.startsWith("/api/auth/") || path === "/api/me") {
       const { mockFetch } = await import("@/mocks/auth");
+      return mockFetch(path, init);
+    }
+    if (path.startsWith("/api/vendor/")) {
+      const { mockFetch } = await import("@/mocks/vendor");
       return mockFetch(path, init);
     }
     const { mockFetch } = await import("@/mocks/events");
@@ -89,4 +94,13 @@ export const api = {
     ),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
+
+  listVendorBookings: () =>
+    request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
+  decideBooking: (id: string, status: "confirmed" | "declined") =>
+    request<{ booking: VendorBooking }>(
+      "PATCH",
+      `/api/vendor/bookings/${encodeURIComponent(id)}`,
+      { status },
+    ),
 };
