@@ -43,6 +43,17 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           "The customer has another active booking with you for this event.",
         );
       }
+      // The confirm trigger (017): the date is taken. The hint says why.
+      if (error.message === "date_unavailable") {
+        const date = error.details ?? "this date";
+        return errorResponse(
+          409,
+          "date_unavailable",
+          error.hint === "blocked"
+            ? `You blocked ${date} on your calendar. Unblock it to accept this booking.`
+            : `You already have a confirmed booking on ${date}.`,
+        );
+      }
       return errorResponse(500, "server_error", "Could not update booking.");
     }
 

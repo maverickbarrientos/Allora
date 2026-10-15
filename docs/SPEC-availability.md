@@ -114,7 +114,7 @@ All routes require a session. Logged-out requests return 401 `unauthorized`.
   - Also: a "Clear selection" button; days read "Open" when nothing is on them and "· Selected" when picked; a line counts days picked in other months; clicks wait until the month has loaded.
 - `/vendor` (dashboard): "Month at a glance" shows blocked days once the route returns them. Its fallback stays.
 - `/vendor/bookings`:
-  - A confirm, or "Accept instead", that hits `date_unavailable` shows "You already have a confirmed booking on {date}." on that row.
+  - A confirm, or "Accept instead", that hits `date_unavailable` shows "You already have a confirmed booking on {date}." on that row, or "You blocked {date} on your calendar. Unblock it to accept this booking." when the day is blocked (the error's hint says which). The date is written the way the row writes it.
   - The row keeps its status, and declining still works.
 - `/events/[id]/vendors`:
   - Each vendor card shows "Available on {date}" or "Unavailable on {date}" in text (built).

@@ -55,6 +55,8 @@ function VendorBookings() {
   const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
+  // A message shown on one booking's row (an accept refused because the date is taken).
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const decisionLock = useRef(false);
 
   // Cancelling a confirmed booking (docs/SPEC-cancellation.md). The dialog
@@ -138,6 +140,11 @@ function VendorBookings() {
     decisionLock.current = true;
     setPendingDecision(null);
     setNotice(null);
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[booking.id];
+      return next;
+    });
     setBusy((s) => new Set(s).add(booking.id));
     try {
       const { booking: updated } = await api.decideBooking(booking.id, status);
@@ -153,8 +160,16 @@ function VendorBookings() {
           : prev,
       );
     } catch (e) {
-      const { code } = toApiError(e);
-      if (code === "status_unchanged") {
+      const { code, message } = toApiError(e);
+      if (code === "date_unavailable") {
+        // The row keeps its status; declining it still works. The date is
+        // written the way the row writes it.
+        const when = formatDate(booking.event.date);
+        const text = message.startsWith("You blocked")
+          ? `You blocked ${when} on your calendar. Unblock it to accept this booking.`
+          : `You already have a confirmed booking on ${when}.`;
+        setRowErrors((prev) => ({ ...prev, [booking.id]: text }));
+      } else if (code === "status_unchanged") {
         setNotice("This booking already has that status.");
         reload();
       } else if (code === "conflicting_booking") {
@@ -253,6 +268,7 @@ function VendorBookings() {
                         <BookingRow
                           booking={b}
                           busy={busy.has(b.id)}
+                          error={rowErrors[b.id]}
                           onDecide={(st) => setPendingDecision({ booking: b, status: st })}
                           onCancel={() => {
                             setCancelError(null);
@@ -334,11 +350,13 @@ const cancelButtonId = (bookingId: string) => `cancel-${bookingId}`;
 function BookingRow({
   booking,
   busy,
+  error,
   onDecide,
   onCancel,
 }: {
   booking: VendorBooking;
   busy: boolean;
+  error?: string;
   onDecide: (status: "confirmed" | "declined") => void;
   onCancel: () => void;
 }) {
@@ -386,6 +404,11 @@ function BookingRow({
             Accept instead
           </Button>
         </div>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-destructive sm:col-span-3">
+          {error}
+        </p>
       )}
     </div>
   );
