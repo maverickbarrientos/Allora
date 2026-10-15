@@ -1,7 +1,7 @@
 // Maps DB rows (snake_case) to the API shapes in docs/SPEC-events-booking.md.
 
 export type EventType = "wedding" | "birthday" | "corporate";
-export type BookingStatus = "pending" | "confirmed" | "declined";
+export type BookingStatus = "pending" | "confirmed" | "declined" | "cancel_requested" | "cancelled";
 
 export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes";
 export const VENDOR_COLUMNS = "id, name, category, price, location";

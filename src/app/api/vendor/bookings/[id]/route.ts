@@ -21,19 +21,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     const body = await readJson(req);
     const status = body?.status;
-    if (status !== "confirmed" && status !== "declined") {
-      return errorResponse(400, "validation_error", "status must be confirmed or declined.");
+    if (status !== "confirmed" && status !== "declined" && status !== "cancelled") {
+      return errorResponse(400, "validation_error", "status must be confirmed, declined or cancelled.");
     }
 
     // Applies only when the status actually changes, so of two simultaneous
     // same-status requests one updates and the other matches no row.
-    // RLS limits it to this vendor's own bookings.
-    const { data: updated, error } = await supabase
-      .from("bookings")
-      .update({ status })
-      .eq("id", id)
-      .neq("status", status)
-      .select("id");
+    // RLS limits it to this vendor's own bookings. Approving a cancellation
+    // (cancelled) is only valid on a booking the customer asked to cancel;
+    // rejecting one is the existing confirm.
+    let query = supabase.from("bookings").update({ status }).eq("id", id).neq("status", status);
+    if (status === "cancelled") query = query.eq("status", "cancel_requested");
+    const { data: updated, error } = await query.select("id");
     if (error) {
       // bookings_event_vendor_active_uniq (002): another pending or confirmed
       // booking exists for the same event and vendor.
@@ -66,7 +65,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const rows = (found ?? []) as VendorBookingRow[];
     if (!updated || updated.length === 0) {
       return rows.length > 0
-        ? errorResponse(409, "status_unchanged", `This booking is already ${status}.`)
+        ? errorResponse(
+            409,
+            "status_unchanged",
+            status === "cancelled"
+              ? "This booking has no cancellation request to approve."
+              : `This booking is already ${status}.`,
+          )
         : errorResponse(404, "booking_not_found", "Booking not found.");
     }
     if (rows.length === 0) {

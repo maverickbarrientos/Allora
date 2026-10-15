@@ -73,7 +73,7 @@ async function hasActiveBooking(supabase: SupabaseClient, vendorId: string) {
     .from("bookings")
     .select("id", { count: "exact", head: true })
     .eq("vendor_id", vendorId)
-    .in("status", ["pending", "confirmed"]);
+    .in("status", ["pending", "confirmed", "cancel_requested"]);
   if (error) return null;
   return (count ?? 0) > 0;
 }

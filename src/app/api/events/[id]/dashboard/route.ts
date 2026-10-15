@@ -60,7 +60,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
 
     const bookingCounts = { pending: 0, confirmed: 0, declined: 0 };
-    for (const b of bookings) bookingCounts[b.status] += 1;
+    // A cancel request is still waiting on the vendor; a cancelled booking counts as declined.
+    for (const b of bookings) {
+      bookingCounts[b.status === "cancelled" ? "declined" : b.status === "cancel_requested" ? "pending" : b.status] += 1;
+    }
 
     const gaps = findGaps(services, bookings);
     const gapSet = new Set(gaps);
@@ -72,7 +75,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         const p = payments.get(b.id);
         // Not currently paid: no active paid deposit (a refunded one counts as unpaid).
         if (p && p.status !== "paid") actions.push({ type: "pay_deposit", ...base, amount: p.depositAmount });
-      } else if (b.status === "declined") {
+      } else if (b.status === "declined" || b.status === "cancelled") {
         if (gapSet.has(b.category)) actions.push({ type: "find_replacement", ...base, amount: null });
       } else {
         actions.push({ type: "awaiting_vendor", ...base, amount: null });

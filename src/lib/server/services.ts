@@ -45,7 +45,7 @@ export function withServiceStatus(
 ): EventService[] {
   return services.map((category) => {
     const statuses = bookings.filter((b) => b.category === category).map((b) => b.status);
-    const status = statuses.includes("confirmed") ? "confirmed" : statuses.includes("pending") ? "pending" : null;
+    const status = statuses.includes("confirmed") ? "confirmed" : statuses.includes("pending") || statuses.includes("cancel_requested") ? "pending" : null;
     return { category, status };
   });
 }

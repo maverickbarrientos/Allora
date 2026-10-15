@@ -50,7 +50,8 @@ const TIGHT_FRACTION = 0.1;
 
 const cents = (n: number) => Math.round((n + Number.EPSILON) * 100);
 const fromCents = (c: number) => c / 100;
-const isActive = (status: string) => status === "pending" || status === "confirmed";
+const isActive = (status: string) =>
+  status === "pending" || status === "confirmed" || status === "cancel_requested";
 
 export function computeFinance(args: {
   /** The event's own service list, in order. */
@@ -120,7 +121,8 @@ export function computeFinance(args: {
     };
   });
 
-  const count = (status: string) => bookings.filter((b) => b.status === status).length;
+  // A cancel request is still waiting on the vendor; a cancelled booking counts as declined.
+  const count = (...statuses: string[]) => bookings.filter((b) => statuses.includes(b.status)).length;
 
   return {
     affordability: { budget, committed, remaining, projectedMinimum: fromCents(projectedCents), verdict, rows },
@@ -129,7 +131,11 @@ export function computeFinance(args: {
       budget,
       committed,
       remaining,
-      counts: { pending: count("pending"), confirmed: count("confirmed"), declined: count("declined") },
+      counts: {
+        pending: count("pending", "cancel_requested"),
+        confirmed: count("confirmed"),
+        declined: count("declined", "cancelled"),
+      },
       rows: summaryRows,
     },
   };

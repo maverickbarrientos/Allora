@@ -35,7 +35,7 @@ export async function loadBudgetSummary(
   const set = toSetBudgets(budgetsResult.data ?? []);
   const booked = new Map<string, number>();
   for (const b of (bookingsResult.data ?? []) as unknown as BookingRow[]) {
-    if (b.status !== "pending" && b.status !== "confirmed") continue;
+    if (b.status !== "pending" && b.status !== "confirmed" && b.status !== "cancel_requested") continue;
     const vendor = Array.isArray(b.vendor) ? b.vendor[0] : b.vendor;
     booked.set(b.category, (booked.get(b.category) ?? 0) + Number(vendor?.price ?? 0));
   }

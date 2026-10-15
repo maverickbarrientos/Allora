@@ -4,7 +4,7 @@ import { errorResponse, loadProfile } from "@/lib/api-helpers";
 export type VendorBooking = {
   id: string;
   category: string;
-  status: "pending" | "confirmed" | "declined";
+  status: "pending" | "confirmed" | "declined" | "cancel_requested" | "cancelled";
   createdAt: string;
   customerName: string;
   event: {

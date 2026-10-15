@@ -162,12 +162,14 @@ export const api = {
       `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
       { testMethod },
     ),
+  requestBookingCancellation: (bookingId: string) =>
+    request<{ booking: PlanBooking }>("POST", `/api/bookings/${encodeURIComponent(bookingId)}/cancel-request`),
   getBookingReceipt: (bookingId: string) =>
     request<{ receipt: BookingReceipt }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/receipt`),
 
   listVendorBookings: () =>
     request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
-  decideBooking: (id: string, status: "confirmed" | "declined") =>
+  decideBooking: (id: string, status: "confirmed" | "declined" | "cancelled") =>
     request<{ booking: VendorBooking }>(
       "PATCH",
       `/api/vendor/bookings/${encodeURIComponent(id)}`,

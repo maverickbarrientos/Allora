@@ -17,7 +17,7 @@ export type LoginInput = { email: string; password: string };
 // Shapes from docs/SPEC-events-booking.md ("Shared shapes").
 
 export type EventType = "wedding" | "birthday" | "corporate";
-export type BookingStatus = "pending" | "confirmed" | "declined";
+export type BookingStatus = "pending" | "confirmed" | "declined" | "cancel_requested" | "cancelled";
 
 export type Event = {
   id: string;
@@ -70,7 +70,7 @@ export type VendorProfileInput = {
 export type BookingContract = {
   bookingId: string;
   category: string;
-  status: "pending" | "confirmed" | "declined";
+  status: BookingStatus;
   bookedAt: string;
   event: { id: string; name: string | null; type: EventType; date: string; guestCount: number };
   vendor: { name: string; price: number };

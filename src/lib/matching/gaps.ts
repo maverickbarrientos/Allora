@@ -7,7 +7,7 @@ type BookingLike = { category: string; status: string };
 export function findGaps(services: readonly string[], bookings: readonly BookingLike[]): string[] {
   const covered = new Set(
     bookings
-      .filter((b) => b.status === "pending" || b.status === "confirmed")
+      .filter((b) => b.status === "pending" || b.status === "confirmed" || b.status === "cancel_requested")
       .map((b) => b.category),
   );
   return services.filter((category) => !covered.has(category));
