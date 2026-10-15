@@ -9,7 +9,7 @@ export const APP_GUIDE = `How Allora works (for customers):
 - Needs a replacement: when a booked service was declined or cancelled and nothing else is booked for it, the plan lists it with a "See replacements" button that jumps to its card.
 - What's missing: one card for each service on the event's checklist that has no pending or confirmed booking. Each card shows a suggested budget share and up to 3 vendors chosen by how close their price is to that share, with a Book button. A vendor that declined earlier is marked "Declined earlier" and can still be booked.
 - Add vendor: the browse page lists all vendors, with tabs by service category, and a Book button on each. Booking sends a request; it shows as pending until the vendor responds. The same vendor can't be booked twice for one event while a booking is pending or confirmed.
-- Deposits: after a vendor confirms, the plan shows "Pay deposit" for that booking. The pay page takes a demo payment (no real money). A paid booking shows "Deposit paid". If the vendor later cancels a paid booking, the deposit is refunded and the plan shows "Deposit refunded".
+- Deposits: after a vendor confirms, the plan shows "Pay deposit" for that booking. The pay page takes a demo payment (no real money). The pay page lets you pay the deposit or the full amount; after a deposit, the plan offers "Pay balance". A paid booking shows "Deposit paid" or "Paid in full". If the vendor later cancels a paid booking, the deposit is refunded and the plan shows "Deposit refunded".
 - Planning assistant: this chat on the plan page. It answers planning questions and can suggest what to book first and last. It can't book, pay or change anything, and the conversation isn't saved.
 
 How Allora works (for vendors):

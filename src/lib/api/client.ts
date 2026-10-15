@@ -14,6 +14,7 @@ import type {
   LoginInput,
   MissingResponse,
   Payment,
+  PaymentKind,
   BookingContract,
   PlanBooking,
   Session,
@@ -156,11 +157,11 @@ export const api = {
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
   getBookingContract: (bookingId: string) =>
     request<{ contract: BookingContract }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/contract`),
-  payBooking: (bookingId: string, testMethod: TestMethod) =>
+  payBooking: (bookingId: string, testMethod: TestMethod, plan: PaymentKind = "deposit") =>
     request<{ payment: Payment; booking: PlanBooking }>(
       "POST",
       `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
-      { testMethod },
+      { testMethod, plan },
     ),
   getBookingReceipt: (bookingId: string) =>
     request<{ receipt: BookingReceipt }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/receipt`),

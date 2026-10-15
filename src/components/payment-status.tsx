@@ -32,9 +32,21 @@ export function PlanPaymentLine({ booking, eventId }: { booking: PlanBooking; ev
   if (!p) return null;
   if (p.status === "paid") {
     return (
-      <p className="text-sm font-medium">
-        Deposit paid{p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="text-sm font-medium">
+          {p.fullyPaid ? "Paid in full" : "Deposit paid"}
+          {p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
+        </p>
+        {p.balanceDue > 0 && (
+          <Link
+            href={payHref}
+            className={cn(buttonVariants({ size: "sm" }), "w-fit")}
+            aria-label={`Pay balance of ${formatAmount(p.balanceDue)} for ${booking.vendorName}`}
+          >
+            Pay balance &middot; {formatAmount(p.balanceDue)}
+          </Link>
+        )}
+      </div>
     );
   }
   if (p.status === "refunded") return <p className="text-sm font-medium">Deposit refunded</p>;
@@ -62,7 +74,8 @@ export function VendorPaymentBadge({ booking }: { booking: VendorBooking }) {
   if (p.status === "paid") {
     return (
       <span className={cn(badge, "border-forest text-forest")}>
-        Deposit paid{p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
+        {p.fullyPaid ? "Paid in full" : "Deposit paid"}
+        {p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
       </span>
     );
   }

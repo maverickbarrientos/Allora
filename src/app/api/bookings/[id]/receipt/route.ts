@@ -50,7 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         deposit:
           payment.status === "unpaid"
             ? null
-            : { status: payment.status, amount: payment.paidAmount, paidAt: payment.paidAt },
+            : { status: payment.status, amount: payment.paidAmount, paidAt: payment.paidAt, fullyPaid: payment.fullyPaid },
       },
     });
   } catch {

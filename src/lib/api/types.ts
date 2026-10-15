@@ -124,7 +124,7 @@ export type BookingReceipt = {
   event: { id: string; name: string | null; type: EventType; date: string; guestCount: number };
   vendor: { name: string; price: number };
   /** null when no deposit was ever paid. paidAt is when the deposit was paid. */
-  deposit: { status: "paid" | "refunded"; amount: number | null; paidAt: string | null } | null;
+  deposit: { status: "paid" | "refunded"; amount: number | null; paidAt: string | null; fullyPaid: boolean } | null;
 };
 
 // Shape from docs/SPEC-vendor-portal.md ("Shared shapes").
@@ -141,8 +141,10 @@ export type VendorBooking = {
 
 // Shapes from docs/SPEC-payment.md ("Shared shapes").
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
+export type PaymentKind = "deposit" | "full" | "balance";
 export type Payment = {
   id: string;
+  kind: PaymentKind;
   bookingId: string;
   amount: number;
   status: "paid" | "refunded";
@@ -155,8 +157,12 @@ export type PlanPayment = {
   depositAmount: number;
   paidAmount: number | null;
   paidAt: string | null;
+  /** True once the whole price is paid (a full payment, or deposit plus balance). */
+  fullyPaid: boolean;
+  /** What is still owed after a deposit; 0 otherwise. */
+  balanceDue: number;
 };
-export type VendorPayment = { status: PaymentStatus; paidAmount: number | null };
+export type VendorPayment = { status: PaymentStatus; paidAmount: number | null; fullyPaid: boolean };
 export type TestMethod = "approve" | "decline";
 
 // Shapes from docs/SPEC-matching.md ("Shared shapes" and API).

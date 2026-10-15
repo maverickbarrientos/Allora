@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
-import type { Payment, PlanBooking, TestMethod } from "@/lib/api/types";
+import type { Payment, PaymentKind, PlanBooking, TestMethod } from "@/lib/api/types";
 import { formatAmount, formatTimestamp } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
@@ -48,8 +48,10 @@ function Pay() {
   const router = useRouter();
   const { id, bookingId } = useParams<{ id: string; bookingId: string }>();
   const { state, reload } = useLoad(() => api.getPlan(id));
+  const booking = state.status === "loaded" ? state.data.bookings.find((b) => b.id === bookingId) : undefined;
   const [phase, setPhase] = useState<Phase>({ kind: "form" });
   const [method, setMethod] = useState<TestMethod>("approve");
+  const [choice, setChoice] = useState<"deposit" | "full">("deposit");
   const inFlight = useRef(false);
   const resultRef = useRef<HTMLHeadingElement>(null);
 
@@ -60,12 +62,16 @@ function Pay() {
     if (phase.kind !== "form" && phase.kind !== "submitting") resultRef.current?.focus();
   }, [phase.kind]);
 
+  // Deposit already paid with a balance left: the only thing to pay is the balance.
+  const balance = booking?.payment?.status === "paid" && !booking.payment.fullyPaid ? booking.payment.balanceDue : 0;
+  const plan: PaymentKind = balance > 0 ? "balance" : choice;
+
   async function pay() {
     if (inFlight.current) return; // a double click sends one request
     inFlight.current = true;
     setPhase({ kind: "submitting" });
     try {
-      const { payment } = await api.payBooking(bookingId, method);
+      const { payment } = await api.payBooking(bookingId, method, plan);
       setPhase({ kind: "receipt", payment });
     } catch (e) {
       const { status, code } = toApiError(e);
@@ -113,7 +119,6 @@ function Pay() {
     );
   }
 
-  const booking = state.data.bookings.find((b) => b.id === bookingId);
   if (!booking || phase.kind === "not_found") return <NotFound back={back} headingRef={resultRef} />;
 
   if (phase.kind === "receipt") {
@@ -122,6 +127,7 @@ function Pay() {
         <Receipt
           headingRef={resultRef}
           booking={booking}
+          title={RECEIPT_TITLE[phase.payment.kind]}
           amount={phase.payment.amount}
           date={phase.payment.createdAt}
           reference={phase.payment.reference}
@@ -131,13 +137,14 @@ function Pay() {
     );
   }
 
-  // A reload of the receipt URL: the plan already says the deposit is paid.
-  if (booking.payment?.status === "paid") {
+  // A reload of the receipt URL: the plan already says it is paid and nothing is left to pay.
+  if (booking.payment?.status === "paid" && balance === 0) {
     return (
       <Result back={back}>
         <Receipt
           headingRef={resultRef}
           booking={booking}
+          title={booking.payment.fullyPaid ? "Payment complete" : "Deposit paid"}
           amount={booking.payment.paidAmount}
           date={booking.payment.paidAt}
           planHref={planHref}
@@ -157,11 +164,16 @@ function Pay() {
 
   const submitting = phase.kind === "submitting";
   const deposit = booking.payment?.depositAmount;
+  const payNow = balance > 0 ? balance : choice === "full" ? booking.price : deposit;
 
   return (
     <div className="flex flex-col gap-14 lg:gap-24">
       {back}
-      <PageHeader label="Deposit" title="Pay deposit" description="Pay the deposit to secure this booking." />
+      <PageHeader
+        label={balance > 0 ? "Balance" : "Payment"}
+        title={balance > 0 ? "Pay balance" : "Pay for this booking"}
+        description={balance > 0 ? "Pay the rest to settle this booking." : "Pay a deposit to secure this booking, or the full amount."}
+      />
 
       <div className="flex max-w-xl flex-col gap-8">
         <dl className="flex flex-col divide-y divide-border border-y border-border">
@@ -169,8 +181,40 @@ function Pay() {
           <Row label="Vendor" value={booking.vendorName} />
           <Row label="Category" value={booking.category} />
           <Row label="Price" value={formatAmount(booking.price)} />
-          <Row label="Deposit" value={deposit != null ? formatAmount(deposit) : "Shown on your receipt"} strong />
+          {balance > 0 ? (
+            <Row label="Balance" value={formatAmount(balance)} strong />
+          ) : (
+            <Row label="Deposit" value={deposit != null ? formatAmount(deposit) : "Shown on your receipt"} strong />
+          )}
         </dl>
+
+        {balance === 0 && (
+          <fieldset className="flex flex-col gap-2" disabled={submitting}>
+            <legend className="label mb-2">Pay</legend>
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+              {(["deposit", "full"] as const).map((v) => (
+                <label
+                  key={v}
+                  className="flex min-h-12 cursor-pointer flex-col gap-1 rounded-xl border border-input bg-ivory p-4 text-sm text-foreground has-[:checked]:border-forest has-[:checked]:ring-2 has-[:checked]:ring-forest has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:text-ink-muted"
+                >
+                  <input
+                    type="radio"
+                    name="plan"
+                    value={v}
+                    checked={choice === v}
+                    onChange={() => setChoice(v)}
+                    className="sr-only"
+                  />
+                  <span className="font-medium">{v === "full" ? "Full amount" : "Deposit"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {v === "full" ? formatAmount(booking.price) : deposit != null ? formatAmount(deposit) : ""}
+                    {v === "deposit" && " now, balance later"}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         {/* Always visible; there is no way to dismiss it. */}
         <Alert className="font-medium">Demo payment: no real money, do not enter card details</Alert>
@@ -223,8 +267,8 @@ function Pay() {
             ? "Paying"
             : phase.kind === "declined" || phase.kind === "error"
               ? "Try again"
-              : deposit != null
-                ? `Pay ${formatAmount(deposit)}`
+              : payNow != null
+                ? `Pay ${formatAmount(payNow)}`
                 : "Pay deposit"}
         </Button>
       </div>
@@ -252,9 +296,16 @@ function Result({ back, children }: { back: React.ReactNode; children: React.Rea
 
 type HeadingRef = React.RefObject<HTMLHeadingElement | null>;
 
+const RECEIPT_TITLE: Record<PaymentKind, string> = {
+  deposit: "Deposit paid",
+  full: "Payment complete",
+  balance: "Balance paid",
+};
+
 function Receipt({
   headingRef,
   booking,
+  title,
   amount,
   date,
   reference,
@@ -262,6 +313,7 @@ function Receipt({
 }: {
   headingRef: HeadingRef;
   booking: PlanBooking;
+  title: string;
   amount: number | null;
   date: string | null;
   reference?: string;
@@ -273,7 +325,7 @@ function Receipt({
         <p className="label">Receipt</p>
         <CardTitle>
           <span ref={headingRef} tabIndex={-1} className="outline-none">
-            Deposit paid
+            {title}
           </span>
         </CardTitle>
       </CardHeader>
@@ -315,7 +367,7 @@ function Blocked({
 }) {
   const [title, body] =
     code === "already_paid"
-      ? ["This deposit is already paid", "There's nothing more to pay for this booking."]
+      ? ["This payment is already made", "There's nothing more to pay for this booking."]
       : booking.status === "declined"
         ? ["This booking was declined", "Only a confirmed booking can be paid."]
         : booking.status === "pending"
