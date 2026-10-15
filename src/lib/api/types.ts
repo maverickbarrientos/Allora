@@ -47,7 +47,17 @@ export type VendorCalendarBooking = {
   customerName: string;
 };
 export type VendorCalendar = { from: string; to: string; blocked: string[]; bookings: VendorCalendarBooking[] };
-export type VendorProfile = { vendor: Vendor; categoryLocked: boolean };
+/** docs/SPEC-vendor-profiles.md: a vendor with its profile text. */
+export type VendorDetail = Vendor & { about: string | null; location: string | null };
+export type VendorProfile = { vendor: VendorDetail; categoryLocked: boolean };
+/** Body for creating or editing a vendor profile; null or "" clears about and location. */
+export type VendorProfileInput = {
+  name: string;
+  category: string;
+  price: number;
+  about?: string | null;
+  location?: string | null;
+};
 export type PlanBooking = {
   id: string;
   eventId: string;

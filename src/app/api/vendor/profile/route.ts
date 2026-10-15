@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse, readJson } from "@/lib/api-helpers";
-import { VENDOR_COLUMNS, toVendor } from "@/lib/server/shapes";
+import { VENDOR_DETAIL_COLUMNS, toVendorDetail } from "@/lib/server/shapes";
 import { requireVendorRole } from "@/lib/vendor-portal";
 import {
+  ABOUT_MAX,
+  LOCATION_MAX,
   invalidFields,
   isCategoryLocked,
+  optionalText,
   validCategory,
   validName,
   validPrice,
@@ -17,7 +20,7 @@ const notLinked = () =>
   errorResponse(404, "vendor_not_linked", "Your account is not linked to a service.");
 
 async function loadOwnVendor(supabase: SupabaseClient, userId: string) {
-  return supabase.from("vendors").select(VENDOR_COLUMNS).eq("owner", userId).maybeSingle();
+  return supabase.from("vendors").select(VENDOR_DETAIL_COLUMNS).eq("owner", userId).maybeSingle();
 }
 
 /** True when the vendor has any pending or confirmed booking (RLS: own bookings only). */
@@ -44,7 +47,7 @@ export async function GET() {
     const locked = await hasActiveBooking(supabase, vendor.id);
     if (locked === null) return errorResponse(500, "server_error", "Could not load bookings.");
 
-    return NextResponse.json({ vendor: toVendor(vendor), categoryLocked: locked });
+    return NextResponse.json({ vendor: toVendorDetail(vendor), categoryLocked: locked });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }
@@ -63,6 +66,11 @@ export async function POST(req: Request) {
     if (!validName(body.name)) bad.push("name");
     if (!validCategory(body.category)) bad.push("category");
     if (!validPrice(body.price)) bad.push("price");
+    // About and location are optional; left out means none.
+    const about = body.about === undefined ? null : optionalText(body.about, ABOUT_MAX);
+    const location = body.location === undefined ? null : optionalText(body.location, LOCATION_MAX);
+    if (about === undefined) bad.push("about");
+    if (location === undefined) bad.push("location");
     if (bad.length) return errorResponse(400, "validation_error", invalidFields(bad));
 
     const { data: existing, error: exErr } = await loadOwnVendor(supabase, auth.userId);
@@ -76,9 +84,11 @@ export async function POST(req: Request) {
         name: (body.name as string).trim(),
         category: body.category,
         price: body.price,
+        about,
+        location,
         owner: auth.userId,
       })
-      .select(VENDOR_COLUMNS)
+      .select(VENDOR_DETAIL_COLUMNS)
       .single();
     if (error) {
       // vendors_owner_unique (004): a simultaneous create won the race.
@@ -88,7 +98,7 @@ export async function POST(req: Request) {
       return errorResponse(500, "server_error", "Could not create vendor profile.");
     }
 
-    return NextResponse.json({ vendor: toVendor(vendor), categoryLocked: false }, { status: 201 });
+    return NextResponse.json({ vendor: toVendorDetail(vendor), categoryLocked: false }, { status: 201 });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }
@@ -105,8 +115,9 @@ export async function PATCH(req: Request) {
 
     // Unknown fields, including owner, are ignored.
     const has = (k: string) => Object.prototype.hasOwnProperty.call(body, k);
-    if (!has("name") && !has("category") && !has("price")) {
-      return errorResponse(400, "validation_error", "Send at least one of name, category, price.");
+    const editable = ["name", "category", "price", "about", "location"];
+    if (!editable.some(has)) {
+      return errorResponse(400, "validation_error", `Send at least one of ${editable.join(", ")}.`);
     }
 
     const { data: vendor, error: vErr } = await loadOwnVendor(supabase, auth.userId);
@@ -128,6 +139,13 @@ export async function PATCH(req: Request) {
       if (validPrice(body.price)) changes.price = body.price;
       else bad.push("price");
     }
+    // Empty text or null clears about and location.
+    for (const [field, max] of [["about", ABOUT_MAX], ["location", LOCATION_MAX]] as const) {
+      if (!has(field)) continue;
+      const value = optionalText(body[field], max);
+      if (value === undefined) bad.push(field);
+      else changes[field] = value;
+    }
     if (bad.length) return errorResponse(400, "validation_error", invalidFields(bad));
 
     let updated = vendor;
@@ -136,7 +154,7 @@ export async function PATCH(req: Request) {
         .from("vendors")
         .update(changes)
         .eq("id", vendor.id)
-        .select(VENDOR_COLUMNS)
+        .select(VENDOR_DETAIL_COLUMNS)
         .single();
       if (error) {
         if (isCategoryLocked(error)) {
@@ -154,7 +172,7 @@ export async function PATCH(req: Request) {
     const locked = await hasActiveBooking(supabase, vendor.id);
     if (locked === null) return errorResponse(500, "server_error", "Could not load bookings.");
 
-    return NextResponse.json({ vendor: toVendor(updated), categoryLocked: locked });
+    return NextResponse.json({ vendor: toVendorDetail(updated), categoryLocked: locked });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }

@@ -22,6 +22,7 @@ import type {
   VendorBooking,
   VendorCalendar,
   VendorProfile,
+  VendorProfileInput,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -136,8 +137,8 @@ export const api = {
     ),
   listCategories: () => request<{ categories: string[] }>("GET", "/api/categories"),
   getVendorProfile: () => request<VendorProfile>("GET", "/api/vendor/profile"),
-  createVendorProfile: (input: Omit<Vendor, "id">) =>
-    request<{ vendor: Vendor; categoryLocked: false }>("POST", "/api/vendor/profile", input),
-  updateVendorProfile: (input: Partial<Omit<Vendor, "id">>) =>
+  createVendorProfile: (input: VendorProfileInput) =>
+    request<VendorProfile>("POST", "/api/vendor/profile", input),
+  updateVendorProfile: (input: Partial<VendorProfileInput>) =>
     request<VendorProfile>("PATCH", "/api/vendor/profile", input),
 };

@@ -8,8 +8,16 @@ export const CATEGORIES: readonly string[] = Object.keys(WEIGHTS);
 
 export const NAME_MAX = 80;
 export const PRICE_MAX = 100_000_000;
+export const ABOUT_MAX = 1000;
+export const LOCATION_MAX = 80;
 
-export type ProfileFields = { name?: string; category?: string; price?: number };
+export type ProfileFields = {
+  name?: string;
+  category?: string;
+  price?: number;
+  about?: string | null;
+  location?: string | null;
+};
 
 export function validName(v: unknown): v is string {
   if (typeof v !== "string") return false;
@@ -29,6 +37,19 @@ export function validPrice(v: unknown): v is number {
 
 export function validCategory(v: unknown): v is string {
   return typeof v === "string" && CATEGORIES.includes(v);
+}
+
+/**
+ * An optional text field (about, location): null, or a string of at most
+ * `max` characters after trimming. Returns what to save (an empty string
+ * clears it to null), or undefined when the value is invalid.
+ */
+export function optionalText(v: unknown, max: number): string | null | undefined {
+  if (v === null) return null;
+  if (typeof v !== "string") return undefined;
+  const text = v.trim();
+  if ([...text].length > max) return undefined;
+  return text === "" ? null : text;
 }
 
 export function invalidFields(fields: string[]) {

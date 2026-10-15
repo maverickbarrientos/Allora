@@ -14,16 +14,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 
-type Fields = { name: string; category: string; price: string };
+type Fields = { name: string; category: string; price: string; about: string; location: string };
 type FieldErrors = Partial<Record<keyof Fields, string>>;
 
-const EMPTY_FIELDS: Fields = { name: "", category: "", price: "" };
+const ABOUT_MAX = 1000;
+const ABOUT_COUNTER_FROM = 900;
+const LOCATION_MAX = 80;
+
+const EMPTY_FIELDS: Fields = { name: "", category: "", price: "", about: "", location: "" };
 const FIELD_ERRORS: Record<keyof Fields, string> = {
   name: "Enter a name between 1 and 80 characters.",
   category: "Choose a category.",
   price: "Enter a price above 0, up to 100,000,000, with no more than 2 decimals.",
+  about: `Keep the description to ${ABOUT_MAX.toLocaleString("en-US")} characters or fewer.`,
+  location: `Keep the location to ${LOCATION_MAX} characters or fewer.`,
 };
+
+/** Character count as the server counts it (an emoji is one character). */
+const charCount = (text: string) => [...text].length;
 
 function fieldsFromProfile(profile: VendorProfile | null): Fields {
   return profile
@@ -31,6 +41,8 @@ function fieldsFromProfile(profile: VendorProfile | null): Fields {
         name: profile.vendor.name,
         category: profile.vendor.category,
         price: String(profile.vendor.price),
+        about: profile.vendor.about ?? "",
+        location: profile.vendor.location ?? "",
       }
     : EMPTY_FIELDS;
 }
@@ -95,6 +107,10 @@ export default function VendorProfilePage() {
     ) {
       errors.price = FIELD_ERRORS.price;
     }
+    const about = fields.about.trim();
+    const location = fields.location.trim();
+    if (charCount(about) > ABOUT_MAX) errors.about = FIELD_ERRORS.about;
+    if (charCount(location) > LOCATION_MAX) errors.location = FIELD_ERRORS.location;
     setFieldErrors(errors);
     setFormError(null);
     setSaved(false);
@@ -103,7 +119,14 @@ export default function VendorProfilePage() {
     savingRef.current = true;
     setSaving(true);
     try {
-      const payload = { name, category: fields.category, price: numericPrice };
+      // Empty about or location is sent as null, which clears it.
+      const payload = {
+        name,
+        category: fields.category,
+        price: numericPrice,
+        about: about || null,
+        location: location || null,
+      };
       if (profile) {
         const updated = await api.updateVendorProfile(payload);
         setProfileOverride(updated);
@@ -160,6 +183,7 @@ export default function VendorProfilePage() {
   }
 
   const isEdit = profile !== null;
+  const aboutCounter = charCount(fields.about) >= ABOUT_COUNTER_FROM;
 
   return (
     <div className="flex max-w-xl flex-col gap-10">
@@ -259,6 +283,63 @@ export default function VendorProfilePage() {
             }}
           />
           {fieldErrors.price && <p id="vendor-price-error" className="text-sm text-destructive">{fieldErrors.price}</p>}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="vendor-location">Location (optional)</Label>
+          <Input
+            id="vendor-location"
+            name="location"
+            autoComplete="address-level2"
+            placeholder="e.g. Quezon City"
+            value={fields.location}
+            disabled={saving}
+            aria-invalid={Boolean(fieldErrors.location)}
+            aria-describedby={fieldErrors.location ? "vendor-location-error" : undefined}
+            onChange={(event) => {
+              setFieldDraft((current) => ({
+                ...(current ?? fieldsFromProfile(profile)),
+                location: event.target.value,
+              }));
+              setFieldErrors((current) => ({ ...current, location: undefined }));
+              setSaved(false);
+            }}
+          />
+          {fieldErrors.location && (
+            <p id="vendor-location-error" className="text-sm text-destructive">{fieldErrors.location}</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="vendor-about">About (optional)</Label>
+          <Textarea
+            id="vendor-about"
+            name="about"
+            rows={5}
+            placeholder="What you offer, your style, and what customers can expect."
+            value={fields.about}
+            disabled={saving}
+            aria-invalid={Boolean(fieldErrors.about)}
+            aria-describedby={
+              [fieldErrors.about && "vendor-about-error", aboutCounter && "vendor-about-counter"]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
+            onChange={(event) => {
+              setFieldDraft((current) => ({
+                ...(current ?? fieldsFromProfile(profile)),
+                about: event.target.value,
+              }));
+              setFieldErrors((current) => ({ ...current, about: undefined }));
+              setSaved(false);
+            }}
+          />
+          {aboutCounter && (
+            <p id="vendor-about-counter" className="self-end text-xs text-muted-foreground" aria-live="polite">
+              {charCount(fields.about).toLocaleString("en-US")} / {ABOUT_MAX.toLocaleString("en-US")}
+            </p>
+          )}
+          {fieldErrors.about && <p id="vendor-about-error" className="text-sm text-destructive">{fieldErrors.about}</p>}
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
