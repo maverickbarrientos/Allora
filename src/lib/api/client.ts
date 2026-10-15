@@ -47,8 +47,7 @@ async function send(method: string, path: string, body?: unknown) {
       const { mockFetch } = await import("@/mocks/vendor");
       return mockFetch(path, init);
     }
-    const { mockFetch } = await import("@/mocks/events");
-    return mockFetch(path, init);
+    // Events, vendors and bookings always use the real API.
   }
   return fetch(path, init);
 }
