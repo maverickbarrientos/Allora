@@ -40,7 +40,7 @@ export function ImagePlaceholder({
           "linear-gradient(135deg, var(--stone), color-mix(in srgb, var(--brass) 18%, var(--stone)))",
       }}
     >
-      <span className="absolute bottom-3 left-4 right-4 text-xs text-muted-foreground">
+      <span className="absolute bottom-3 left-4 right-4 text-xs text-foreground">
         {caption}
       </span>
     </div>
