@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import type { ConversationDetail, Message } from "@/lib/api/types";
 import { capitalize, formatTimestamp } from "@/lib/format";
 import { MESSAGE_MAX, messageBody, messageLength } from "@/lib/messages";
+import { createClient } from "@/lib/supabase/client";
 import { useLoad } from "@/lib/use-load";
 import { cn } from "@/lib/utils";
+import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,11 +27,29 @@ const showsTime = (messages: Message[], i: number) => {
 };
 
 /**
+ * Adds messages that aren't on the page yet (by id), keeping them in time
+ * order. A message can arrive twice: from my own send and from Realtime.
+ */
+function withMessages(list: Message[], incoming: Message[]): Message[] {
+  const known = new Set(list.map((m) => m.id));
+  const added = incoming.filter((m) => !known.has(m.id));
+  if (added.length === 0) return list;
+  return [...list, ...added].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+}
+
+type Update = (change: (detail: ConversationDetail) => ConversationDetail) => void;
+
+/**
  * One conversation between a customer and a vendor (docs/SPEC-messages.md),
  * shared by /messages/[id] and /vendor/messages/[id]. Messages are plain text.
  */
 export function Conversation({ id, backHref, backLabel }: { id: string; backHref: string; backLabel: string }) {
   const { state, setState, reload } = useLoad(() => api.getConversation(id));
+  // Changes always build on the latest state: Realtime and sending can land together.
+  const update = useCallback<Update>(
+    (change) => setState((s) => (s.status === "loaded" ? { status: "loaded", data: change(s.data) } : s)),
+    [setState],
+  );
 
   const back = (
     <Link
@@ -73,23 +93,20 @@ export function Conversation({ id, backHref, backLabel }: { id: string; backHref
   }
 
   return (
-    <Thread
-      detail={state.data}
-      back={back}
-      onChange={(data) => setState({ status: "loaded", data })}
-    />
+    <Thread detail={state.data} back={back} update={update} />
   );
 }
 
 function Thread({
   detail,
   back,
-  onChange,
+  update,
 }: {
   detail: ConversationDetail;
   back: React.ReactNode;
-  onChange: (next: ConversationDetail) => void;
+  update: Update;
 }) {
+  const userId = useProfile().id;
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -99,11 +116,60 @@ function Thread({
   const endRef = useRef<HTMLDivElement>(null);
   const scrollOnChange = useRef(true);
 
-  // Newest message in view after loading and after sending, not after "Load earlier".
+  // Newest message in view after loading and after sending, not after "Load
+  // earlier", and not when a message arrives while I'm reading further up.
   useEffect(() => {
     if (scrollOnChange.current) endRef.current?.scrollIntoView({ block: "end" });
     scrollOnChange.current = true;
   }, [detail.messages.length]);
+
+  // New messages arrive instantly through Supabase Realtime (docs/SPEC-messages.md).
+  // RLS only lets participants receive them. Sending still goes through the API.
+  const conversationId = detail.id;
+  useEffect(() => {
+    const supabase = createClient();
+    const nearBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
+    const channel = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const row = payload.new as { id?: string; body: string; created_at: string; sender_id: string };
+          const id = row.id;
+          if (!id) return; // an empty event carries no message
+          const mine = row.sender_id === userId;
+          scrollOnChange.current = mine || nearBottom();
+          update((d) => ({
+            ...d,
+            messages: withMessages(d.messages, [{ id, body: row.body, createdAt: row.created_at, mine }]),
+          }));
+        },
+      );
+    let stopped = false;
+    // Join as the signed-in user: the session is read from cookies after the
+    // client starts, and joining before that would join as logged out (RLS sends nothing).
+    void supabase.auth.getSession().then(({ data }) => {
+      if (stopped) return;
+      if (data.session) supabase.realtime.setAuth(data.session.access_token);
+      channel.subscribe((status) => {
+        // On (re)connecting, catch up on anything sent while not listening.
+        if (status !== "SUBSCRIBED") return;
+        api
+          .getConversation(conversationId)
+          .then((latest) => {
+            scrollOnChange.current = nearBottom();
+            update((d) => ({ ...d, open: latest.open, messages: withMessages(d.messages, latest.messages) }));
+          })
+          .catch(() => {});
+      });
+    });
+    // Leaving the page stops listening.
+    return () => {
+      stopped = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [conversationId, userId, update]);
 
   const body = messageBody(draft);
   const length = messageLength(draft.trim());
@@ -115,11 +181,11 @@ function Thread({
     setSendError(null);
     try {
       const { message } = await api.sendMessage(detail.id, body);
-      onChange({ ...detail, messages: [...detail.messages, message] });
+      update((d) => ({ ...d, messages: withMessages(d.messages, [message]) }));
       setDraft("");
     } catch (err) {
       const { code } = toApiError(err);
-      if (code === "conversation_closed") onChange({ ...detail, open: false });
+      if (code === "conversation_closed") update((d) => ({ ...d, open: false }));
       else if (code === "validation_error") setSendError(`Write a message of 1 to ${MESSAGE_MAX.toLocaleString("en-US")} characters.`);
       else setSendError("Couldn't send your message. Please try again.");
     } finally {
@@ -136,7 +202,7 @@ function Thread({
     try {
       const older = await api.getConversation(detail.id, first.id);
       scrollOnChange.current = false;
-      onChange({ ...detail, messages: [...older.messages, ...detail.messages], hasMore: older.hasMore });
+      update((d) => ({ ...d, messages: withMessages(d.messages, older.messages), hasMore: older.hasMore }));
     } catch {
       setEarlierError(true);
     } finally {
