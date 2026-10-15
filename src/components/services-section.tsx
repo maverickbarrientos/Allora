@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import { capitalize } from "@/lib/format";
@@ -29,17 +29,38 @@ export function ServicesSection({
   state,
   onRetry,
   onSaved,
+  onRefreshed,
 }: {
   eventId: string;
   state: Load<{ services: EventService[] }>;
   onRetry: () => void;
+  /** After a successful save: the list changed. */
   onSaved: (data: { services: EventService[] }) => void;
+  /** A fresh list without a save (after a refused save): only the list changes. */
+  onRefreshed: (data: { services: EventService[] }) => void;
 }) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [categoriesFailed, setCategoriesFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  // Where focus goes next: the first checkbox when the picker opens, the Edit
+  // button when it closes, so keyboard users never land back at the page top.
+  const focusNext = useRef<"picker" | "edit" | null>(null);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || !focusNext.current) return;
+    const target =
+      focusNext.current === "picker"
+        ? section.querySelector<HTMLInputElement>("input[type=checkbox]:not(:disabled)")
+        : section.querySelector<HTMLButtonElement>("[data-services-edit]");
+    if (target) {
+      target.focus();
+      focusNext.current = null;
+    }
+  });
 
   const services = state.status === "loaded" ? state.data.services : [];
   const locked = new Set(services.filter((s) => s.status !== null).map((s) => s.category));
@@ -48,21 +69,30 @@ export function ServicesSection({
     setError(null);
     setCategoriesFailed(false);
     setEditing({ categories: null, selected: services.map((s) => s.category) });
+    focusNext.current = "picker";
     api
       .listCategories()
       .then(({ categories }) => setEditing((prev) => prev && { ...prev, categories }))
       .catch(() => setCategoriesFailed(true));
   }
 
+  function closeEditing() {
+    focusNext.current = "edit";
+    setEditing(null);
+  }
+
   async function save() {
     if (!editing || inFlight.current || editing.selected.length === 0) return;
+    // Booked services are always kept, even if they were locked after the
+    // picker opened, so what is sent matches the ticked boxes.
+    const toSend = [...editing.selected, ...[...locked].filter((c) => !editing.selected.includes(c))];
     inFlight.current = true;
     setSaving(true);
     setError(null);
     try {
-      const data = await api.saveServices(eventId, editing.selected);
+      const data = await api.saveServices(eventId, toSend);
       onSaved(data);
-      setEditing(null);
+      closeEditing();
     } catch (err) {
       const { code, message } = toApiError(err);
       // Shown as the server wrote it ("Can't remove X: they have a booking.").
@@ -70,10 +100,19 @@ export function ServicesSection({
       else if (code === "validation_error") setError("That list of services isn't valid. Please check it and try again.");
       else setError("Couldn't save your services. Please try again.");
       // A booking may have been made elsewhere, so the locks may have changed.
+      // Nothing was saved, so only the list is refreshed, and the newly
+      // locked services go back into the selection.
       if (code === "service_has_active_booking") {
         api
           .getServices(eventId)
-          .then(onSaved)
+          .then((data) => {
+            onRefreshed(data);
+            const nowLocked = data.services.filter((s) => s.status !== null).map((s) => s.category);
+            setEditing(
+              (prev) =>
+                prev && { ...prev, selected: [...prev.selected, ...nowLocked.filter((c) => !prev.selected.includes(c))] },
+            );
+          })
           .catch(() => {});
       }
     } finally {
@@ -83,13 +122,13 @@ export function ServicesSection({
   }
 
   return (
-    <section className="flex flex-col gap-6" aria-labelledby="services-heading">
+    <section ref={sectionRef} className="flex flex-col gap-6" aria-labelledby="services-heading">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="services-heading" className="font-display text-h2">
           Services
         </h2>
         {state.status === "loaded" && !editing && (
-          <Button variant="outline" size="sm" onClick={startEditing}>
+          <Button variant="outline" size="sm" onClick={startEditing} data-services-edit>
             Edit
           </Button>
         )}
@@ -122,7 +161,8 @@ export function ServicesSection({
               selected={editing.selected}
               locked={locked}
               disabled={saving}
-              onChange={(selected) => setEditing({ ...editing, selected })}
+              hintId="services-hint"
+              onChange={(selected) => setEditing((prev) => prev && { ...prev, selected })}
             />
           ) : categoriesFailed ? (
             <div className="flex flex-wrap items-center gap-3">
@@ -137,11 +177,15 @@ export function ServicesSection({
             <Skeleton role="status" aria-label="Loading services" className="h-24" />
           )}
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => void save()} disabled={saving || !editing.categories || editing.selected.length === 0}>
+            <Button
+              onClick={() => void save()}
+              disabled={saving || !editing.categories || editing.selected.length === 0}
+              aria-describedby={editing.selected.length === 0 ? "services-hint" : undefined}
+            >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? "Saving" : "Save"}
             </Button>
-            <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>
+            <Button variant="outline" onClick={closeEditing} disabled={saving}>
               Cancel
             </Button>
           </div>

@@ -149,14 +149,17 @@ export default function PlanPage() {
   }
 
   // After the service list changes: the gaps and shares change, so the cards
-  // are refetched and the budgets refreshed quietly.
+  // are refetched, and the plan refresh also refreshes budgets and services.
   function onServicesSaved(data: { services: EventService[] }) {
+    if (!alive.current) return;
     setServices({ status: "loaded", data });
     reloadCards();
-    api
-      .getBudgets(id)
-      .then((summary) => alive.current && setBudgets({ status: "loaded", data: summary }))
-      .catch(() => {});
+    void refreshPlan({ cards: false, queue: true });
+  }
+
+  // A fresh list without a save (after a refused save): only the list changes.
+  function onServicesRefreshed(data: { services: EventService[] }) {
+    if (alive.current) setServices({ status: "loaded", data });
   }
 
   function removeCard(category: string) {
@@ -325,6 +328,7 @@ export default function PlanPage() {
         state={services.state}
         onRetry={services.reload}
         onSaved={onServicesSaved}
+        onRefreshed={onServicesRefreshed}
       />
 
       <BudgetSection eventId={id} state={budgets.state} onRetry={budgets.reload} />

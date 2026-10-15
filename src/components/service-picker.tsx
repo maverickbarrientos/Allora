@@ -10,12 +10,15 @@ export function ServicePicker({
   selected,
   locked,
   disabled,
+  hintId,
   onChange,
 }: {
   categories: readonly string[];
   selected: readonly string[];
   locked: ReadonlySet<string>;
   disabled?: boolean;
+  /** id for the "Choose at least one service" hint, so a Save button can point at it. */
+  hintId?: string;
   onChange: (next: string[]) => void;
 }) {
   function toggle(category: string, checked: boolean) {
@@ -48,7 +51,7 @@ export function ServicePicker({
         })}
       </div>
       {selected.length === 0 && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p id={hintId} role="status" className="text-sm text-muted-foreground">
           Choose at least one service.
         </p>
       )}

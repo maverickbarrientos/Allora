@@ -31,8 +31,8 @@ export function parseServices(body: Record<string, unknown> | null): { services:
   }
   const seen = new Set<string>();
   for (const c of list) {
-    if (typeof c !== "string" || !CATEGORIES.includes(c)) return { error: `Unknown service: ${String(c)}.` };
-    if (seen.has(c)) return { error: `Duplicate service: ${c}.` };
+    if (typeof c !== "string" || !CATEGORIES.includes(c)) return { error: "Unknown service." };
+    if (seen.has(c)) return { error: "A service is listed twice." };
     seen.add(c);
   }
   return { services: [...seen] };
