@@ -19,7 +19,7 @@ Maps, addresses, distance or travel fees, a vendor serving more than one area, a
 - Existing free-text vendor locations: one that names an area (ignoring case and spaces) becomes that area; a Metro Manila city (for example "Quezon City" or "Makati") becomes Metro Manila; anything else is cleared. This runs once in the migration.
 
 ## Data and tables
-SQL `017_event_location.sql`, safe to re-run. (`main` ends at 016; the availability branch also uses 014 to 018, so renumber at merge if needed.)
+SQL `028_event_location.sql`, safe to re-run. (Written as 017 and renumbered at merge, after the availability and messages SQL on `main`.)
 - `events` gains `location text`, nullable, with a check that it is one of the areas. The column-level UPDATE grant on `events` gains `location`.
 - `vendors.location`: existing values are mapped as in Rules, then a check that it is null or one of the areas. The 80-character length check stays.
 - No new tables; RLS unchanged.

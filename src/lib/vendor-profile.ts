@@ -10,6 +10,7 @@ export const CATEGORIES: readonly string[] = Object.keys(WEIGHTS);
 export const NAME_MAX = 80;
 export const PRICE_MAX = 100_000_000;
 export const ABOUT_MAX = 1000;
+export const TERMS_MAX = 4000;
 
 export type ProfileFields = {
   name?: string;
@@ -17,6 +18,7 @@ export type ProfileFields = {
   price?: number;
   about?: string | null;
   location?: string | null;
+  terms?: string | null;
 };
 
 export function validName(v: unknown): v is string {

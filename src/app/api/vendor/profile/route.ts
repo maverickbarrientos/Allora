@@ -9,6 +9,7 @@ import { requireVendorRole } from "@/lib/vendor-portal";
 import {
   ABOUT_MAX,
   CONTACT_FIELDS,
+  TERMS_MAX,
   contactValue,
   invalidFields,
   isCategoryLocked,
@@ -113,11 +114,13 @@ export async function POST(req: Request) {
     if (!validName(body.name)) bad.push("name");
     if (!validCategory(body.category)) bad.push("category");
     if (!validPrice(body.price)) bad.push("price");
-    // About and location are optional; left out means none.
+    // About, location and terms are optional; left out means none.
     const about = body.about === undefined ? null : optionalText(body.about, ABOUT_MAX);
     const location = body.location === undefined ? null : parseLocation(body.location);
+    const terms = body.terms === undefined ? null : optionalText(body.terms, TERMS_MAX);
     if (about === undefined) bad.push("about");
     if (location === undefined) bad.push("location");
+    if (terms === undefined) bad.push("terms");
     const contactChanges = parseContact(body, bad);
     if (bad.length) return errorResponse(400, "validation_error", invalidFields(bad));
 
@@ -134,6 +137,7 @@ export async function POST(req: Request) {
         price: body.price,
         about,
         location,
+        terms,
         owner: auth.userId,
       })
       .select(VENDOR_DETAIL_COLUMNS)
@@ -171,7 +175,7 @@ export async function PATCH(req: Request) {
 
     // Unknown fields, including owner, are ignored.
     const has = (k: string) => Object.prototype.hasOwnProperty.call(body, k);
-    const editable = ["name", "category", "price", "about", "location", ...CONTACT_FIELDS];
+    const editable = ["name", "category", "price", "about", "location", "terms", ...CONTACT_FIELDS];
     if (!editable.some(has)) {
       return errorResponse(400, "validation_error", `Send at least one of ${editable.join(", ")}.`);
     }
@@ -195,11 +199,12 @@ export async function PATCH(req: Request) {
       if (validPrice(body.price)) changes.price = body.price;
       else bad.push("price");
     }
-    // Empty text or null clears about and location.
-    if (has("about")) {
-      const value = optionalText(body.about, ABOUT_MAX);
-      if (value === undefined) bad.push("about");
-      else changes.about = value;
+    // Empty text or null clears about, location and terms.
+    for (const [field, max] of [["about", ABOUT_MAX], ["terms", TERMS_MAX]] as const) {
+      if (!has(field)) continue;
+      const value = optionalText(body[field], max);
+      if (value === undefined) bad.push(field);
+      else changes[field] = value;
     }
     if (has("location")) {
       const value = parseLocation(body.location);

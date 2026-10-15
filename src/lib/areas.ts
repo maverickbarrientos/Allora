@@ -1,6 +1,6 @@
 // PLACEHOLDER area list (docs/SPEC-event-location.md, "Rules").
 // Events and vendors pick their location from this list. The same list is in
-// the check constraints of 017_event_location.sql; change both together.
+// the check constraints of 028_event_location.sql; change both together.
 
 export const AREAS = [
   "Metro Manila",

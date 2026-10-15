@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { eventName } from "@/lib/event-name";
+import { useLiveLoad } from "@/lib/use-live-messages";
 import { useLoad } from "@/lib/use-load";
 import type { EventService, PlanBooking } from "@/lib/api/types";
 import { PlanningAssistant } from "@/components/chat/planning-assistant";
@@ -16,6 +17,7 @@ import { ErrorState } from "@/components/error-state";
 import { missingCardId } from "@/components/missing-card";
 import { MissingSection } from "@/components/missing-section";
 import { PageHeader } from "@/components/page-header";
+import { MessageLink } from "@/components/message-link";
 import { PlanPaymentLine } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
@@ -33,6 +35,8 @@ export default function PlanPage() {
   const setBudgets = budgets.setState;
   // "Services" (the event's own list) loads on its own too.
   const services = useLoad(() => api.getServices(id));
+  // Message links; the plan works without them if this fails.
+  const conversations = useLiveLoad(() => api.getBookingConversations());
   const setServices = services.setState;
   const alive = useRef(true);
 
@@ -317,8 +321,31 @@ export default function PlanPage() {
                     <span className="hidden text-right sm:block">{formatNumber(b.price)}</span>
                     <StatusBadge status={b.status} className="justify-self-end" />
                     <span className="text-sm sm:hidden">{formatNumber(b.price)}</span>
-                    <div className="col-span-2 empty:hidden sm:col-span-3 sm:col-start-2">
+                    <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 empty:hidden sm:col-span-3 sm:col-start-2">
                       <PlanPaymentLine booking={b} eventId={event.id} />
+                      {conversations.state.status === "loaded" && conversations.state.data.bookings[b.id] && (
+                        <MessageLink
+                          href={`/messages/${conversations.state.data.bookings[b.id].conversationId}`}
+                          name={b.vendorName}
+                          unread={conversations.state.data.bookings[b.id].unread}
+                        />
+                      )}
+                    </div>
+                    <div className="col-span-2 flex flex-wrap gap-x-4 text-sm sm:col-span-3 sm:col-start-2">
+                      <Link
+                        href={`/events/${event.id}/bookings/${b.id}/contract`}
+                        className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
+                        aria-label={`Contract for ${b.vendorName}`}
+                      >
+                        Contract
+                      </Link>
+                      <Link
+                        href={`/events/${event.id}/bookings/${b.id}/receipt`}
+                        className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
+                        aria-label={`Receipt for ${b.vendorName}`}
+                      >
+                        Receipt
+                      </Link>
                     </div>
                   </div>
                 </Reveal>

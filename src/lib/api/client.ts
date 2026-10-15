@@ -1,4 +1,5 @@
 import type {
+  BookingReceipt,
   BudgetEntry,
   BudgetSummary,
   ChatIntent,
@@ -13,6 +14,7 @@ import type {
   LoginInput,
   MissingResponse,
   Payment,
+  BookingContract,
   PlanBooking,
   Session,
   SignupInput,
@@ -26,6 +28,10 @@ import type {
   VendorProfileInput,
   VendorDetail,
   VendorContact,
+  BookingConversation,
+  ConversationDetail,
+  ConversationSummary,
+  Message,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -117,6 +123,22 @@ export const api = {
       "GET",
       `/api/vendors/${encodeURIComponent(vendorId)}${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ""}`,
     ),
+  /** Marks the conversation read for me only (the other side's count is untouched). */
+  markConversationRead: (conversationId: string) =>
+    request<void>("POST", `/api/conversations/${encodeURIComponent(conversationId)}/read`),
+  /** The inbox: my conversations, newest activity first. */
+  listConversations: () => request<{ conversations: ConversationSummary[] }>("GET", "/api/conversations"),
+  /** With `before` (a message id), the 50 messages before it. */
+  getConversation: (conversationId: string, before?: string) =>
+    request<ConversationDetail>(
+      "GET",
+      `/api/conversations/${encodeURIComponent(conversationId)}/messages${before ? `?before=${encodeURIComponent(before)}` : ""}`,
+    ),
+  sendMessage: (conversationId: string, body: string) =>
+    request<{ message: Message }>("POST", `/api/conversations/${encodeURIComponent(conversationId)}/messages`, { body }),
+  /** Booking id to its conversation, for the Message links on booking rows. */
+  getBookingConversations: () =>
+    request<{ bookings: Record<string, BookingConversation> }>("GET", "/api/conversations/booking-map"),
   getVendorAvailability: (vendorId: string, from: string, to: string) =>
     request<VendorAvailability>(
       "GET",
@@ -124,18 +146,25 @@ export const api = {
     ),
   getVendorCalendar: (from: string, to: string) =>
     request<VendorCalendar>("GET", `/api/vendor/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  blockDates: (dates: string[]) => request<{ changed: string[] }>("POST", "/api/vendor/availability/block", { dates }),
+  unblockDates: (dates: string[]) => request<{ changed: string[] }>("POST", "/api/vendor/availability/unblock", { dates }),
   getMissing: (eventId: string) =>
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   chat: (eventId: string, messages: ChatMessage[], intent?: ChatIntent) =>
     request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages, intent }),
-  createBooking: (input: { eventId: string; vendorId: string }) =>
+  /** agreedTerms: the vendor terms the customer ticked "I agree" to; leave out when the vendor has none. */
+  createBooking: (input: { eventId: string; vendorId: string; agreedTerms?: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
+  getBookingContract: (bookingId: string) =>
+    request<{ contract: BookingContract }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/contract`),
   payBooking: (bookingId: string, testMethod: TestMethod) =>
     request<{ payment: Payment; booking: PlanBooking }>(
       "POST",
       `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
       { testMethod },
     ),
+  getBookingReceipt: (bookingId: string) =>
+    request<{ receipt: BookingReceipt }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/receipt`),
 
   listVendorBookings: () =>
     request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),

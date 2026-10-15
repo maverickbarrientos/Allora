@@ -40,6 +40,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           "The budget can't be lower than the service budgets already set.",
         );
       }
+      // The date trigger (023): a vendor confirmed this date.
+      if (error.message === "date_has_confirmed_bookings") {
+        return errorResponse(
+          409,
+          "date_has_confirmed_bookings",
+          "This event has confirmed bookings, so its date can't change.",
+        );
+      }
       return errorResponse(500, "server_error", "Could not update event.");
     }
     if (!data || data.length === 0) {

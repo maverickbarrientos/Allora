@@ -56,3 +56,16 @@ export async function requireVendorRole(supabase: SupabaseClient) {
   }
   return { userId: data.user.id };
 }
+
+/**
+ * The caller's own vendor id: 401 if no session, 403 if not a vendor-role
+ * user, 404 `vendor_not_linked` if the account has no vendor record yet.
+ */
+export async function requireOwnVendor(supabase: SupabaseClient) {
+  const auth = await requireVendorRole(supabase);
+  if (auth.error) return { error: auth.error };
+  const { data, error } = await supabase.from("vendors").select("id").eq("owner", auth.userId).maybeSingle();
+  if (error) return { error: errorResponse(500, "server_error", "Could not load vendor.") };
+  if (!data) return { error: errorResponse(404, "vendor_not_linked", "Your account is not linked to a service.") };
+  return { vendorId: data.id as string };
+}

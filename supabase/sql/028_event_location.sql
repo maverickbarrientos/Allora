@@ -1,4 +1,4 @@
--- 017_event_location: an event's location, and vendor locations limited to the
+-- 028_event_location: an event's location, and vendor locations limited to the
 -- same list of areas (docs/SPEC-event-location.md, tickets 16 and 17).
 -- Run after 006 (event details) and 015 (vendor location). Safe to run more than once.
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.

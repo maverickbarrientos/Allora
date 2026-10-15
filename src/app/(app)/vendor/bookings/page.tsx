@@ -7,10 +7,12 @@ import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import type { BookingStatus, VendorBooking } from "@/lib/api/types";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
+import { useLiveLoad } from "@/lib/use-live-messages";
 import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { MessageLink } from "@/components/message-link";
 import { VendorPaymentBadge } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
@@ -52,9 +54,15 @@ export default function VendorBookingsPage() {
 function VendorBookings() {
   const router = useRouter();
   const { state, setState, reload } = useLoad(() => api.listVendorBookings());
+  // Message links; the list works without them if this fails.
+  const conversations = useLiveLoad(() => api.getBookingConversations());
+  const conversationOf = (bookingId: string) =>
+    conversations.state.status === "loaded" ? conversations.state.data.bookings[bookingId] : undefined;
   const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
+  // A message shown on one booking's row (an accept refused because the date is taken).
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const decisionLock = useRef(false);
 
   // Cancelling a confirmed booking (docs/SPEC-cancellation.md). The dialog
@@ -138,6 +146,11 @@ function VendorBookings() {
     decisionLock.current = true;
     setPendingDecision(null);
     setNotice(null);
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[booking.id];
+      return next;
+    });
     setBusy((s) => new Set(s).add(booking.id));
     try {
       const { booking: updated } = await api.decideBooking(booking.id, status);
@@ -153,8 +166,12 @@ function VendorBookings() {
           : prev,
       );
     } catch (e) {
-      const { code } = toApiError(e);
-      if (code === "status_unchanged") {
+      const { code, message } = toApiError(e);
+      if (code === "date_unavailable") {
+        // The row keeps its status; declining it still works. The server's
+        // message already names the reason and writes the date like the row.
+        setRowErrors((prev) => ({ ...prev, [booking.id]: message }));
+      } else if (code === "status_unchanged") {
         setNotice("This booking already has that status.");
         reload();
       } else if (code === "conflicting_booking") {
@@ -252,7 +269,10 @@ function VendorBookings() {
                       <Reveal delay={Math.min(s * 3 + i, 3) * 80}>
                         <BookingRow
                           booking={b}
+                          messageHref={conversationOf(b.id) && `/vendor/messages/${conversationOf(b.id)!.conversationId}`}
+                          messageUnread={conversationOf(b.id)?.unread}
                           busy={busy.has(b.id)}
+                          error={rowErrors[b.id]}
                           onDecide={(st) => setPendingDecision({ booking: b, status: st })}
                           onCancel={() => {
                             setCancelError(null);
@@ -333,12 +353,19 @@ const cancelButtonId = (bookingId: string) => `cancel-${bookingId}`;
 
 function BookingRow({
   booking,
+  messageHref,
+  messageUnread,
   busy,
+  error,
   onDecide,
   onCancel,
 }: {
   booking: VendorBooking;
+  /** The conversation with this customer, once it has loaded, and its unread count. */
+  messageHref?: string;
+  messageUnread?: number;
   busy: boolean;
+  error?: string;
   onDecide: (status: "confirmed" | "declined") => void;
   onCancel: () => void;
 }) {
@@ -373,19 +400,27 @@ function BookingRow({
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Accept
           </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
         </div>
       ) : booking.status === "confirmed" ? (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button id={cancelButtonId(booking.id)} variant="outline" size="sm" disabled={busy} onClick={onCancel}>
             Cancel booking
           </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
         </div>
       ) : (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
             Accept instead
           </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
         </div>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-destructive sm:col-span-3">
+          {error}
+        </p>
       )}
     </div>
   );

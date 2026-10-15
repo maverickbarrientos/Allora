@@ -1,8 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, toApiError, type ApiError } from "@/lib/api/client";
+import { MAX_BLOCK_DATES } from "@/lib/availability";
 import type { VendorCalendar } from "@/lib/api/types";
 import { capitalize } from "@/lib/format";
 import { longDate, monthKey, monthOf, monthRange, parseMonthKey, todayYmd, type YearMonth, type Ymd } from "@/lib/dates";
@@ -12,12 +14,13 @@ import { ErrorState } from "@/components/error-state";
 import { MonthGrid, MonthGridLegend } from "@/components/month-grid";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 /**
- * Vendor calendar (docs/SPEC-availability.md), read-only: confirmed and
- * pending bookings by event date, plus any blocked dates the API returns.
- * Blocking and unblocking are not offered: those endpoints aren't on main.
+ * Vendor calendar (docs/SPEC-availability.md): confirmed and pending bookings
+ * by event date, and blocked dates. The vendor selects days (click or Space)
+ * and blocks or unblocks them; days with a confirmed booking can't be blocked.
  * An optional `?month=YYYY-MM` opens that month (the dashboard links here).
  */
 export default function VendorCalendarPage() {
@@ -46,7 +49,13 @@ function Calendar() {
   const [initial] = useState<YearMonth>(() => parseMonthKey(params.get("month")) ?? monthOf(todayYmd()));
   const [month, setMonth] = useState<YearMonth>(initial);
   const [loads, setLoads] = useState<Record<string, Load>>(() => ({ [monthKey(initial)]: { status: "loading" } }));
+  // The day whose bookings the side panel shows, and the days picked for blocking or unblocking.
   const [selected, setSelected] = useState<Ymd | null>(null);
+  const [picked, setPicked] = useState<ReadonlySet<Ymd>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inFlight = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -55,14 +64,20 @@ function Calendar() {
     };
   }, []);
 
+  // Only the latest request for a month may write its result, so a slow
+  // response from before a save can't bring back old blocked days.
+  const latest = useRef<Record<string, number>>({});
   function fetchMonth(ym: YearMonth) {
     const key = monthKey(ym);
     const { from, to } = monthRange(ym);
+    const ticket = (latest.current[key] ?? 0) + 1;
+    latest.current[key] = ticket;
+    const isLatest = () => mounted.current && latest.current[key] === ticket;
     api
       .getVendorCalendar(from, to)
-      .then((data) => mounted.current && setLoads((p) => ({ ...p, [key]: { status: "loaded", data } })))
+      .then((data) => isLatest() && setLoads((p) => ({ ...p, [key]: { status: "loaded", data } })))
       .catch((e) => {
-        if (!mounted.current) return;
+        if (!isLatest()) return;
         const error = toApiError(e);
         if (error.code === "vendor_not_linked") router.replace("/vendor/profile");
         setLoads((p) => ({ ...p, [key]: { status: "error", error } }));
@@ -82,8 +97,11 @@ function Calendar() {
   });
 
   function changeMonth(next: YearMonth) {
+    // A save reloads the month it started on; moving away mid-save would leave this one unloaded.
+    if (saving) return;
     setMonth(next);
     setSelected(null);
+    setNotice(null);
     const state = loads[monthKey(next)];
     if (!state || state.status === "error") load(next);
   }
@@ -93,9 +111,70 @@ function Calendar() {
   const { byDate, dayInfo } = calendarDays(data);
   const panel = selected ? (byDate.get(selected) ?? []) : [];
 
+  // Blocked and confirmed days across every month loaded so far, since a
+  // selection can span months.
+  const blockedDays = new Set<Ymd>();
+  const confirmedDays = new Set<Ymd>();
+  for (const state of Object.values(loads)) {
+    if (state.status !== "loaded") continue;
+    for (const d of state.data.blocked) blockedDays.add(d);
+    for (const b of state.data.bookings) if (b.status === "confirmed") confirmedDays.add(b.date);
+  }
+  const toBlock = [...picked].filter((d) => !blockedDays.has(d)).sort();
+  const toUnblock = [...picked].filter((d) => blockedDays.has(d)).sort();
+  const pickedElsewhere = [...picked].filter((d) => !d.startsWith(monthKey(month))).length;
+
+  function onDayClick(date: Ymd) {
+    // Until the month has loaded, its blocked and confirmed days aren't known.
+    if (current?.status !== "loaded") return;
+    setSelected(date);
+    setNotice(null);
+    // A day with a confirmed booking only shows its bookings; it can't be blocked.
+    if (confirmedDays.has(date) && !blockedDays.has(date)) return;
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }
+
+  async function save(action: "block" | "unblock") {
+    const dates = action === "block" ? toBlock : toUnblock;
+    if (inFlight.current || dates.length === 0) return;
+    inFlight.current = true;
+    setSaving(true);
+    setSaveError(null);
+    setNotice(null);
+    try {
+      const { changed } = action === "block" ? await api.blockDates(dates) : await api.unblockDates(dates);
+      if (!mounted.current) return;
+      setPicked(new Set());
+      const n = changed.length;
+      setNotice(`${action === "block" ? "Blocked" : "Unblocked"} ${n} ${n === 1 ? "day" : "days"}.`);
+      // Blocked dates may sit in any loaded month: reload this one, forget the others.
+      setLoads({ [monthKey(month)]: { status: "loading" } });
+      fetchMonth(month);
+    } catch (e) {
+      if (!mounted.current) return;
+      const error = toApiError(e);
+      // The selection stays, so the vendor can adjust it and try again.
+      if (error.code === "date_has_confirmed_booking") setSaveError(error.message);
+      else if (error.code === "validation_error") setSaveError(`Select between 1 and ${MAX_BLOCK_DATES} days.`);
+      else setSaveError("Couldn't save your changes. Please try again.");
+    } finally {
+      inFlight.current = false;
+      if (mounted.current) setSaving(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-10 lg:gap-14">
-      <PageHeader label="Vendor" title="Calendar" description="Your confirmed and pending bookings by event date." />
+      <PageHeader
+        label="Vendor"
+        title="Calendar"
+        description="Your bookings by event date. Block the days you're not available, so customers can't book you on them."
+      />
 
       {current?.status === "error" ? (
         <ErrorState error={current.error} onRetry={() => load(month)} message="Couldn't load your calendar. Please try again." />
@@ -110,10 +189,10 @@ function Calendar() {
                 dayInfo={dayInfo}
                 highlight={todayYmd()}
                 highlightLabel="Today"
-                selectedDate={selected}
-                onDayClick={(date) => setSelected((s) => (s === date ? null : date))}
+                selectedDates={picked}
+                onDayClick={onDayClick}
                 extraControls={
-                  <Button variant="ghost" size="sm" onClick={() => changeMonth(monthOf(todayYmd()))}>
+                  <Button variant="ghost" size="sm" onClick={() => changeMonth(monthOf(todayYmd()))} disabled={saving}>
                     Today
                   </Button>
                 }
@@ -125,7 +204,35 @@ function Calendar() {
               </p>
             )}
             <MonthGridLegend items={["confirmed", "pending", "blocked", "today"]} />
-            <p className="text-sm text-muted-foreground">Blocking dates isn&apos;t available yet.</p>
+            <p className="text-sm text-muted-foreground">
+              Select open days to block them, or blocked days to unblock them. Days with a confirmed booking can&apos;t be
+              blocked.
+            </p>
+            {saveError && <Alert variant="destructive">{saveError}</Alert>}
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={() => void save("block")} disabled={saving || toBlock.length === 0}>
+                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                Block selected ({toBlock.length})
+              </Button>
+              <Button variant="outline" onClick={() => void save("unblock")} disabled={saving || toUnblock.length === 0}>
+                Unblock selected ({toUnblock.length})
+              </Button>
+              {picked.size > 0 && (
+                <Button variant="ghost" onClick={() => setPicked(new Set())} disabled={saving}>
+                  Clear selection
+                </Button>
+              )}
+            </div>
+            {pickedElsewhere > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {pickedElsewhere} selected {pickedElsewhere === 1 ? "day is" : "days are"} in other months.
+              </p>
+            )}
+            {notice && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {notice}
+              </p>
+            )}
           </div>
 
           <aside aria-label="Bookings on the selected day" className="flex flex-col gap-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">

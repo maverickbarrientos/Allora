@@ -136,6 +136,8 @@ function Browser({
   // On by default: only vendors in the event's area (docs/SPEC-event-location.md).
   const [onlyArea, setOnlyArea] = useState(true);
   const area = eventLocation && onlyArea ? eventLocation : null;
+  // Vendors whose date was taken while the customer had the dialog open.
+  const [taken, setTaken] = useState<Set<string>>(new Set());
   // Book opens "Check availability"; the booking is only sent from that dialog.
   const [checking, setChecking] = useState<Vendor | null>(null);
 
@@ -193,6 +195,7 @@ function Browser({
             eventId={eventId}
             eventDate={eventDate}
             booked={booked}
+            taken={taken}
             onBook={setChecking}
             onShowAll={() => setCategory(null)}
             onShowEveryArea={() => setOnlyArea(false)}
@@ -206,6 +209,7 @@ function Browser({
         eventDate={eventDate}
         onOpenChange={(open) => !open && setChecking(null)}
         onBooked={(b) => setBooked((s) => new Set(s).add(b.vendorId))}
+        onUnavailable={(vendorId) => setTaken((s) => new Set(s).add(vendorId))}
       />
     </div>
   );
@@ -217,6 +221,7 @@ function VendorList({
   eventId,
   eventDate,
   booked,
+  taken,
   onBook,
   onShowAll,
   onShowEveryArea,
@@ -226,6 +231,7 @@ function VendorList({
   eventId: string;
   eventDate: string;
   booked: Set<string>;
+  taken: Set<string>;
   onBook: (vendor: Vendor) => void;
   onShowAll: () => void;
   onShowEveryArea: () => void;
@@ -268,7 +274,7 @@ function VendorList({
       {state.data.vendors.map((v, i) => (
         <Reveal key={v.id} delay={Math.min(i, 5) * 60} className="min-w-0">
           <VendorCard
-            vendor={v}
+            vendor={taken.has(v.id) ? { ...v, availableOnEventDate: false } : v}
             href={`/events/${eventId}/vendors/${v.id}`}
             booked={booked.has(v.id)}
             eventDate={eventDate}
