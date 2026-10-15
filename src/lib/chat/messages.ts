@@ -7,6 +7,14 @@ export const MAX_CONTENT = 1000;
 /** Only the most recent messages reach the model. */
 export const HISTORY_FOR_MODEL = 10;
 
+export type ChatIntent = "affordability" | "summary";
+
+/** Optional `intent` from the quick-action buttons. Anything else is ignored. */
+export function parseIntent(body: Record<string, unknown> | null): ChatIntent | null {
+  const v = body?.intent;
+  return v === "affordability" || v === "summary" ? v : null;
+}
+
 /**
  * Returns the messages, or an error message for a 400 validation_error.
  * Extra fields on the body or on a message are ignored.

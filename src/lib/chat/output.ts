@@ -1,4 +1,6 @@
 import type { EventType } from "../matching/config";
+import type { Affordability, PlanSummary } from "./finance";
+import type { ChatIntent } from "./messages";
 
 // Validation of the model's answer and the fallback (docs/SPEC-chatbot.md,
 // "Validation of the model output"). All or nothing: any problem gives the
@@ -8,7 +10,16 @@ export const REPLY_MAX = 2000;
 export const REASON_MAX = 120;
 
 export type OrderItem = { category: string; reason: string };
-export type ChatResponse = { reply: string; order: OrderItem[] | null; source: "ai" | "fallback" };
+export type ChatResponse = {
+  reply: string;
+  order: OrderItem[] | null;
+  source: "ai" | "fallback";
+  /** Computed by the server (finance.ts), never taken from the model. */
+  affordability?: Affordability;
+  summary?: PlanSummary;
+};
+/** A validated model answer, plus which block it asked the server to show. */
+export type ValidAnswer = ChatResponse & { show: ChatIntent | null };
 
 const asRecord = (v: unknown): Record<string, unknown> | null =>
   v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
@@ -17,13 +28,18 @@ const asRecord = (v: unknown): Record<string, unknown> | null =>
  * Returns the validated answer with source "ai", or null if anything is off.
  * `missing` is the list of missing categories computed by the server.
  */
-export function validateChatOutput(output: unknown, missing: readonly string[]): ChatResponse | null {
+export function validateChatOutput(output: unknown, missing: readonly string[]): ValidAnswer | null {
   const o = asRecord(output);
   if (!o || typeof o.reply !== "string") return null;
   const reply = o.reply.trim();
   if (reply === "" || reply.length > REPLY_MAX) return null;
 
-  if (o.order === null) return { reply, order: null, source: "ai" };
+  // "show" is optional; when present it must be null or a known block name.
+  const showRaw = o.show ?? null;
+  if (showRaw !== null && showRaw !== "affordability" && showRaw !== "summary") return null;
+  const show: ChatIntent | null = showRaw;
+
+  if (o.order === null) return { reply, order: null, source: "ai", show };
   if (!Array.isArray(o.order) || missing.length === 0) return null;
   if (o.order.length !== missing.length) return null;
 
@@ -39,11 +55,21 @@ export function validateChatOutput(output: unknown, missing: readonly string[]):
     seen.add(item.category);
     order.push({ category: item.category, reason });
   }
-  return { reply, order, source: "ai" };
+  return { reply, order, source: "ai", show };
 }
 
 /** The standard answer, used whenever the model's answer can't be used. */
-export function fallbackResponse(type: EventType, missing: readonly string[]): ChatResponse {
+export function fallbackResponse(
+  type: EventType,
+  missing: readonly string[],
+  intent: ChatIntent | null = null,
+): ChatResponse {
+  if (intent === "affordability") {
+    return { reply: "The planning assistant is unavailable right now. Here are your budget numbers.", order: null, source: "fallback" };
+  }
+  if (intent === "summary") {
+    return { reply: "The planning assistant is unavailable right now. Here is your plan summary.", order: null, source: "fallback" };
+  }
   if (missing.length === 0) {
     return { reply: "Every service on the checklist has a booking.", order: null, source: "fallback" };
   }
