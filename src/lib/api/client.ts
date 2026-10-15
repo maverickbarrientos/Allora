@@ -17,22 +17,13 @@ export function toApiError(e: unknown): ApiError {
   return new ApiError(0, "server_error", "Something went wrong");
 }
 
-// Mocks are TEMPORARY, see src/mocks/auth.ts. NEXT_PUBLIC_ vars are inlined at
-// build time, so the dynamic import is dropped when the flag is not "true".
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
-
 async function send(method: string, path: string, body?: unknown) {
-  const init: RequestInit = {
+  return fetch(path, {
     method,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: "same-origin",
-  };
-  if (USE_MOCKS) {
-    const { mockFetch } = await import("@/mocks/auth");
-    return mockFetch(path, init);
-  }
-  return fetch(path, init);
+  });
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
