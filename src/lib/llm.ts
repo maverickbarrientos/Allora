@@ -41,6 +41,9 @@ export async function requestJson({
         model: MODEL,
         temperature: 0.3,
         max_tokens: maxTokens,
+        // Short text tasks: no hidden reasoning. With it on, calls took 5 to 7.5 s
+        // (close to the 8 s timeout) and reasoning tokens ate into max_tokens.
+        reasoning: { enabled: false },
         messages: [
           { role: "system", content: system },
           { role: "user", content: typeof input === "string" ? input : JSON.stringify(input) },
