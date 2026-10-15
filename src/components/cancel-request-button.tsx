@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
+import { hasOpenCancelRequest } from "@/lib/cancel-request";
 import type { PlanBooking } from "@/lib/api/types";
 import { Alert } from "@/components/ui/alert";
 import {
@@ -40,7 +41,7 @@ export function CancelRequestButton({
     };
   }, []);
 
-  if (booking.status === "cancel_requested") {
+  if (hasOpenCancelRequest(booking)) {
     return <p className="text-sm text-muted-foreground">Waiting for {booking.vendorName} to answer.</p>;
   }
   if (booking.status !== "pending" && booking.status !== "confirmed") return null;

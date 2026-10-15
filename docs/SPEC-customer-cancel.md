@@ -22,21 +22,22 @@ A customer who has booked a vendor for an event, and the vendor who received tha
 - **Customer plan, approved:** the booking shows as cancelled, a paid deposit shows "Deposit refunded", and the service appears under "Needs a replacement".
 - **Customer plan, rejected:** the booking goes back to confirmed.
 - **Vendor bookings:** a "Cancellation requested" group with "Approve cancellation" and "Keep booking", and a confirm dialog before approving.
-- **Vendor dashboard and calendar:** a request counts as pending; a cancelled booking is removed from the calendar.
+- **Vendor dashboard and calendar:** a request is listed under "needs your attention"; a cancelled booking is removed from the calendar.
 
 ## Data
-No new tables. Booking status gains two values:
-- `cancel_requested`: still active. It holds the category, the vendor and event pair, and the budget.
-- `cancelled`: inactive like `declined` (the category becomes a gap) but distinguishable from a vendor decline.
+No new tables. Booking gains one status and one column:
+- status `cancelled`: inactive like `declined` (the category becomes a gap) but distinguishable from a vendor decline.
+- `bookings.cancel_requested_at` (nullable): set when the customer asks to cancel. The booking stays pending or confirmed while the vendor decides, so the date, contact details, event date lock, budget and one-active-booking rules keep applying to it. Cleared when the vendor keeps the booking or changes its status.
 
 Access:
-- Customers read bookings on their own events. They cannot update a booking directly. The only way is `request_booking_cancellation`, which moves their own pending or confirmed booking to `cancel_requested`.
-- Vendors update only their own bookings, to `confirmed`, `declined` or `cancelled`. The API allows `cancelled` only from `cancel_requested`.
+- Customers read bookings on their own events. They cannot update a booking directly. The only way is `request_booking_cancellation`, which sets `cancel_requested_at` on their own pending or confirmed booking.
+- Vendors update only their own bookings, to `confirmed`, `declined` or `cancelled`. The API allows `cancelled` only when a request is open. Keeping a booking uses `keep_booking`, which clears the request and leaves the status alone. Nobody can write `cancel_requested_at` directly.
 - A paid payment becomes `refunded` when its booking becomes `cancelled`, in the same transaction.
 
 Routes:
 - `POST /api/bookings/:id/cancel-request` (customer): 200 `{ booking }`, 401, 403, 404 (missing, malformed id or not their event), 409 `already_requested`, 409 `not_cancellable`.
 - `PATCH /api/vendor/bookings/:id` also accepts `cancelled`; 409 `status_unchanged` when there is no request to approve.
+- `POST /api/vendor/bookings/:id/keep` (vendor): 200 `{ booking }`, 404, 409 `no_request`.
 
 Migration: `supabase/sql/029_customer_cancel.sql`.
 
@@ -52,6 +53,5 @@ Existing Supabase Auth with the customer and vendor roles. Nothing new.
 
 ## Out of scope
 - Notifications (email, push, SMS), cancellation reasons, partial refunds and cancellation fees.
-- Freeing the vendor's date and hiding contact details while a request is open (date and contact rules look at `confirmed` only).
 - Customer-side cancel of declined or already cancelled bookings.
 - Changes to matching or ranking, and any LLM involvement.

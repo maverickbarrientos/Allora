@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import type { Payment, PlanBooking, TestMethod } from "@/lib/api/types";
 import { formatAmount, formatTimestamp } from "@/lib/format";
+import { hasOpenCancelRequest } from "@/lib/cancel-request";
 import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
@@ -318,7 +319,7 @@ function Blocked({
       ? ["This deposit is already paid", "There's nothing more to pay for this booking."]
       : booking.status === "declined" || booking.status === "cancelled"
         ? [`This booking was ${booking.status === "cancelled" ? "cancelled" : "declined"}`, "Only a confirmed booking can be paid."]
-        : booking.status === "cancel_requested"
+        : hasOpenCancelRequest(booking)
           ? ["Cancellation requested", "You asked to cancel this booking, so it can't be paid while the vendor decides."]
         : booking.status === "pending"
           ? ["Waiting for the vendor", "You can pay the deposit once the vendor confirms this booking."]

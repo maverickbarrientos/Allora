@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
-import type { BookingStatus, VendorBooking } from "@/lib/api/types";
+import type { VendorBooking } from "@/lib/api/types";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { useLiveLoad } from "@/lib/use-live-messages";
+import { hasOpenCancelRequest } from "@/lib/cancel-request";
 import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
@@ -30,18 +31,18 @@ import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const SECTIONS: { status: BookingStatus; title: string }[] = [
-  { status: "cancel_requested", title: "Cancellation requested" },
-  { status: "pending", title: "Pending" },
-  { status: "confirmed", title: "Confirmed" },
-  { status: "declined", title: "Declined" },
-  { status: "cancelled", title: "Cancelled" },
+// A booking with an open cancellation request is listed under "Cancellation requested" only.
+// That group and "Cancelled" are shown only when something is in them (docs/SPEC-customer-cancel.md).
+const SECTIONS: { key: string; title: string; match: (b: VendorBooking) => boolean; hideWhenEmpty?: boolean }[] = [
+  { key: "requested", title: "Cancellation requested", match: hasOpenCancelRequest, hideWhenEmpty: true },
+  { key: "pending", title: "Pending", match: (b) => b.status === "pending" && !hasOpenCancelRequest(b) },
+  { key: "confirmed", title: "Confirmed", match: (b) => b.status === "confirmed" && !hasOpenCancelRequest(b) },
+  { key: "declined", title: "Declined", match: (b) => b.status === "declined" },
+  { key: "cancelled", title: "Cancelled", match: (b) => b.status === "cancelled", hideWhenEmpty: true },
 ];
 
-// Shown only when there is something in them (customer cancellation requests, docs/SPEC-customer-cancel.md).
-const HIDE_WHEN_EMPTY: BookingStatus[] = ["cancel_requested", "cancelled"];
-
-type DecisionStatus = "confirmed" | "declined" | "cancelled";
+// "keep" answers a cancellation request by keeping the booking; the others set the status.
+type DecisionStatus = "confirmed" | "declined" | "cancelled" | "keep";
 
 type Decision = { booking: VendorBooking; status: DecisionStatus };
 
@@ -160,7 +161,8 @@ function VendorBookings() {
     });
     setBusy((s) => new Set(s).add(booking.id));
     try {
-      const { booking: updated } = await api.decideBooking(booking.id, status);
+      const { booking: updated } =
+        status === "keep" ? await api.keepBooking(booking.id) : await api.decideBooking(booking.id, status);
       setState((prev) =>
         prev.status === "loaded"
           ? {
@@ -178,7 +180,7 @@ function VendorBookings() {
         // The row keeps its status; declining it still works. The server's
         // message already names the reason and writes the date like the row.
         setRowErrors((prev) => ({ ...prev, [booking.id]: message }));
-      } else if (code === "status_unchanged") {
+      } else if (code === "status_unchanged" || code === "no_request") {
         setNotice("This booking already has that status.");
         reload();
       } else if (code === "conflicting_booking") {
@@ -260,12 +262,12 @@ function VendorBookings() {
           </p>
         </Reveal>
       ) : (
-        SECTIONS.map(({ status, title }, s) => {
-          const rows = bookings.filter((b) => b.status === status);
-          if (rows.length === 0 && HIDE_WHEN_EMPTY.includes(status)) return null;
+        SECTIONS.map(({ key, title, match, hideWhenEmpty }, s) => {
+          const rows = bookings.filter(match);
+          if (rows.length === 0 && hideWhenEmpty) return null;
           return (
-            <section key={status} className="flex flex-col gap-4" aria-labelledby={`h-${status}`}>
-              <h2 id={`h-${status}`} className="font-display text-h2">
+            <section key={key} className="flex flex-col gap-4" aria-labelledby={`h-${key}`}>
+              <h2 id={`h-${key}`} className="font-display text-h2">
                 {title} <span className="text-muted-foreground">({rows.length})</span>
               </h2>
               {rows.length === 0 ? (
@@ -283,7 +285,7 @@ function VendorBookings() {
                           error={rowErrors[b.id]}
                           onDecide={(st) =>
                             // Keeping a booking undoes nothing, so it needs no dialog.
-                            b.status === "cancel_requested" && st === "confirmed"
+                            st === "keep"
                               ? void decide({ booking: b, status: st })
                               : setPendingDecision({ booking: b, status: st })
                           }
@@ -410,7 +412,19 @@ function BookingRow({
           {formatNumber(event.budget)}
         </span>
       </div>
-      {booking.status === "pending" ? (
+      {hasOpenCancelRequest(booking) ? (
+        <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-span-1">
+          <p className="w-full text-sm text-muted-foreground">The customer asked to cancel this booking.</p>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("keep")}>
+            Keep booking
+          </Button>
+          <Button size="sm" disabled={busy} onClick={() => onDecide("cancelled")}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            Approve cancellation
+          </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
+        </div>
+      ) : booking.status === "pending" ? (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
             Decline
@@ -425,18 +439,6 @@ function BookingRow({
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button id={cancelButtonId(booking.id)} variant="outline" size="sm" disabled={busy} onClick={onCancel}>
             Cancel booking
-          </Button>
-          {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
-        </div>
-      ) : booking.status === "cancel_requested" ? (
-        <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-span-1">
-          <p className="w-full text-sm text-muted-foreground">The customer asked to cancel this booking.</p>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
-            Keep booking
-          </Button>
-          <Button size="sm" disabled={busy} onClick={() => onDecide("cancelled")}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            Approve cancellation
           </Button>
           {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
         </div>

@@ -4,7 +4,7 @@ A vendor can cancel a booking it has already confirmed. The customer sees the ca
 
 Out of scope
 
-Customer-initiated cancellation (it needs its own status to be told apart from a vendor decline), refunds, deposits and payments, notifications (email, push, SMS), cancellation reasons, vendor penalties or ranking changes, live updates (realtime or polling), changes to the matching rules, new tables, fields or statuses, SQL or policy changes, new dependencies.
+Customer-initiated cancellation (built later, see SPEC-customer-cancel.md), refunds, deposits and payments, notifications (email, push, SMS), cancellation reasons, vendor penalties or ranking changes, live updates (realtime or polling), changes to the matching rules, new tables, fields or statuses, SQL or policy changes, new dependencies.
 
 Rules (CLAUDE.md)
 Cancel means moving the booking to the existing declined status. No new status, field, table or label. (Assumption)
