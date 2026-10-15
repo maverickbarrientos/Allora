@@ -18,16 +18,18 @@ export function MissingSection({
   onRetry,
   onBooked,
   onRemove,
+  declinedVendorIds,
 }: {
   eventId: string;
   state: Load<MissingResponse>;
   onRetry: () => void;
   onBooked: (booking?: PlanBooking) => void;
   onRemove: (category: string) => void;
+  declinedVendorIds?: ReadonlySet<string>;
 }) {
   return (
     <section className="flex flex-col gap-6" aria-labelledby="missing-heading">
-      <h2 id="missing-heading" className="font-display text-h2">
+      <h2 id="missing-heading" tabIndex={-1} className="font-display text-h2">
         What&apos;s missing
       </h2>
 
@@ -66,6 +68,7 @@ export function MissingSection({
                 eventId={eventId}
                 onBooked={onBooked}
                 onRemove={onRemove}
+                declinedVendorIds={declinedVendorIds}
               />
             </Reveal>
           ))}
