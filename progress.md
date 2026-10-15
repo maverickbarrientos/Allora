@@ -17,7 +17,7 @@ Booking and planning platform where customers create events, book vendors, and s
 | 8 | Customer dashboard | not started | _tbd_ | One event at a time with a picker; countdown, bookings by status, actions needed, missing services; needs event upgrades and payments merged |
 | 9 | Polish and deploy to Vercel | not started | _tbd_ | Final polish, production deploy |
 | 10 | Event services | done | `feature/event-services` | Each event has its own service list (template per type, editable on create, plan and edit pages); 5 new categories with weights and seed vendors; built ticket by ticket (03-07) on one branch, not split into backend and frontend |
-| 11 | Vendor profiles | built, awaiting live checks | `feature/vendor-profiles` | About and location on the vendor profile, a vendor page for customers, contact details shown only after a confirmed booking; tickets 12-15 on one branch, like event services |
+| 11 | Vendor profiles | done | `feature/vendor-profiles` | About and location on the vendor profile, a vendor page for customers, contact details shown only after a confirmed booking; tickets 12-15 on one branch, like event services |
 progress.md, "Decisions and changes", dated entry:
 - Customer dashboard added as feature 8. One event at a time with a picker, a Dashboard item in the sidebar, My events stays at /. No AI, no new tables.
 
