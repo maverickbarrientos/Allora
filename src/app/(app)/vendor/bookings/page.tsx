@@ -31,12 +31,19 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const SECTIONS: { status: BookingStatus; title: string }[] = [
+  { status: "cancel_requested", title: "Cancellation requested" },
   { status: "pending", title: "Pending" },
   { status: "confirmed", title: "Confirmed" },
   { status: "declined", title: "Declined" },
+  { status: "cancelled", title: "Cancelled" },
 ];
 
-type Decision = { booking: VendorBooking; status: "confirmed" | "declined" };
+// Shown only when there is something in them (customer cancellation requests, docs/SPEC-customer-cancel.md).
+const HIDE_WHEN_EMPTY: BookingStatus[] = ["cancel_requested", "cancelled"];
+
+type DecisionStatus = "confirmed" | "declined" | "cancelled";
+
+type Decision = { booking: VendorBooking; status: DecisionStatus };
 
 export default function VendorBookingsPage() {
   const router = useRouter();
@@ -255,6 +262,7 @@ function VendorBookings() {
       ) : (
         SECTIONS.map(({ status, title }, s) => {
           const rows = bookings.filter((b) => b.status === status);
+          if (rows.length === 0 && HIDE_WHEN_EMPTY.includes(status)) return null;
           return (
             <section key={status} className="flex flex-col gap-4" aria-labelledby={`h-${status}`}>
               <h2 id={`h-${status}`} className="font-display text-h2">
@@ -273,7 +281,12 @@ function VendorBookings() {
                           messageUnread={conversationOf(b.id)?.unread}
                           busy={busy.has(b.id)}
                           error={rowErrors[b.id]}
-                          onDecide={(st) => setPendingDecision({ booking: b, status: st })}
+                          onDecide={(st) =>
+                            // Keeping a booking undoes nothing, so it needs no dialog.
+                            b.status === "cancel_requested" && st === "confirmed"
+                              ? void decide({ booking: b, status: st })
+                              : setPendingDecision({ booking: b, status: st })
+                          }
                           onCancel={() => {
                             setCancelError(null);
                             setCancelTarget(b);
@@ -297,13 +310,15 @@ function VendorBookings() {
           <>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {pendingDecision.status === "confirmed" ? "Accept" : "Decline"} this booking?
+                {pendingDecision.status === "cancelled"
+                  ? "Approve this cancellation?"
+                  : `${pendingDecision.status === "confirmed" ? "Accept" : "Decline"} this booking?`}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {capitalize(pendingDecision.booking.event.type)} on{" "}
                 {formatDate(pendingDecision.booking.event.date)}. The customer will see this
                 change on their event plan.
-                {pendingDecision.status === "declined" &&
+                {pendingDecision.status !== "confirmed" &&
                   pendingDecision.booking.payment?.status === "paid" &&
                   " The customer's deposit will be refunded."}
               </AlertDialogDescription>
@@ -311,7 +326,11 @@ function VendorBookings() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPendingDecision(null)}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={() => decide(pendingDecision)}>
-                {pendingDecision.status === "confirmed" ? "Accept" : "Decline"}
+                {pendingDecision.status === "cancelled"
+                  ? "Approve cancellation"
+                  : pendingDecision.status === "confirmed"
+                    ? "Accept"
+                    : "Decline"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </>
@@ -366,7 +385,7 @@ function BookingRow({
   messageUnread?: number;
   busy: boolean;
   error?: string;
-  onDecide: (status: "confirmed" | "declined") => void;
+  onDecide: (status: DecisionStatus) => void;
   onCancel: () => void;
 }) {
   const { event } = booking;
@@ -409,6 +428,24 @@ function BookingRow({
           </Button>
           {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
         </div>
+      ) : booking.status === "cancel_requested" ? (
+        <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-span-1">
+          <p className="w-full text-sm text-muted-foreground">The customer asked to cancel this booking.</p>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
+            Keep booking
+          </Button>
+          <Button size="sm" disabled={busy} onClick={() => onDecide("cancelled")}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            Approve cancellation
+          </Button>
+          {messageHref && <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />}
+        </div>
+      ) : booking.status === "cancelled" ? (
+        messageHref ? (
+          <div className="col-span-2 flex gap-3 lg:col-span-1">
+            <MessageLink href={messageHref} name={booking.customerName} unread={messageUnread} />
+          </div>
+        ) : null
       ) : (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
