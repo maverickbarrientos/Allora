@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
 import type { PlanBooking } from "@/lib/api/types";
 import { PlanningAssistant } from "@/components/chat/planning-assistant";
 import { ErrorState } from "@/components/error-state";
+import { missingCardId } from "@/components/missing-card";
 import { MissingSection } from "@/components/missing-section";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
-import { buttonVariants } from "@/components/ui/button";
+import { ReplacementNotice, hasNewlyDeclined, replacementCategories } from "@/components/replacement-notice";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PlanPage() {
@@ -31,6 +33,85 @@ export default function PlanPage() {
     };
   }, []);
 
+  // One plan refresh at a time (Refresh button, tab focus, after a booking).
+  // A refresh asked for while one runs is queued once, or dropped if `queue`
+  // is false. When a refresh shows a booking that turned declined since the
+  // last render, the cards are refetched once (unless `cards` is false).
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const inFlight = useRef(false);
+  const queued = useRef<{ cards: boolean } | null>(null);
+  const shown = useRef<PlanBooking[] | null>(null);
+  const reloadCards = missing.reload;
+
+  useEffect(() => {
+    if (state.status === "loaded") shown.current = state.data.bookings;
+  }, [state]);
+
+  async function refreshPlan({ cards, queue }: { cards: boolean; queue: boolean }) {
+    if (inFlight.current) {
+      if (queue) queued.current = { cards: (queued.current?.cards ?? false) || cards };
+      return;
+    }
+    inFlight.current = true;
+    setRefreshing(true);
+    setRefreshFailed(false);
+    try {
+      const data = await api.getPlan(id);
+      if (!alive.current) return;
+      const before = shown.current;
+      shown.current = data.bookings;
+      setState((prev) => (prev.status === "loaded" ? { status: "loaded", data } : prev));
+      if (cards && before && hasNewlyDeclined(before, data.bookings)) reloadCards();
+    } catch {
+      if (alive.current) setRefreshFailed(true);
+    } finally {
+      inFlight.current = false;
+      if (alive.current) {
+        setRefreshing(false);
+        const next = queued.current;
+        queued.current = null;
+        if (next) void refreshPlan({ ...next, queue: false });
+      }
+    }
+  }
+
+  // The focus listener always calls the latest refreshPlan.
+  const refreshRef = useRef(refreshPlan);
+  useEffect(() => {
+    refreshRef.current = refreshPlan;
+  });
+
+  // Refresh when the tab regains focus. Extra focus events while a refresh
+  // runs are dropped, so they never stack.
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void refreshRef.current({ cards: true, queue: false });
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, []);
+
+  function seeReplacements(category: string) {
+    // The card if it is on screen, otherwise the "What's missing" heading
+    // (cards still loading, failed, or already booked).
+    const el = document.getElementById(missingCardId(category)) ?? document.getElementById("missing-heading");
+    if (!el) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    el.focus({ preventScroll: true });
+  }
+
+  const planBookings = state.status === "loaded" ? state.data.bookings : null;
+  const declinedVendorIds = useMemo(
+    () => new Set((planBookings ?? []).filter((b) => b.status === "declined").map((b) => b.vendorId)),
+    [planBookings],
+  );
+
   // After a booking from a card: show it on the plan at once, then refresh the
   // bookings quietly. The cards are not refetched.
   function onBooked(booking?: PlanBooking) {
@@ -44,12 +125,7 @@ export default function PlanPage() {
           : prev,
       );
     }
-    api
-      .getPlan(id)
-      .then((data) => {
-        if (alive.current) setState((prev) => (prev.status === "loaded" ? { status: "loaded", data } : prev));
-      })
-      .catch(() => {});
+    void refreshPlan({ cards: false, queue: true });
   }
 
   function removeCard(category: string) {
@@ -139,10 +215,33 @@ export default function PlanPage() {
         </dl>
       </Reveal>
 
+      <ReplacementNotice
+        categories={replacementCategories(bookings)}
+        onSeeReplacements={seeReplacements}
+      />
+
       <section className="flex flex-col gap-6" aria-labelledby="bookings-heading">
-        <h2 id="bookings-heading" className="font-display text-h2">
-          Bookings
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="bookings-heading" className="font-display text-h2">
+            Bookings
+          </h2>
+          <div className="flex items-center gap-3">
+            {refreshFailed && (
+              <p role="status" className="text-sm text-muted-foreground">
+                Couldn&apos;t refresh. Please try again.
+              </p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={refreshing}
+              onClick={() => void refreshPlan({ cards: true, queue: false })}
+            >
+              {refreshing && <Loader2 className="h-4 w-4 animate-spin" />}
+              Refresh
+            </Button>
+          </div>
+        </div>
 
         {bookings.length === 0 ? (
           <Reveal delay={500} className="flex max-w-md flex-col items-start gap-4">
@@ -179,6 +278,7 @@ export default function PlanPage() {
         onRetry={missing.reload}
         onBooked={onBooked}
         onRemove={removeCard}
+        declinedVendorIds={declinedVendorIds}
       />
 
       <PlanningAssistant
