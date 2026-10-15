@@ -120,6 +120,9 @@ export const api = {
       "GET",
       `/api/vendors/${encodeURIComponent(vendorId)}${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ""}`,
     ),
+  /** Marks the conversation read for me only (the other side's count is untouched). */
+  markConversationRead: (conversationId: string) =>
+    request<void>("POST", `/api/conversations/${encodeURIComponent(conversationId)}/read`),
   /** The inbox: my conversations, newest activity first. */
   listConversations: () => request<{ conversations: ConversationSummary[] }>("GET", "/api/conversations"),
   /** With `before` (a message id), the 50 messages before it. */

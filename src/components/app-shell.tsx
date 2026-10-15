@@ -8,6 +8,7 @@ import type { Profile } from "@/lib/api/types";
 import { useLoad } from "@/lib/use-load";
 import { ErrorState } from "@/components/error-state";
 import { SidebarContent } from "@/components/sidebar";
+import { useRefreshOnMessages } from "@/lib/use-live-messages";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +23,25 @@ export function useProfile(): Profile {
 }
 
 /**
+ * Keeps the sidebar's unread total current. Renders nothing; it only exists once the
+ * profile is known, so a logged-out page never asks for messages.
+ * shortcut: sums the inbox list; a count-only endpoint is lighter when inboxes grow.
+ */
+function UnreadTracker({ onTotal }: { onTotal: (total: number) => void }) {
+  const refresh = () =>
+    api
+      .listConversations()
+      .then(({ conversations }) => onTotal(conversations.reduce((sum, c) => sum + c.unread, 0)))
+      .catch(() => {});
+  useRefreshOnMessages(refresh);
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the profile arrives
+  }, []);
+  return null;
+}
+
+/**
  * Signed-in shell: fixed sidebar from 1024px, a drawer below it, and the
  * page container. Loads GET /api/me once; a 401 sends the user to /login.
  */
@@ -30,6 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { state, reload } = useLoad(() => api.me());
   const [loggingOut, setLoggingOut] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     if (state.status === "error" && state.error.status === 401) router.replace("/login");
@@ -58,6 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     loading: state.status === "loading",
     loggingOut,
     onLogout: logout,
+    unreadMessages,
   };
 
   return (
@@ -66,6 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // Without it they escape the clip and scroll the whole window once main
     // is scrolled to the bottom.
     <div className="relative flex min-h-screen flex-col lg:h-screen lg:flex-row lg:overflow-hidden">
+      {profile && <UnreadTracker onTotal={setUnreadMessages} />}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-stone lg:block">
         <SidebarContent {...sidebarProps} />
       </aside>

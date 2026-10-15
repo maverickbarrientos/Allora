@@ -8,6 +8,7 @@ import type { ConversationDetail, Message } from "@/lib/api/types";
 import { capitalize, formatTimestamp } from "@/lib/format";
 import { MESSAGE_MAX, messageBody, messageLength } from "@/lib/messages";
 import { useLoad } from "@/lib/use-load";
+import { announceMessagesRead } from "@/lib/use-live-messages";
 import { useMessageInserts } from "@/lib/use-message-inserts";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/components/app-shell";
@@ -126,6 +127,14 @@ function Thread({
     scrollOnChange.current = true;
   }, [detail.messages.length]);
 
+  // Opening the conversation marks it read for me; so does each message that arrives while
+  // it's open. shortcut: an open but hidden tab counts as reading; upgrade if read receipts matter.
+  const conversationId = detail.id;
+  const markRead = useCallback(() => {
+    api.markConversationRead(conversationId).then(announceMessagesRead).catch(() => {});
+  }, [conversationId]);
+  useEffect(markRead, [markRead]);
+
   // New messages arrive instantly (docs/SPEC-messages.md). Sending still goes through the API.
   useMessageInserts(
     detail.id,
@@ -136,6 +145,7 @@ function Thread({
         ...d,
         messages: withMessages(d.messages, [{ id: row.id, body: row.body, createdAt: row.created_at, mine }]),
       }));
+      if (!mine) markRead();
     },
     // On (re)connecting, catch up on anything sent while not listening.
     () => {

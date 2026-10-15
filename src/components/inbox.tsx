@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { api } from "@/lib/api/client";
 import { capitalize } from "@/lib/format";
-import { useLoad } from "@/lib/use-load";
-import { useMessageInserts } from "@/lib/use-message-inserts";
+import { useLiveLoad } from "@/lib/use-live-messages";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UnreadBadge } from "@/components/unread-badge";
 
 const shortTime = (iso: string) =>
   new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -17,15 +17,8 @@ const shortTime = (iso: string) =>
  * /messages and /vendor/messages; `basePath` is where a conversation opens.
  */
 export function Inbox({ basePath }: { basePath: string }) {
-  const { state, setState, reload } = useLoad(() => api.listConversations());
-
-  // A new message moves its conversation up: refetch quietly, without a loading state.
-  const refresh = () =>
-    api
-      .listConversations()
-      .then((data) => setState({ status: "loaded", data }))
-      .catch(() => {});
-  useMessageInserts(null, refresh, refresh);
+  // A new message moves its conversation up and changes its count: refetched quietly.
+  const { state, reload } = useLiveLoad(() => api.listConversations());
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -50,14 +43,17 @@ export function Inbox({ basePath }: { basePath: string }) {
               >
                 <span className="flex items-baseline justify-between gap-4">
                   <span className="min-w-0 truncate font-display text-h2">{c.otherName || "Customer"}</span>
-                  {c.lastMessage && (
-                    <time dateTime={c.lastMessage.createdAt} className="shrink-0 text-xs text-muted-foreground">
-                      {shortTime(c.lastMessage.createdAt)}
-                    </time>
-                  )}
+                  <span className="flex shrink-0 items-center gap-2">
+                    {c.lastMessage && (
+                      <time dateTime={c.lastMessage.createdAt} className="text-xs text-muted-foreground">
+                        {shortTime(c.lastMessage.createdAt)}
+                      </time>
+                    )}
+                    <UnreadBadge count={c.unread} />
+                  </span>
                 </span>
                 {/* One line: newlines in the message collapse to spaces. */}
-                <span className="truncate text-muted-foreground">
+                <span className={c.unread > 0 ? "truncate font-medium text-foreground" : "truncate text-muted-foreground"}>
                   {c.lastMessage ? `${c.lastMessage.mine ? "You: " : ""}${c.lastMessage.body}` : "No messages yet"}
                 </span>
                 <span className="flex items-center gap-3">

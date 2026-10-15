@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { eventName } from "@/lib/event-name";
+import { useLiveLoad } from "@/lib/use-live-messages";
 import { useLoad } from "@/lib/use-load";
 import type { EventService, PlanBooking } from "@/lib/api/types";
 import { PlanningAssistant } from "@/components/chat/planning-assistant";
@@ -35,7 +36,7 @@ export default function PlanPage() {
   // "Services" (the event's own list) loads on its own too.
   const services = useLoad(() => api.getServices(id));
   // Message links; the plan works without them if this fails.
-  const conversations = useLoad(() => api.getBookingConversations());
+  const conversations = useLiveLoad(() => api.getBookingConversations());
   const setServices = services.setState;
   const alive = useRef(true);
 
@@ -326,6 +327,7 @@ export default function PlanPage() {
                         <MessageLink
                           href={`/messages/${conversations.state.data.bookings[b.id].conversationId}`}
                           name={b.vendorName}
+                          unread={conversations.state.data.bookings[b.id].unread}
                         />
                       )}
                     </div>

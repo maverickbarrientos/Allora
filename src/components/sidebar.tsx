@@ -7,6 +7,7 @@ import type { Profile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UnreadBadge } from "@/components/unread-badge";
 
 type NavItem = {
   href: string;
@@ -16,6 +17,8 @@ type NavItem = {
   prefixes: string[];
   /** Highlight only on exactly `href`, never on the routes below it. */
   exact?: boolean;
+  /** Shows my unread message count. */
+  unread?: boolean;
 };
 
 // Only pages that exist on main.
@@ -24,13 +27,13 @@ const NAV: Record<Profile["role"], NavItem[]> = {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, prefixes: ["/dashboard"] },
     { href: "/events", label: "My events", icon: Ticket, prefixes: ["/events"] },
     { href: "/events/new", label: "New event", icon: CalendarPlus, prefixes: ["/events/new"] },
-    { href: "/messages", label: "Messages", icon: MessageCircle, prefixes: ["/messages"] },
+    { href: "/messages", label: "Messages", icon: MessageCircle, prefixes: ["/messages"], unread: true },
   ],
   vendor: [
     { href: "/vendor", label: "Dashboard", icon: LayoutDashboard, prefixes: [], exact: true },
     { href: "/vendor/bookings", label: "Bookings", icon: ClipboardList, prefixes: ["/vendor/bookings"] },
     { href: "/vendor/calendar", label: "Calendar", icon: CalendarDays, prefixes: ["/vendor/calendar"] },
-    { href: "/vendor/messages", label: "Messages", icon: MessageCircle, prefixes: ["/vendor/messages"] },
+    { href: "/vendor/messages", label: "Messages", icon: MessageCircle, prefixes: ["/vendor/messages"], unread: true },
     { href: "/vendor/profile", label: "Profile", icon: UserRound, prefixes: ["/vendor/profile"] },
   ],
 };
@@ -64,12 +67,15 @@ export function SidebarContent({
   loggingOut,
   onLogout,
   onNavigate,
+  unreadMessages = 0,
 }: {
   profile: Profile | null;
   loading: boolean;
   loggingOut: boolean;
   onLogout: () => void;
   onNavigate?: () => void;
+  /** Total unread messages, shown on the Messages item. */
+  unreadMessages?: number;
 }) {
   const pathname = usePathname();
   const items = profile ? NAV[profile.role] : [];
@@ -107,6 +113,7 @@ export function SidebarContent({
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span className="truncate">{item.label}</span>
+                  {item.unread && <UnreadBadge count={unreadMessages} className="ml-auto" />}
                 </Link>
               </li>
             );
