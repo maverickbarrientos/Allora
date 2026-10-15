@@ -17,7 +17,11 @@ export function AuthHero({
       <p className="max-w-[65ch] text-muted-foreground lg:hidden">{line}</p>
       <div className="hidden flex-col gap-12 lg:flex">
         <h2 className="font-display text-display max-w-[14ch]">{headline}</h2>
-        <ImagePlaceholder caption="Table setting, natural light" aspect="16 / 9" />
+        <ImagePlaceholder
+          caption="Event room with floral centerpieces and warm lighting"
+          aspect="16 / 9"
+          src="/images/auth-hero.jpg"
+        />
       </div>
     </aside>
   );

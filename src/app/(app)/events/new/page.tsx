@@ -45,6 +45,7 @@ function valuesFromTemplate(t: EventTemplate): EventFormValues {
     budget: String(t.budget),
     guestCount: String(t.guestCount),
     notes: t.notes,
+    area: "",
   };
 }
 

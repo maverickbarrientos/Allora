@@ -247,7 +247,7 @@ export default function PlanPage() {
       <PageHeader
         label="Event plan"
         title={<span className="[overflow-wrap:anywhere]">{eventName(event)}</span>}
-        description={`${capitalize(event.type)} · ${formatDate(event.date)}`}
+        description={[capitalize(event.type), formatDate(event.date), event.area].filter(Boolean).join(" · ")}
         action={actions}
       />
 

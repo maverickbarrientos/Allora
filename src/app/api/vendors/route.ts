@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { inArea, parseArea } from "@/lib/areas";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse, requireSession } from "@/lib/api-helpers";
 import { VENDOR_COLUMNS, toVendor } from "@/lib/server/shapes";
@@ -13,6 +14,9 @@ export async function GET(req: NextRequest) {
 
     const category = req.nextUrl.searchParams.get("category");
     const eventId = req.nextUrl.searchParams.get("eventId");
+    // Empty means no filter; text longer than the limit is refused.
+    const area = parseArea(req.nextUrl.searchParams.get("area") ?? "");
+    if (area === undefined) return errorResponse(400, "validation_error", "Invalid fields: area.");
 
     // With eventId, every vendor gets availableOnEventDate. The event and the
     // vendors don't depend on each other, so they load together.
@@ -31,7 +35,10 @@ export async function GET(req: NextRequest) {
     // free-text values (e.g. SQL-looking strings), which would turn an
     // unknown category into a 500 instead of an empty list.
     // An empty value is treated like no filter ("All").
-    const rows = category ? (data ?? []).filter((v) => v.category === category) : (data ?? []);
+    // Vendors with no area are kept (docs/SPEC-event-location.md).
+    const rows = (data ?? []).filter(
+      (v) => (!category || v.category === category) && inArea(v.area, area),
+    );
 
     if (!event) return NextResponse.json({ vendors: rows.map(toVendor) });
 

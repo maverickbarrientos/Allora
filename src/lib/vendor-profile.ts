@@ -19,6 +19,7 @@ export type ProfileFields = {
   price?: number;
   about?: string | null;
   location?: string | null;
+  area?: string | null;
   terms?: string | null;
 };
 
