@@ -59,6 +59,9 @@ const VENDORS = [
   { id: vid(11), name: "Paper Moon Styling", category: "decoration", price: 22000 },
 ];
 
+// Read-only access for src/mocks/missing.ts.
+export { VENDORS as MOCK_VENDORS };
+
 const readStore = (): Store => {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) ?? "null");
@@ -69,6 +72,7 @@ const readStore = (): Store => {
   return { events: [], bookings: [], seeded: [] };
 };
 const writeStore = (s: Store) => localStorage.setItem(STORE_KEY, JSON.stringify(s));
+export { readStore as readMockStore };
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -147,8 +151,15 @@ function createEvent(store: Store, owner: string, b: Record<string, unknown>) {
   return json(201, { event: toEvent(event) });
 }
 
-const ownEvent = (store: Store, owner: string, id: unknown) =>
-  id === "missing" ? undefined : store.events.find((e) => e.id === id && e.owner === owner);
+// Trigger ids used by src/mocks/missing.ts. They resolve to the caller's first
+// event so /events/complete etc. open a real plan page.
+const TRIGGER_IDS = ["complete", "fallback", "slow", "broken"];
+const ownEvent = (store: Store, owner: string, id: unknown) => {
+  if (id === "missing") return undefined;
+  const own = store.events.filter((e) => e.owner === owner);
+  if (typeof id === "string" && TRIGGER_IDS.includes(id)) return own[0];
+  return own.find((e) => e.id === id);
+};
 
 function createBooking(store: Store, owner: string, b: Record<string, unknown>) {
   const { eventId, vendorId } = b;
@@ -160,14 +171,14 @@ function createBooking(store: Store, owner: string, b: Record<string, unknown>) 
   if (!vendor) return fail(404, "vendor_not_found", "Vendor not found");
   if (
     store.bookings.some(
-      (x) => x.eventId === eventId && x.vendorId === vendorId && x.status !== "declined",
+      (x) => x.eventId === event.id && x.vendorId === vendorId && x.status !== "declined",
     )
   )
     return fail(409, "already_booked", "Vendor already booked for this event");
 
   const booking: StoredBooking = {
     id: crypto.randomUUID(),
-    eventId,
+    eventId: event.id,
     vendorId,
     vendorName: vendor.name,
     category: vendor.category,

@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
+import type { PlanBooking } from "@/lib/api/types";
 import { ErrorState } from "@/components/error-state";
+import { MissingSection } from "@/components/missing-section";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
@@ -15,7 +18,49 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PlanPage() {
   const { id } = useParams<{ id: string }>();
-  const { state, reload } = useLoad(() => api.getPlan(id));
+  const { state, setState, reload } = useLoad(() => api.getPlan(id));
+  // "What's missing" loads on its own, in parallel, and never blocks the plan.
+  const missing = useLoad(() => api.getMissing(id));
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  // After a booking from a card: show it on the plan at once, then refresh the
+  // bookings quietly. The cards are not refetched.
+  function onBooked(booking?: PlanBooking) {
+    if (booking) {
+      setState((prev) =>
+        prev.status === "loaded" && !prev.data.bookings.some((b) => b.id === booking.id)
+          ? {
+              status: "loaded",
+              data: { ...prev.data, bookings: [...prev.data.bookings, booking] },
+            }
+          : prev,
+      );
+    }
+    api
+      .getPlan(id)
+      .then((data) => {
+        if (alive.current) setState((prev) => (prev.status === "loaded" ? { status: "loaded", data } : prev));
+      })
+      .catch(() => {});
+  }
+
+  function removeCard(category: string) {
+    missing.setState((prev) =>
+      prev.status === "loaded"
+        ? {
+            status: "loaded",
+            data: { ...prev.data, cards: prev.data.cards.filter((c) => c.category !== category) },
+          }
+        : prev,
+    );
+  }
 
   const back = (
     <Link
@@ -126,6 +171,14 @@ export default function PlanPage() {
           </ul>
         )}
       </section>
+
+      <MissingSection
+        eventId={id}
+        state={missing.state}
+        onRetry={missing.reload}
+        onBooked={onBooked}
+        onRemove={removeCard}
+      />
     </div>
   );
 }

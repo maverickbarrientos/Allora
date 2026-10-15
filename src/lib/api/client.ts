@@ -3,6 +3,7 @@ import type {
   ErrorBody,
   Event,
   LoginInput,
+  MissingResponse,
   PlanBooking,
   Session,
   SignupInput,
@@ -40,6 +41,10 @@ async function send(method: string, path: string, body?: unknown) {
   if (USE_MOCKS) {
     if (path.startsWith("/api/auth/") || path === "/api/me") {
       const { mockFetch } = await import("@/mocks/auth");
+      return mockFetch(path, init);
+    }
+    if (/^\/api\/events\/[^/]+\/missing$/.test(path)) {
+      const { mockFetch } = await import("@/mocks/missing");
       return mockFetch(path, init);
     }
     const { mockFetch } = await import("@/mocks/events");
@@ -87,6 +92,8 @@ export const api = {
       "GET",
       category ? `/api/vendors?category=${encodeURIComponent(category)}` : "/api/vendors",
     ),
+  getMissing: (eventId: string) =>
+    request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
 };
