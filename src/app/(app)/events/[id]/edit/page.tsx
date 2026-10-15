@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { api, ApiError, toApiError } from "@/lib/api/client";
 import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
-import type { Event, UpdateEventInput } from "@/lib/api/types";
+import type { Event, EventService, UpdateEventInput } from "@/lib/api/types";
 import {
   EventForm,
   fieldErrorsFrom,
@@ -18,6 +18,7 @@ import {
 } from "@/components/event-form";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { ServicesSection } from "@/components/services-section";
 import { Reveal } from "@/components/reveal";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +39,9 @@ export default function EditEventPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { state, setState, reload } = useLoad(() => api.getPlan(id));
+  // Services have their own section and Save, separate from the event details.
+  const services = useLoad(() => api.getServices(id));
+  const setServices = services.setState;
   const [edited, setEdited] = useState<EventFormValues | null>(null);
   const [errors, setErrors] = useState<EventFormErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -116,6 +120,10 @@ export default function EditEventPage() {
     }
   }
 
+  function onServicesChanged(data: { services: EventService[] }) {
+    if (alive.current) setServices({ status: "loaded", data });
+  }
+
   const back = (
     <Link
       href={`/events/${id}`}
@@ -188,6 +196,14 @@ export default function EditEventPage() {
           }
         />
       </Reveal>
+
+      <ServicesSection
+        eventId={id}
+        state={services.state}
+        onRetry={services.reload}
+        onSaved={onServicesChanged}
+        onRefreshed={onServicesChanged}
+      />
     </div>
   );
 }
