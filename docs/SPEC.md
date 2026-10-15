@@ -47,6 +47,10 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - A vendor is unavailable on dates they blocked and on dates of their confirmed bookings; a booking can't be made or confirmed on an unavailable date, and an event's date can't change once it has a confirmed booking (see SPEC-availability.md)
 
 
+**Messages (customer and vendor)**
+- One conversation per customer and vendor, opened by their first booking; read-only when they have no pending or confirmed booking left
+- Messages arrive instantly; an inbox and unread counts for both sides (see SPEC-messages.md)
+
 **AI 1: "What's missing" cards**
 - Compare the event to its own list of services (it starts from its type's template; the customer can add or remove services)
 - One card per gap with a short why-it-matters note
@@ -67,7 +71,9 @@ Each service category gets a share of the event budget (venue and catering large
 - **Vendor contact**: vendor, phone, email, website (readable by the owner and by customers with a confirmed booking)
 - **Booking**: event, vendor, category, status, termsSnapshot and termsAcceptedAt (set by the database when the booking is created, never changed; see SPEC-booking-documents.md)
 - **Event service**: event, category, position (the event's own list of services; see SPEC-event-services.md)
-- **Blocked date**: vendor, date (a date the vendor is unavailable)
+- **Blocked date**: vendor, date
+- **Conversation**: customer (profile), vendor, read times for each side (one per customer and vendor)
+- **Message**: conversation, sender (profile), body (a date the vendor is unavailable)
 
 A service on the event's list with no pending or confirmed booking counts as a gap.
 

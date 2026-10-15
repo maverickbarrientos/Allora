@@ -28,6 +28,10 @@ import type {
   VendorProfileInput,
   VendorDetail,
   VendorContact,
+  BookingConversation,
+  ConversationDetail,
+  ConversationSummary,
+  Message,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -118,6 +122,22 @@ export const api = {
       "GET",
       `/api/vendors/${encodeURIComponent(vendorId)}${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ""}`,
     ),
+  /** Marks the conversation read for me only (the other side's count is untouched). */
+  markConversationRead: (conversationId: string) =>
+    request<void>("POST", `/api/conversations/${encodeURIComponent(conversationId)}/read`),
+  /** The inbox: my conversations, newest activity first. */
+  listConversations: () => request<{ conversations: ConversationSummary[] }>("GET", "/api/conversations"),
+  /** With `before` (a message id), the 50 messages before it. */
+  getConversation: (conversationId: string, before?: string) =>
+    request<ConversationDetail>(
+      "GET",
+      `/api/conversations/${encodeURIComponent(conversationId)}/messages${before ? `?before=${encodeURIComponent(before)}` : ""}`,
+    ),
+  sendMessage: (conversationId: string, body: string) =>
+    request<{ message: Message }>("POST", `/api/conversations/${encodeURIComponent(conversationId)}/messages`, { body }),
+  /** Booking id to its conversation, for the Message links on booking rows. */
+  getBookingConversations: () =>
+    request<{ bookings: Record<string, BookingConversation> }>("GET", "/api/conversations/booking-map"),
   getVendorAvailability: (vendorId: string, from: string, to: string) =>
     request<VendorAvailability>(
       "GET",

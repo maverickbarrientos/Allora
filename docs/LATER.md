@@ -17,3 +17,8 @@ Parked from docs/PROBLEM.md on 2026-10-16. The MVP is vendor terms agreed per bo
 - A separate deposit-only receipt
 - A PDF-generation library (the MVP uses the browser's save-as-PDF)
 - Vendors viewing the contract and receipt pages for bookings addressed to them (RLS already allows it; only the screens are missing). Cut from SPEC-booking-documents.md to fit one session.
+
+## Parked
+
+- **Email notifications for new messages and booking decisions.** Needs an email service outside the current stack (asked 2026-10-16 while planning Messages).
+- **Rate limit on messages.** Any customer can book any vendor and then send unlimited messages to them; a vendor could be flooded. Fine for a demo; add a limit per customer and conversation before production (found in the Messages review, 2026-10-16).

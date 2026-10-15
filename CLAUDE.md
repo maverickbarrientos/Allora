@@ -31,6 +31,8 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase (Au
 - **Booking**: event, vendor, category, status (pending, confirmed, declined)
 - **Event service**: event, category, position (the event's own list of services; starts from its type's template)
  **Blocked date**: vendor, date
+- **Conversation**: customer, vendor (one per pair, created by the first booking)
+- **Message**: conversation, sender, body (participants only)
 
 
 ## Workflow rules
