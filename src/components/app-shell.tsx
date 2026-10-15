@@ -8,7 +8,7 @@ import type { Profile } from "@/lib/api/types";
 import { useLoad } from "@/lib/use-load";
 import { ErrorState } from "@/components/error-state";
 import { SidebarContent } from "@/components/sidebar";
-import { useRefreshOnMessages } from "@/lib/use-live-messages";
+import { useLatestOnly, useRefreshOnMessages } from "@/lib/use-live-messages";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,11 +28,11 @@ export function useProfile(): Profile {
  * shortcut: sums the inbox list; a count-only endpoint is lighter when inboxes grow.
  */
 function UnreadTracker({ onTotal }: { onTotal: (total: number) => void }) {
+  const latestOnly = useLatestOnly();
   const refresh = () =>
-    api
-      .listConversations()
-      .then(({ conversations }) => onTotal(conversations.reduce((sum, c) => sum + c.unread, 0)))
-      .catch(() => {});
+    latestOnly(api.listConversations(), ({ conversations }) =>
+      onTotal(conversations.reduce((sum, c) => sum + c.unread, 0)),
+    );
   useRefreshOnMessages(refresh);
   useEffect(() => {
     refresh();

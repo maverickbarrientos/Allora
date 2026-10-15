@@ -61,6 +61,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       otherName: conversation.other_name,
       category: conversation.category,
       open: conversation.open,
+      vendorHasAccount: conversation.vendor_has_account,
       // Oldest first on the page.
       messages: rows.slice(0, PAGE_SIZE).reverse().map((m) => toMessage(m, userId)),
       hasMore: rows.length > PAGE_SIZE,

@@ -20,3 +20,5 @@ end $$;
 -- event for every insert (no content, but it shows that something was sent).
 -- With SELECT, Realtime checks RLS instead, and no policy is for anon, so they get nothing.
 grant select on public.messages to anon;
+-- Never add a messages read policy that applies to everyone (`to public`, `using (true)`): with this
+-- grant it would expose messages to logged-out users. Keep a logged-out read check in the tests.

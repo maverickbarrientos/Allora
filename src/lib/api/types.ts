@@ -73,6 +73,8 @@ export type ConversationDetail = {
   category: string;
   /** False when the pair has no pending or confirmed booking left: read-only. */
   open: boolean;
+  /** False for a seeded vendor with no account: nobody will read the messages. */
+  vendorHasAccount: boolean;
   /** Oldest first. */
   messages: Message[];
   hasMore: boolean;

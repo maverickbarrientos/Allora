@@ -9,7 +9,10 @@ export type MessageRow = { id: string; body: string; created_at: string; sender_
  * Calls `onInsert` for each new message the signed-in user may read, through
  * Supabase Realtime (RLS decides who receives what). Pass a conversation id to
  * listen to one conversation, or null for all of mine. `onSubscribed` runs when
- * listening starts or resumes: the place to catch up on anything missed.
+ * listening resumes after a drop: the place to catch up on anything missed. Not on the
+ * first connection: the page has only just loaded.
+ * shortcut: a message sent in the instant between the page's load and the first
+ * connection shows after the next message or a reload.
  */
 export function useMessageInserts(
   conversationId: string | null,
@@ -42,13 +45,16 @@ export function useMessageInserts(
         },
       );
     let stopped = false;
+    let connectedBefore = false;
     // Join as the signed-in user: the session is read from cookies after the
     // client starts, and joining before that would join as logged out (RLS sends nothing).
     void supabase.auth.getSession().then(({ data }) => {
       if (stopped) return;
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
       channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") subscribed.current?.();
+        if (status !== "SUBSCRIBED") return;
+        if (connectedBefore) subscribed.current?.();
+        connectedBefore = true;
       });
     });
     // Leaving the page stops listening.

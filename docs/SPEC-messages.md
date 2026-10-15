@@ -6,12 +6,12 @@ A customer and a vendor can message each other inside Allora. There is one conve
 Called **Messages** in the app, to keep it apart from the AI planning chat (SPEC-chatbot.md), which is unchanged.
 
 ## Out of scope
-Email or push notifications (see LATER.md), attachments and images, editing or deleting messages, typing indicators, read receipts shown to the other side, messaging a vendor before any booking, group conversations, sending messages to the LLM, new dependencies.
+Email or push notifications and rate limits on how many messages can be sent (see LATER.md), attachments and images, editing or deleting messages, typing indicators, read receipts shown to the other side, messaging a vendor before any booking, group conversations, sending messages to the LLM, new dependencies.
 
 ## Rules
 - One conversation per (customer, vendor). It is created automatically by the database the first time the customer books that vendor, on any event. Nobody creates conversations by hand.
 - **Open** while the pair has at least one pending or confirmed booking (any event). With only declined bookings it is **read-only**: the history stays visible, and new messages are refused.
-- Only the two participants can read a conversation and its messages: the customer, and the user who owns the vendor. A seeded vendor with no account has nobody on the vendor side; the customer can still write.
+- Only the two participants can read a conversation and its messages: the customer, and the user who owns the vendor. A seeded vendor with no account has nobody on the vendor side; the customer can still write, and the conversation page says "This vendor hasn't joined Allora yet, so they won't see your messages."
 - A message is plain text, trimmed, 1 to 2,000 characters. Messages can't be edited or deleted.
 - Each side has its own read time. Unread = messages from the other side sent after my read time. Opening a conversation marks it read.
 - The other party's name comes from the database through a security definer function. Vendors still can't read `profiles` or `events` directly, and no email, profile id or owner id is sent.
@@ -34,12 +34,13 @@ SQL `018_messages.sql`, safe to re-run.
   - `mark_conversation_read(uuid)`: sets only the caller's own read time. Raises if the caller isn't a participant.
   - `my_conversations()`: the caller's conversations, each with its id, the other side's name, the vendor's category, `open`, the last message (body and time), `last_message_at` and `unread`.
   - `my_booking_conversations()`: the booking id, conversation id and unread count for each of the caller's bookings.
-- **Realtime:** `messages` is added to the `supabase_realtime` publication. Realtime applies the read policy, so each user only receives their own conversations.
+- **Realtime** (`019_messages_realtime.sql`): `messages` is added to the `supabase_realtime` publication. Realtime applies the read policy, so each user only receives their own conversations. Logged-out users are given SELECT on `messages` too: with no policy for them they read nothing, and without the grant Realtime would send them an empty event for every insert. Never add a read policy for everyone.
+- **`020_messages_vendor_account.sql`:** `my_conversations()` also returns `vendor_has_account` (false for a seeded vendor with no owner).
 
 ## Shared shapes
 - `ConversationSummary` = `{ id, otherName, category, open, lastMessage: { body, createdAt, mine } | null, unread }`
 - `Message` = `{ id, body, createdAt, mine }`
-- `ConversationDetail` = `{ id, otherName, category, open, messages: Message[], hasMore }`
+- `ConversationDetail` = `{ id, otherName, category, open, vendorHasAccount, messages: Message[], hasMore }`
 - `BookingConversation` = `{ conversationId, unread }`
 - Error body, 401 and 404 as in earlier specs.
 
@@ -57,7 +58,8 @@ Every route requires a session; logged-out requests get 401. Both roles use the 
 
 ## UI screens and states
 - **Conversation** at `/messages/[id]` (customer) and `/vendor/messages/[id]` (vendor), using one shared component:
-  - A header with the other side's name and the vendor category.
+  - A header with the other side's name and the vendor category, and a link back to the inbox.
+  - A notice when the vendor has no account.
   - Messages oldest to newest, mine on the right, with time stamps. Line breaks are kept.
   - "Load earlier" when there are older messages.
   - A text box with Send. Enter sends and Shift+Enter adds a line. The button is disabled while sending and when the text is empty or over the limit.

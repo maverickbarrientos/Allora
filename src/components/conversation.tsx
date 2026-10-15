@@ -4,40 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
-import type { ConversationDetail, Message } from "@/lib/api/types";
-import { capitalize, formatTimestamp } from "@/lib/format";
-import { MESSAGE_MAX, messageBody, messageLength } from "@/lib/messages";
+import type { ConversationDetail } from "@/lib/api/types";
+import { capitalize } from "@/lib/format";
+import { MESSAGE_MAX, messageBody, messageLength, showsTime, withMessages } from "@/lib/messages";
 import { useLoad } from "@/lib/use-load";
 import { announceMessagesRead } from "@/lib/use-live-messages";
 import { useMessageInserts } from "@/lib/use-message-inserts";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
+import { MessageItem } from "@/components/message-item";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
 const COUNTER_FROM = 1800;
-/** Messages from the same side within this gap share one time stamp, under the last of them. */
-const GROUP_GAP_MS = 5 * 60 * 1000;
-
-const showsTime = (messages: Message[], i: number) => {
-  const next = messages[i + 1];
-  return !next || next.mine !== messages[i].mine || Date.parse(next.createdAt) - Date.parse(messages[i].createdAt) > GROUP_GAP_MS;
-};
-
-/**
- * Adds messages that aren't on the page yet (by id), keeping them in time
- * order. A message can arrive twice: from my own send and from Realtime.
- */
-function withMessages(list: Message[], incoming: Message[]): Message[] {
-  const known = new Set(list.map((m) => m.id));
-  const added = incoming.filter((m) => !known.has(m.id));
-  if (added.length === 0) return list;
-  return [...list, ...added].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
-}
-
 /** Whether the page is scrolled to (near) the newest message. */
 const nearBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
 
@@ -206,6 +188,10 @@ function Thread({
         <h1 className="font-display text-h1 [overflow-wrap:anywhere]">{detail.otherName || "Customer"}</h1>
       </header>
 
+      {!detail.vendorHasAccount && (
+        <Alert>This vendor hasn&apos;t joined Allora yet, so they won&apos;t see your messages.</Alert>
+      )}
+
       {detail.hasMore && (
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="outline" size="sm" onClick={() => void loadEarlier()} disabled={loadingEarlier}>
@@ -216,10 +202,11 @@ function Thread({
         </div>
       )}
 
+      {/* role="log" on the list: screen readers announce new messages as they arrive */}
       {detail.messages.length === 0 ? (
         <p className="text-muted-foreground">No messages yet. Say hello and share the details of your event.</p>
       ) : (
-        <ol className="flex flex-col gap-2" aria-label="Messages">
+        <ol role="log" className="flex flex-col gap-2" aria-label="Messages">
           {detail.messages.map((m, i) => (
             <MessageItem key={m.id} message={m} showTime={showsTime(detail.messages, i)} />
           ))}
@@ -243,7 +230,7 @@ function Thread({
             rows={3}
             value={draft}
             placeholder="Write a message"
-            disabled={sending}
+            readOnly={sending} // not disabled: that would drop focus (and close a phone keyboard) after every send
             aria-describedby={[sendError && "message-error", length >= COUNTER_FROM && "message-counter"].filter(Boolean).join(" ") || undefined}
             onChange={(e) => {
               setDraft(e.target.value);
@@ -285,29 +272,5 @@ function Thread({
         <Alert>This conversation is read-only because there&apos;s no active booking.</Alert>
       )}
     </div>
-  );
-}
-
-function MessageItem({ message, showTime }: { message: Message; showTime: boolean }) {
-  return (
-    <li className={cn("flex flex-col gap-1", message.mine ? "items-end" : "items-start")}>
-      <p
-        title={formatTimestamp(message.createdAt)}
-        className={cn(
-          "max-w-[85%] whitespace-pre-line rounded-2xl px-4 py-2.5 [overflow-wrap:anywhere]",
-          message.mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
-        )}
-      >
-        <span className="sr-only">{message.mine ? "You: " : "Them: "}</span>
-        {message.body}
-      </p>
-      {showTime ? (
-        <time dateTime={message.createdAt} className="text-xs text-muted-foreground">
-          {formatTimestamp(message.createdAt)}
-        </time>
-      ) : (
-        <span className="sr-only">{formatTimestamp(message.createdAt)}</span>
-      )}
-    </li>
   );
 }

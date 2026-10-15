@@ -27,13 +27,25 @@ export function useRefreshOnMessages(refresh: () => void) {
   }, []);
 }
 
-/** useLoad that quietly refetches (no loading state) whenever messages or read marks change. */
+/**
+ * Wraps a refetch so only the latest one's result is used: several can be in
+ * flight at once, and an older one finishing last must not overwrite a newer one.
+ */
+export function useLatestOnly() {
+  const latest = useRef(0);
+  return <T>(request: Promise<T>, apply: (value: T) => void) => {
+    const mine = ++latest.current;
+    request.then((value) => mine === latest.current && apply(value)).catch(() => {});
+  };
+}
+
+/**
+ * useLoad that quietly refetches (no loading state) whenever messages or read marks change.
+ * shortcut: the very first load isn't covered by the latest-only rule; it would need useLoad to change.
+ */
 export function useLiveLoad<T>(fn: () => Promise<T>) {
   const { state, setState, reload } = useLoad(fn);
-  useRefreshOnMessages(() => {
-    fn()
-      .then((data) => setState({ status: "loaded", data }))
-      .catch(() => {});
-  });
+  const latestOnly = useLatestOnly();
+  useRefreshOnMessages(() => latestOnly(fn(), (data) => setState({ status: "loaded", data })));
   return { state, reload };
 }

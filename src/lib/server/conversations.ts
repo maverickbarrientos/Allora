@@ -17,6 +17,7 @@ export type ConversationRow = {
   last_mine: boolean | null;
   last_message_at: string | null;
   unread: number;
+  vendor_has_account: boolean;
 };
 type MessageRow = { id: string; body: string; created_at: string; sender_id: string };
 
