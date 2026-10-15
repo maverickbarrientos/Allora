@@ -8,6 +8,15 @@ import {
   type VendorBookingRow,
 } from "@/lib/vendor-portal";
 
+// Vendor transitions: target status -> the current statuses it may come from.
+// pending -> confirmed, pending -> declined, and confirmed -> declined
+// (cancelling a confirmed booking, docs/SPEC-cancellation.md). Anything else
+// is rejected with 409 already_decided.
+const ALLOWED_FROM = {
+  confirmed: ["pending"],
+  declined: ["pending", "confirmed"],
+} as const;
+
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient();
@@ -23,12 +32,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       return errorResponse(400, "validation_error", "status must be confirmed or declined.");
     }
 
-    // Applies only while pending; RLS limits it to this vendor's own bookings.
+    // Applies only from an allowed current status, in one conditional update, so
+    // two simultaneous requests can't both succeed. RLS limits it to this
+    // vendor's own bookings.
     const { data: updated, error } = await supabase
       .from("bookings")
       .update({ status })
       .eq("id", id)
-      .eq("status", "pending")
+      .in("status", ALLOWED_FROM[status])
       .select("id");
     if (error) return errorResponse(500, "server_error", "Could not update booking.");
 
