@@ -10,12 +10,13 @@ import { useProfile } from "@/components/app-shell";
 import { useLoad } from "@/lib/use-load";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ABOUT_MAX, CONTACT_FIELDS, LOCATION_MAX, contactValue } from "@/lib/vendor-profile";
+import { ContactFields } from "./contact-fields";
+import { TextField } from "./text-field";
 
 type Fields = {
   name: string;
@@ -83,31 +84,6 @@ async function loadProfileData() {
     ),
   ]);
   return { categories: categoryResult.categories, profile: profileResult };
-}
-
-/** Label, input and the error under it, linked for screen readers. */
-function TextField({
-  id,
-  label,
-  error,
-  ...props
-}: { id: string; label: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? `${id}-error` : undefined}
-        {...props}
-      />
-      {error && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
 }
 
 function errorsFromMessage(message: string): FieldErrors {
@@ -354,49 +330,12 @@ export default function VendorProfilePage() {
           {fieldErrors.about && <p id="vendor-about-error" className="text-sm text-destructive">{fieldErrors.about}</p>}
         </div>
 
-        <fieldset className="flex flex-col gap-6 border-t border-border pt-6" disabled={saving}>
-          <legend className="sr-only">Contact details</legend>
-          <div className="flex flex-col gap-1">
-            <h2 className="font-display text-h2" aria-hidden="true">
-              Contact details
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Customers see these only after you confirm their booking.
-            </p>
-          </div>
-          <TextField
-            id="vendor-phone"
-            label="Phone (optional)"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="e.g. +63 917 123 4567"
-            value={fields.phone}
-            error={fieldErrors.phone}
-            onChange={(event) => setField("phone", event.target.value)}
-          />
-          <TextField
-            id="vendor-email"
-            label="Email (optional)"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={fields.email}
-            error={fieldErrors.email}
-            onChange={(event) => setField("email", event.target.value)}
-          />
-          <TextField
-            id="vendor-website"
-            label="Website (optional)"
-            name="website"
-            type="url"
-            autoComplete="url"
-            placeholder="https://"
-            value={fields.website}
-            error={fieldErrors.website}
-            onChange={(event) => setField("website", event.target.value)}
-          />
-        </fieldset>
+        <ContactFields
+          values={fields}
+          errors={fieldErrors}
+          disabled={saving}
+          onChange={setField}
+        />
 
         <div className="flex flex-wrap items-center gap-4">
           <Button type="submit" disabled={saving}>

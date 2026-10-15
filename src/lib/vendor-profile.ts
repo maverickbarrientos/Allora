@@ -1,4 +1,5 @@
 import { WEIGHTS } from "@/lib/matching/config";
+import { EMAIL_RE } from "@/lib/validation";
 
 /**
  * Allowed vendor categories: every category in the feature 4 config, in config
@@ -60,7 +61,7 @@ export type Contact = Record<ContactField, string | null>;
 const CONTACT_RULES: Record<ContactField, (text: string) => boolean> = {
   phone: (t) => /^[0-9+(). -]{5,30}$/.test(t),
   // The sign-up email check, with the usual 254-character limit.
-  email: (t) => t.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t),
+  email: (t) => t.length <= 254 && EMAIL_RE.test(t),
   // Only http and https links, so a stored link can never run code when clicked.
   website: (t) => {
     if (t.length > 200 || !/^https?:\/\/\S+$/i.test(t)) return false;
