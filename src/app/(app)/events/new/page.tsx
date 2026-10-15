@@ -25,6 +25,22 @@ type Errors = {
 const TYPES: EventType[] = ["wedding", "birthday", "corporate"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+const FIELD_MESSAGES = {
+  type: "Choose an event type",
+  date: "Choose a valid date",
+  budget: "Enter a budget above 0",
+  guestCount: "Enter a whole number of guests above 0",
+} as const;
+
+/** The server's validation_error message names the bad fields ("Invalid fields: budget, guestCount."). */
+function fieldErrorsFrom(message: string): Errors {
+  const errors: Errors = {};
+  for (const field of Object.keys(FIELD_MESSAGES) as (keyof typeof FIELD_MESSAGES)[]) {
+    if (new RegExp(`\\b${field}\\b`).test(message)) errors[field] = FIELD_MESSAGES[field];
+  }
+  return errors;
+}
+
 export default function NewEventPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -40,13 +56,14 @@ export default function NewEventPage() {
     const budget = Number(budgetRaw);
     const guestCount = Number(guestRaw);
 
-    // Format checks only. Ranges (budget and guests above 0) are the server's
-    // call; its validation_error shows as a form-level message.
+    // Mirrors the server rules so each field shows its own message.
     const next: Errors = {};
-    if (!TYPES.includes(type as EventType)) next.type = "Choose an event type";
-    if (!DATE_RE.test(date)) next.date = "Choose a date";
-    if (!budgetRaw || Number.isNaN(budget)) next.budget = "Enter a budget";
-    if (!guestRaw || Number.isNaN(guestCount)) next.guestCount = "Enter a guest count";
+    if (!TYPES.includes(type as EventType)) next.type = FIELD_MESSAGES.type;
+    if (!DATE_RE.test(date)) next.date = FIELD_MESSAGES.date;
+    if (!budgetRaw || !Number.isFinite(budget) || budget <= 0) next.budget = FIELD_MESSAGES.budget;
+    if (!guestRaw || !Number.isInteger(guestCount) || guestCount <= 0) {
+      next.guestCount = FIELD_MESSAGES.guestCount;
+    }
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -61,11 +78,15 @@ export default function NewEventPage() {
       router.push(`/events/${event.id}`);
     } catch (err) {
       const { code, message } = toApiError(err);
+      if (code === "validation_error") {
+        const fields = fieldErrorsFrom(message);
+        setErrors(Object.keys(fields).length ? fields : { form: message });
+        setSubmitting(false);
+        return;
+      }
       setErrors({
         form:
-          code === "validation_error"
-            ? message
-            : code === "forbidden"
+          code === "forbidden"
               ? "Only customers can create events."
               : "Something went wrong. Please try again.",
       });
