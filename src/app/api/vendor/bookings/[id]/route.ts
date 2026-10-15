@@ -23,14 +23,27 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       return errorResponse(400, "validation_error", "status must be confirmed or declined.");
     }
 
-    // Applies only while pending; RLS limits it to this vendor's own bookings.
+    // Applies only when the status actually changes, so of two simultaneous
+    // same-status requests one updates and the other matches no row.
+    // RLS limits it to this vendor's own bookings.
     const { data: updated, error } = await supabase
       .from("bookings")
       .update({ status })
       .eq("id", id)
-      .eq("status", "pending")
+      .neq("status", status)
       .select("id");
-    if (error) return errorResponse(500, "server_error", "Could not update booking.");
+    if (error) {
+      // bookings_event_vendor_active_uniq (002): another pending or confirmed
+      // booking exists for the same event and vendor.
+      if (error.code === "23505") {
+        return errorResponse(
+          409,
+          "conflicting_booking",
+          "The customer has another active booking with you for this event.",
+        );
+      }
+      return errorResponse(500, "server_error", "Could not update booking.");
+    }
 
     const { data: found, error: readErr } = await supabase
       .rpc("vendor_incoming_bookings")
@@ -40,7 +53,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const rows = (found ?? []) as VendorBookingRow[];
     if (!updated || updated.length === 0) {
       return rows.length > 0
-        ? errorResponse(409, "already_decided", "This booking has already been decided.")
+        ? errorResponse(409, "status_unchanged", `This booking is already ${status}.`)
         : errorResponse(404, "booking_not_found", "Booking not found.");
     }
     if (rows.length === 0) {
