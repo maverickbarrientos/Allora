@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { OrderItem } from "@/lib/api/types";
+import type { Affordability, OrderItem, PlanSummary } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { AffordabilityCard } from "@/components/chat/affordability-card";
+import { SummaryCard } from "@/components/chat/summary-card";
 import { OrderList } from "@/components/chat/order-list";
 
 export type Entry =
   | { role: "user"; content: string }
-  | { role: "assistant"; content: string; order: OrderItem[] | null; source: "ai" | "fallback" };
+  | { role: "assistant"; content: string; order: OrderItem[] | null;
+      source: "ai" | "fallback";
+      affordability?: Affordability;
+      summary?: PlanSummary;
+    };
 
 /**
  * The conversation. role="log" makes screen readers announce each new message
@@ -43,9 +49,11 @@ export function MessageList({ entries, typing }: { entries: Entry[]; typing: boo
               {e.content}
             </p>
             {e.order && e.order.length > 0 && <OrderList items={e.order} />}
+            {e.affordability && <AffordabilityCard data={e.affordability} />}
+            {e.summary && <SummaryCard data={e.summary} />}
             {e.source === "fallback" && (
               <p className="text-xs text-muted-foreground">
-                Assistant unavailable, showing the standard order
+                {e.order ? "Assistant unavailable, showing the standard order" : "Assistant unavailable"}
               </p>
             )}
           </div>

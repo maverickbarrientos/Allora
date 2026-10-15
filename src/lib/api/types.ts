@@ -33,6 +33,8 @@ export type Vendor = {
   name: string;
   category: string;
   price: number;
+  /** docs/SPEC-vendor-profiles.md: free text, or null when the vendor hasn't set one. */
+  location: string | null;
   /** docs/SPEC-availability.md: present only when listVendors is called with an eventId. */
   availableOnEventDate?: boolean;
 };
@@ -47,7 +49,22 @@ export type VendorCalendarBooking = {
   customerName: string;
 };
 export type VendorCalendar = { from: string; to: string; blocked: string[]; bookings: VendorCalendarBooking[] };
-export type VendorProfile = { vendor: Vendor; categoryLocked: boolean };
+/** docs/SPEC-vendor-profiles.md: a vendor with its profile text. */
+export type VendorDetail = Vendor & { about: string | null };
+/** Contact details; shown to customers only after the vendor confirms their booking. */
+export type VendorContact = { phone: string | null; email: string | null; website: string | null };
+export type VendorProfile = { vendor: VendorDetail; contact: VendorContact; categoryLocked: boolean };
+/** Body for creating or editing a vendor profile; null or "" clears an optional field. */
+export type VendorProfileInput = {
+  name: string;
+  category: string;
+  price: number;
+  about?: string | null;
+  location?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+};
 export type PlanBooking = {
   id: string;
   eventId: string;
@@ -120,6 +137,31 @@ export type ChatResponse = {
   reply: string;
   order: OrderItem[] | null;
   source: "ai" | "fallback";
+  affordability?: Affordability;
+  summary?: PlanSummary;
+};
+export type ChatIntent = "affordability" | "summary";
+export type Verdict = "within_budget" | "tight" | "cannot_cover_all" | "over_budget";
+export type Affordability = {
+  budget: number;
+  committed: number;
+  remaining: number;
+  projectedMinimum: number;
+  verdict: Verdict;
+  rows: { category: string; share: number; booked: number; difference: number; lowestPrice: number | null }[];
+};
+export type PlanSummary = {
+  daysUntilEvent: number;
+  budget: number;
+  committed: number;
+  remaining: number;
+  counts: { pending: number; confirmed: number; declined: number };
+  rows: {
+    category: string;
+    state: "confirmed" | "pending" | "needs_replacement" | "missing";
+    vendorName: string | null;
+    amount: number;
+  }[];
 };
 
 // Shapes from docs/SPEC-dashboard.md.

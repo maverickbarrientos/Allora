@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api, toApiError } from "@/lib/api/client";
-import type { ChatMessage } from "@/lib/api/types";
+import type { ChatIntent, ChatMessage } from "@/lib/api/types";
 import { CHAT_INPUT_ID, ChatInput, MAX_CHARS } from "@/components/chat/chat-input";
 import { MessageList, type Entry } from "@/components/chat/message-list";
 import { Alert } from "@/components/ui/alert";
@@ -11,6 +11,10 @@ import { Card } from "@/components/ui/card";
 
 const SUGGESTED = "What should I book first and last?";
 const HISTORY_LIMIT = 20;
+const QUICK_ACTIONS: { label: string; intent: ChatIntent }[] = [
+  { label: "Can I afford this?", intent: "affordability" },
+  { label: "Planning summary", intent: "summary" },
+];
 
 /**
  * The request history: every message so far, an assistant message as its
@@ -60,6 +64,8 @@ export function PlanningAssistant({
   const inFlight = useRef(false);
   const mounted = useRef(true);
   const refocus = useRef(false);
+  // Kept so Retry resends the same quick action.
+  const lastIntent = useRef<ChatIntent | undefined>(undefined);
 
   useEffect(() => {
     mounted.current = true;
@@ -76,14 +82,15 @@ export function PlanningAssistant({
     }
   }, [status]);
 
-  async function ask(history: Entry[]) {
+  async function ask(history: Entry[], intent?: ChatIntent) {
     if (inFlight.current) return;
     inFlight.current = true;
+    lastIntent.current = intent;
     setStatus("sending");
     try {
-      const res = await api.chat(eventId, toHistory(history));
+      const res = await api.chat(eventId, toHistory(history), intent);
       if (!mounted.current) return;
-      setEntries([...history, { role: "assistant", content: res.reply, order: res.order, source: res.source }]);
+      setEntries([...history, { role: "assistant", content: res.reply, order: res.order, source: res.source, affordability: res.affordability, summary: res.summary }]);
       refocus.current = true;
       setStatus("idle");
     } catch (e) {
@@ -97,12 +104,12 @@ export function PlanningAssistant({
   }
 
   /** Returns true when the message was accepted, so the input can clear. */
-  function send(text: string): boolean {
+  function send(text: string, intent?: ChatIntent): boolean {
     const content = text.trim();
     if (!content || inFlight.current || status === "sending") return false;
     const next: Entry[] = [...entries, { role: "user", content }];
     setEntries(next);
-    void ask(next);
+    void ask(next, intent);
     return true;
   }
 
@@ -138,7 +145,7 @@ export function PlanningAssistant({
             <Alert variant="destructive" className="w-auto flex-1">
               Couldn&apos;t get an answer. Please try again.
             </Alert>
-            <Button variant="outline" onClick={() => ask(entries)}>
+            <Button variant="outline" onClick={() => ask(entries, lastIntent.current)}>
               Retry
             </Button>
           </div>
@@ -147,6 +154,19 @@ export function PlanningAssistant({
           <Alert variant="destructive">The planning assistant is for customers only.</Alert>
         )}
 
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick questions">
+          {QUICK_ACTIONS.map((a) => (
+            <Button
+              key={a.intent}
+              variant="outline"
+              size="sm"
+              disabled={busy || status === "forbidden"}
+              onClick={() => send(a.label, a.intent)}
+            >
+              {a.label}
+            </Button>
+          ))}
+        </div>
         <ChatInput disabled={busy || status === "forbidden"} onSend={send} />
         {entries.length > 0 && (
           <p className="text-xs text-muted-foreground">This conversation isn&apos;t saved.</p>

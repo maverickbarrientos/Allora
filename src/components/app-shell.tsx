@@ -61,7 +61,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col lg:h-screen lg:flex-row lg:overflow-hidden">
+    // `relative` makes this the containing block for absolutely positioned
+    // descendants (e.g. sr-only labels), so overflow-hidden clips them too.
+    // Without it they escape the clip and scroll the whole window once main
+    // is scrolled to the bottom.
+    <div className="relative flex min-h-screen flex-col lg:h-screen lg:flex-row lg:overflow-hidden">
       <aside className="hidden w-64 shrink-0 border-r border-border bg-stone lg:block">
         <SidebarContent {...sidebarProps} />
       </aside>

@@ -29,7 +29,7 @@ export async function loadProfile(supabase: SupabaseClient, user: AuthUser) {
   };
 }
 
-export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export { EMAIL_RE } from "@/lib/validation";
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

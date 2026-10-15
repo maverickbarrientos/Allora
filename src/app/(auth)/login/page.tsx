@@ -12,10 +12,10 @@ import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EMAIL_RE } from "@/lib/validation";
 
 type Errors = { email?: string; password?: string; form?: string };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
   const router = useRouter();

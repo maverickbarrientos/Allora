@@ -13,10 +13,10 @@ import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EMAIL_RE } from "@/lib/validation";
 
 type Errors = { name?: string; email?: string; password?: string; role?: string; form?: string };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLES: { value: Role; label: string; hint: string }[] = [
   { value: "customer", label: "Customer", hint: "Plan events and book vendors" },
   { value: "vendor", label: "Vendor", hint: "Manage incoming bookings" },

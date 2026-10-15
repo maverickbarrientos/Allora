@@ -1,6 +1,7 @@
 import type {
   BudgetEntry,
   BudgetSummary,
+  ChatIntent,
   ChatMessage,
   ChatResponse,
   CreateEventInput,
@@ -22,6 +23,9 @@ import type {
   VendorBooking,
   VendorCalendar,
   VendorProfile,
+  VendorProfileInput,
+  VendorDetail,
+  VendorContact,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -106,6 +110,12 @@ export const api = {
     const qs = q.toString();
     return request<{ vendors: Vendor[] }>("GET", qs ? `/api/vendors?${qs}` : "/api/vendors");
   },
+  /** One vendor's profile; with eventId it also says whether they are free on the event's date. */
+  getVendor: (vendorId: string, eventId?: string) =>
+    request<{ vendor: VendorDetail; contact: VendorContact | null; contactVisible: boolean }>(
+      "GET",
+      `/api/vendors/${encodeURIComponent(vendorId)}${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ""}`,
+    ),
   getVendorAvailability: (vendorId: string, from: string, to: string) =>
     request<VendorAvailability>(
       "GET",
@@ -117,8 +127,8 @@ export const api = {
   unblockDates: (dates: string[]) => request<{ changed: string[] }>("POST", "/api/vendor/availability/unblock", { dates }),
   getMissing: (eventId: string) =>
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
-  chat: (eventId: string, messages: ChatMessage[]) =>
-    request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages }),
+  chat: (eventId: string, messages: ChatMessage[], intent?: ChatIntent) =>
+    request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages, intent }),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
   payBooking: (bookingId: string, testMethod: TestMethod) =>
@@ -138,8 +148,8 @@ export const api = {
     ),
   listCategories: () => request<{ categories: string[] }>("GET", "/api/categories"),
   getVendorProfile: () => request<VendorProfile>("GET", "/api/vendor/profile"),
-  createVendorProfile: (input: Omit<Vendor, "id">) =>
-    request<{ vendor: Vendor; categoryLocked: false }>("POST", "/api/vendor/profile", input),
-  updateVendorProfile: (input: Partial<Omit<Vendor, "id">>) =>
+  createVendorProfile: (input: VendorProfileInput) =>
+    request<VendorProfile>("POST", "/api/vendor/profile", input),
+  updateVendorProfile: (input: Partial<VendorProfileInput>) =>
     request<VendorProfile>("PATCH", "/api/vendor/profile", input),
 };
