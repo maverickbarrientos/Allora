@@ -11,6 +11,9 @@ import { buttonVariants } from "@/components/ui/button";
  */
 export function PlanPaymentLine({ booking, eventId }: { booking: PlanBooking; eventId: string }) {
   const p = booking.payment;
+  if (booking.status === "pending" && p?.status !== "paid" && p?.status !== "refunded") {
+    return <p className="text-sm text-muted-foreground">You can pay a deposit once the vendor confirms.</p>;
+  }
   if (!p) return null;
   if (p.status === "paid") {
     return (

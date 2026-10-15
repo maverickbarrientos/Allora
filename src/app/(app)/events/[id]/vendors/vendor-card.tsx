@@ -21,14 +21,16 @@ const captionFor = (category: string) => CAPTIONS[category] ?? "Table setting, n
 export function VendorCard({
   vendor,
   booked,
-  booking,
+  eventDate,
   onBook,
 }: {
   vendor: Vendor;
   booked: boolean;
-  booking: boolean;
+  eventDate: string;
+  /** Opens "Check availability"; nothing is booked until the customer confirms there. */
   onBook: () => void;
 }) {
+  const available = vendor.availableOnEventDate;
   return (
     <Card className="flex h-full min-w-0 flex-col gap-2">
       <ImagePlaceholder caption={captionFor(vendor.category)} aspect="16 / 9" />
@@ -37,17 +39,22 @@ export function VendorCard({
         <h2 className="truncate font-display text-h2" title={vendor.name}>
           {vendor.name}
         </h2>
+        {available !== undefined && (
+          <p className={available ? "text-sm text-forest" : "text-sm text-brick"}>
+            {available ? `Available on ${eventDate}` : `Unavailable on ${eventDate}`}
+          </p>
+        )}
       </div>
       <div className="mt-auto flex items-center justify-between gap-4">
         <span>{formatNumber(vendor.price)}</span>
         <Button
           className="min-w-[5.5rem]"
           variant={booked ? "outline" : "default"}
-          disabled={booked || booking}
+          disabled={booked}
           onClick={onBook}
-          aria-label={booked ? `${vendor.name}, booked` : `Book ${vendor.name}`}
+          aria-label={booked ? `${vendor.name}, booked` : `Book ${vendor.name}: check availability first`}
         >
-          {booked ? "Booked" : booking ? "Booking…" : "Book"}
+          {booked ? "Booked" : "Book"}
         </Button>
       </div>
     </Card>

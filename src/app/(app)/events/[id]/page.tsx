@@ -279,6 +279,7 @@ export default function PlanPage() {
 
       <MissingSection
         eventId={id}
+        eventDate={event.date}
         state={missing.state}
         onRetry={missing.reload}
         onBooked={onBooked}
