@@ -127,7 +127,8 @@ export const api = {
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   chat: (eventId: string, messages: ChatMessage[], intent?: ChatIntent) =>
     request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages, intent }),
-  createBooking: (input: { eventId: string; vendorId: string }) =>
+  /** agreedTerms: the vendor terms the customer ticked "I agree" to; leave out when the vendor has none. */
+  createBooking: (input: { eventId: string; vendorId: string; agreedTerms?: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
   payBooking: (bookingId: string, testMethod: TestMethod) =>
     request<{ payment: Payment; booking: PlanBooking }>(

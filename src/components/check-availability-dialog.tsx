@@ -11,11 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 
 type MonthState = { status: "loading" } | { status: "loaded"; unavailable: Set<string> } | { status: "error" };
+/** The vendor's terms (docs/SPEC-booking-documents.md); null when the vendor has none. */
+type TermsState = { status: "loading" } | { status: "loaded"; terms: string | null } | { status: "error" };
 
 /**
  * "Check availability" before booking (docs/SPEC-availability.md). Shows the
  * vendor's month with unavailable days marked, highlights the event's date,
  * and only sends the booking when the customer presses Confirm booking.
+ * When the vendor has terms, the customer must tick "I agree" first; the
+ * terms they read are sent with the booking so the database can check them.
  * Months are cached by key, so a late response for a month the customer has
  * already left never replaces the month on screen.
  */
@@ -37,6 +41,8 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
   const [months, setMonths] = useState<Record<string, MonthState>>(() => ({ [monthKey(monthOf(eventDate))]: { status: "loading" } }));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [terms, setTerms] = useState<TermsState>({ status: "loading" });
+  const [agreed, setAgreed] = useState(false);
   const inFlight = useRef(false);
   const mounted = useRef(true);
   const vendorId = vendor.id;
@@ -71,6 +77,27 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
     [vendorId],
   );
 
+  const fetchTerms = useCallback(() => {
+    api
+      .getVendor(vendorId)
+      .then((r) => {
+        if (mounted.current) setTerms({ status: "loaded", terms: r.vendor.terms });
+      })
+      .catch(() => {
+        if (mounted.current) setTerms({ status: "error" });
+      });
+  }, [vendorId]);
+
+  useEffect(() => {
+    fetchTerms();
+  }, [fetchTerms]);
+
+  function reloadTerms() {
+    setTerms({ status: "loading" });
+    setAgreed(false);
+    fetchTerms();
+  }
+
   function load(ym: YearMonth) {
     setMonths((prev) => ({ ...prev, [monthKey(ym)]: { status: "loading" } }));
     fetchMonth(ym);
@@ -91,6 +118,9 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
   const eventMonth = months[eventKey];
   const visible = months[monthKey(month)];
   const eventAvailable = eventMonth?.status === "loaded" ? !eventMonth.unavailable.has(eventDate) : null;
+  const vendorTerms = terms.status === "loaded" ? terms.terms : null;
+  const termsReady = terms.status === "loaded" && (vendorTerms === null || agreed);
+  const canConfirm = eventAvailable === true && termsReady;
 
   function retry() {
     load(monthOf(eventDate));
@@ -98,12 +128,12 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
   }
 
   async function confirm() {
-    if (inFlight.current || eventAvailable !== true) return;
+    if (inFlight.current || !canConfirm) return;
     inFlight.current = true;
     setSubmitting(true);
     setError(null);
     try {
-      const { booking } = await api.createBooking({ eventId, vendorId });
+      const { booking } = await api.createBooking({ eventId, vendorId, ...(vendorTerms !== null && { agreedTerms: vendorTerms }) });
       if (!mounted.current) return;
       onBooked(booking);
       onOpenChange(false);
@@ -116,6 +146,12 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
       } else if (code === "already_booked") {
         setError(`You already have a pending or confirmed booking with ${vendor.name} for this event.`);
         retry();
+      } else if (code === "terms_changed") {
+        setError(`${vendor.name} changed their terms. Read them again and tick "I agree" to book.`);
+        reloadTerms();
+      } else if (code === "terms_not_accepted") {
+        setError(`${vendor.name} has terms now. Read them and tick "I agree" to book.`);
+        reloadTerms();
       } else if (code === "forbidden") {
         setError("Only customers can book vendors.");
       } else {
@@ -178,6 +214,50 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
               </Button>
             </div>
           )}
+          {terms.status === "loading" && (
+            <p role="status" aria-label="Loading terms" className="flex items-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading the vendor&apos;s terms
+            </p>
+          )}
+          {terms.status === "error" && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Alert variant="destructive" className="w-auto flex-1">
+                Couldn&apos;t load the vendor&apos;s terms.
+              </Alert>
+              <Button variant="outline" onClick={reloadTerms}>
+                Retry
+              </Button>
+            </div>
+          )}
+          {vendorTerms !== null && (
+            <div className="flex flex-col gap-2">
+              <p id="vendor-terms-heading" className="text-sm font-medium">
+                Vendor&apos;s terms
+              </p>
+              {/* Focusable so keyboard users can scroll long terms. */}
+              <div
+                role="region"
+                aria-labelledby="vendor-terms-heading"
+                tabIndex={0}
+                className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-xl border border-input p-3 text-sm [overflow-wrap:anywhere] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {vendorTerms}
+              </div>
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm has-[:disabled]:cursor-not-allowed has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  checked={agreed}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setAgreed(e.target.checked);
+                    setError(null);
+                  }}
+                />
+                I agree to the vendor&apos;s terms
+              </label>
+            </div>
+          )}
           {error && <Alert variant="destructive">{error}</Alert>}
           {eventAvailable === false && !error && (
             <p className="text-sm">This vendor can&apos;t be booked on your event date. Try another vendor for this service.</p>
@@ -187,7 +267,7 @@ function AvailabilityDialog({ vendor, eventId, eventDate, onOpenChange, onBooked
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={confirm} disabled={submitting || eventAvailable !== true}>
+            <Button onClick={confirm} disabled={submitting || !canConfirm}>
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Confirm booking
             </Button>
