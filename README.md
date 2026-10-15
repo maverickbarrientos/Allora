@@ -65,7 +65,7 @@ with it. You will be asked.
    **publishable key** (it starts with `sb_publishable_`). Older projects
    call it the `anon` key. Either works.
 3. Copy `.env.example` to `.env.local` and paste them in. The publishable
-   key goes in `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+   key goes in `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 4. Add the **same two variables** in Vercel: **Settings → Environment
    Variables**, then redeploy. Forgetting this step is the single most
    common reason the local app works and the live one does not.
