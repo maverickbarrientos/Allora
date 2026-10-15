@@ -15,7 +15,7 @@ Booking and planning platform where customers create events, book vendors, and s
 
 ## Decisions and changes
 
-_No entries yet. Add dated entries (YYYY-MM-DD) below._
+- **2026-10-15 — Setup and auth, backend (branch `feature/auth-backend`).** Added `supabase/sql/001_profiles.sql` (table, role check, signup trigger, RLS), the four route handlers (`/api/auth/signup|login|logout`, `/api/me`), `src/proxy.ts` for route protection (Next 16 renamed middleware to proxy), and `src/lib/api-helpers.ts`. Env var for the key is `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (renamed from the template's `..._ANON_KEY`). The role-immutable UPDATE policy reads the stored role through a security-definer helper, `public.current_user_role()`, because a self-referencing subquery in the policy caused infinite recursion. Requires "Confirm email" OFF in Supabase Auth so signup returns a session. Backend acceptance criteria 1-6 checked with curl and PostgREST using real user JWTs; frontend criteria (UI states, back/refresh) are left to the frontend branch. Not merged.
 
 ## Open questions
 
