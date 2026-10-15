@@ -1,10 +1,13 @@
 import type {
+  BudgetEntry,
+  BudgetSummary,
   ChatMessage,
   ChatResponse,
   CreateEventInput,
   Dashboard,
   ErrorBody,
   Event,
+  EventTemplate,
   LoginInput,
   MissingResponse,
   Payment,
@@ -12,6 +15,7 @@ import type {
   Session,
   SignupInput,
   TestMethod,
+  UpdateEventInput,
   Vendor,
   VendorAvailability,
   VendorBooking,
@@ -76,6 +80,13 @@ export const api = {
     USE_MOCKS
       ? import("@/mocks/dashboard").then((m) => m.mockDashboard(eventId))
       : request<Dashboard>("GET", `/api/events/${encodeURIComponent(eventId)}/dashboard`),
+  listEventTemplates: () => request<{ templates: EventTemplate[] }>("GET", "/api/event-templates"),
+  updateEvent: (eventId: string, input: UpdateEventInput) =>
+    request<{ event: Event }>("PATCH", `/api/events/${encodeURIComponent(eventId)}`, input),
+  getBudgets: (eventId: string) =>
+    request<BudgetSummary>("GET", `/api/events/${encodeURIComponent(eventId)}/budgets`),
+  saveBudgets: (eventId: string, budgets: BudgetEntry[]) =>
+    request<BudgetSummary>("PUT", `/api/events/${encodeURIComponent(eventId)}/budgets`, { budgets }),
   getPlan: (eventId: string) =>
     request<{ event: Event; bookings: PlanBooking[] }>(
       "GET",

@@ -10,6 +10,7 @@ import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
 import type { PlanBooking } from "@/lib/api/types";
 import { PlanningAssistant } from "@/components/chat/planning-assistant";
+import { BudgetSection } from "@/components/budget-section";
 import { ErrorState } from "@/components/error-state";
 import { missingCardId } from "@/components/missing-card";
 import { MissingSection } from "@/components/missing-section";
@@ -26,6 +27,9 @@ export default function PlanPage() {
   const { state, setState, reload } = useLoad(() => api.getPlan(id));
   // "What's missing" loads on its own, in parallel, and never blocks the plan.
   const missing = useLoad(() => api.getMissing(id));
+  // "Budget by service" also loads on its own; if it fails the plan still works.
+  const budgets = useLoad(() => api.getBudgets(id));
+  const setBudgets = budgets.setState;
   const alive = useRef(true);
 
   useEffect(() => {
@@ -65,6 +69,11 @@ export default function PlanPage() {
       shown.current = data.bookings;
       setState((prev) => (prev.status === "loaded" ? { status: "loaded", data } : prev));
       if (cards && before && hasNewlyDeclined(before, data.bookings)) reloadCards();
+      // Booked totals follow the bookings; refreshed quietly, a failure keeps the last values.
+      api
+        .getBudgets(id)
+        .then((summary) => alive.current && setBudgets({ status: "loaded", data: summary }))
+        .catch(() => {});
     } catch {
       if (alive.current) setRefreshFailed(true);
     } finally {
@@ -194,10 +203,15 @@ export default function PlanPage() {
   }
 
   const { event, bookings } = state.data;
-  const addVendor = (
-    <Link href={`/events/${event.id}/vendors`} className={buttonVariants()}>
-      Add vendor
-    </Link>
+  const actions = (
+    <div className="flex flex-wrap gap-3">
+      <Link href={`/events/${event.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+        Edit event
+      </Link>
+      <Link href={`/events/${event.id}/vendors`} className={buttonVariants()}>
+        Add vendor
+      </Link>
+    </div>
   );
 
   return (
@@ -207,7 +221,7 @@ export default function PlanPage() {
         label="Event plan"
         title={<span className="[overflow-wrap:anywhere]">{eventName(event)}</span>}
         description={`${capitalize(event.type)} · ${formatDate(event.date)}`}
-        action={addVendor}
+        action={actions}
       />
 
       <Reveal delay={400}>
@@ -216,6 +230,15 @@ export default function PlanPage() {
           <Stat label="Guests" value={formatNumber(event.guestCount)} />
         </dl>
       </Reveal>
+
+      {event.notes && (
+        <section className="flex flex-col gap-2" aria-labelledby="notes-heading">
+          <h2 id="notes-heading" className="label">
+            Notes
+          </h2>
+          <p className="max-w-[65ch] whitespace-pre-line wrap-anywhere">{event.notes}</p>
+        </section>
+      )}
 
       <ReplacementNotice
         categories={replacementCategories(bookings)}
@@ -276,6 +299,8 @@ export default function PlanPage() {
           </ul>
         )}
       </section>
+
+      <BudgetSection eventId={id} state={budgets.state} onRetry={budgets.reload} />
 
       <MissingSection
         eventId={id}
