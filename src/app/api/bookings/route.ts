@@ -47,6 +47,10 @@ export async function POST(req: Request) {
       if (error.code === "23505") {
         return errorResponse(409, "already_booked", "This vendor is already booked for this event.");
       }
+      // The bookings trigger (016): the vendor blocked the date or is confirmed elsewhere on it.
+      if (error.message === "vendor_unavailable") {
+        return errorResponse(409, "vendor_unavailable", "This vendor isn't available on your event date.");
+      }
       return errorResponse(500, "server_error", "Could not create booking.");
     }
 

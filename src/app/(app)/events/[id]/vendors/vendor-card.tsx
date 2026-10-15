@@ -36,6 +36,8 @@ export function VendorCard({
   onBook: () => void;
 }) {
   const available = vendor.availableOnEventDate;
+  // Unknown (no event date given) counts as bookable; the booking itself is still checked.
+  const unavailable = available === false && !booked;
   return (
     <Card className="flex h-full min-w-0 flex-col gap-2">
       <ImagePlaceholder caption={captionFor(vendor.category)} aspect="16 / 9" />
@@ -54,14 +56,32 @@ export function VendorCard({
         <span>{formatNumber(vendor.price)}</span>
         <Button
           className="min-w-[5.5rem]"
-          variant={booked ? "outline" : "default"}
-          disabled={booked}
+          variant={booked || unavailable ? "outline" : "default"}
+          disabled={booked || unavailable}
           onClick={onBook}
-          aria-label={booked ? `${vendor.name}, booked` : `Book ${vendor.name}: check availability first`}
+          aria-describedby={unavailable ? `unavailable-${vendor.id}` : undefined}
+          aria-label={
+            booked
+              ? `${vendor.name}, booked`
+              : unavailable
+                ? `Book ${vendor.name}: not available on your event date`
+                : `Book ${vendor.name}: check availability first`
+          }
         >
           {booked ? "Booked" : "Book"}
         </Button>
       </div>
+      {unavailable && (
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm">
+          <p id={`unavailable-${vendor.id}`} className="text-muted-foreground">
+            Not available on your event date
+          </p>
+          {/* The calendar stays reachable; its Book button follows the same rule. */}
+          <button type="button" onClick={onBook} className="min-h-11 underline underline-offset-4 hover:text-foreground">
+            View calendar
+          </button>
+        </div>
+      )}
     </Card>
   );
 }
