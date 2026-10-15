@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function MissingSection({
   eventId,
+  eventDate,
   state,
   onRetry,
   onBooked,
@@ -21,6 +22,7 @@ export function MissingSection({
   declinedVendorIds,
 }: {
   eventId: string;
+  eventDate: string;
   state: Load<MissingResponse>;
   onRetry: () => void;
   onBooked: (booking?: PlanBooking) => void;
@@ -66,6 +68,7 @@ export function MissingSection({
               <MissingCardView
                 card={card}
                 eventId={eventId}
+                eventDate={eventDate}
                 onBooked={onBooked}
                 onRemove={onRemove}
                 declinedVendorIds={declinedVendorIds}

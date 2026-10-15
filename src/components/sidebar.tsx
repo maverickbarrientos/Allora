@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarPlus, ClipboardList, Loader2, Ticket, UserRound } from "lucide-react";
+import { CalendarPlus, ClipboardList, Loader2, Ticket, UserRound, CalendarDays } from "lucide-react";
 import type { Profile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ const NAV: Record<Profile["role"], NavItem[]> = {
   ],
   vendor: [
     { href: "/vendor", label: "Bookings", icon: ClipboardList, prefixes: ["/vendor"] },
+    { href: "/vendor/calendar", label: "Calendar", icon: CalendarDays, prefixes: ["/vendor/calendar"] },
     { href: "/vendor/profile", label: "Profile", icon: UserRound, prefixes: ["/vendor/profile"] },
   ],
 };

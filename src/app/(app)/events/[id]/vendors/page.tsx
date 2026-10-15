@@ -4,16 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { api, toApiError } from "@/lib/api/client";
+import { api } from "@/lib/api/client";
 import type { EventType, Vendor } from "@/lib/api/types";
 import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
-import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CheckAvailabilityDialog } from "@/components/check-availability-dialog";
 import { CategoryTabs, TABPANEL_ID, tabId } from "./category-tabs";
 import { VendorCard, VendorCardSkeleton } from "./vendor-card";
 
@@ -98,6 +98,7 @@ export default function VendorsPage() {
     <Browser
       eventId={id}
       eventType={state.data.event.type}
+      eventDate={state.data.event.date}
       all={state.data.all}
       initialBooked={state.data.booked}
       back={back}
@@ -109,6 +110,7 @@ export default function VendorsPage() {
 function Browser({
   eventId,
   eventType,
+  eventDate,
   all,
   initialBooked,
   back,
@@ -116,6 +118,7 @@ function Browser({
 }: {
   eventId: string;
   eventType: EventType;
+  eventDate: string;
   all: Vendor[];
   initialBooked: string[];
   back: React.ReactNode;
@@ -123,35 +126,12 @@ function Browser({
 }) {
   const [category, setCategory] = useState<string | null>(null); // null = All
   const [booked, setBooked] = useState<Set<string>>(new Set(initialBooked));
-  const [booking, setBooking] = useState<Set<string>>(new Set());
-  const [bookError, setBookError] = useState<string | null>(null);
+  // Book opens "Check availability"; the booking is only sent from that dialog.
+  const [checking, setChecking] = useState<Vendor | null>(null);
 
   // Tabs come from the distinct categories of the unfiltered list.
   const categories = [...new Set(all.map((v) => v.category))].sort();
 
-  async function book(vendorId: string) {
-    setBookError(null);
-    setBooking((s) => new Set(s).add(vendorId));
-    try {
-      await api.createBooking({ eventId, vendorId });
-      setBooked((s) => new Set(s).add(vendorId));
-    } catch (e) {
-      const err = toApiError(e);
-      if (err.code === "already_booked") setBooked((s) => new Set(s).add(vendorId));
-      else
-        setBookError(
-          err.code === "forbidden"
-            ? "Only customers can book vendors."
-            : "Couldn't book this vendor. Please try again.",
-        );
-    } finally {
-      setBooking((s) => {
-        const next = new Set(s);
-        next.delete(vendorId);
-        return next;
-      });
-    }
-  }
 
   return (
     <div className="flex flex-col gap-10 lg:gap-16">
@@ -170,38 +150,49 @@ function Browser({
       <div className="flex flex-col gap-5">
         <CategoryTabs categories={categories} active={category} onChange={setCategory} />
 
-        {bookError && <Alert variant="destructive">{bookError}</Alert>}
 
         <div id={TABPANEL_ID} role="tabpanel" aria-labelledby={tabId(category)}>
           {/* key remounts the list so it shows its loading state and fades up on each tab change */}
           <VendorList
             key={category ?? "all"}
             category={category}
+            eventId={eventId}
+            eventDate={eventDate}
             booked={booked}
-            booking={booking}
-            onBook={book}
+            onBook={setChecking}
             onShowAll={() => setCategory(null)}
           />
         </div>
       </div>
+
+      <CheckAvailabilityDialog
+        vendor={checking}
+        eventId={eventId}
+        eventDate={eventDate}
+        onOpenChange={(open) => !open && setChecking(null)}
+        onBooked={(b) => setBooked((s) => new Set(s).add(b.vendorId))}
+      />
     </div>
   );
 }
 
 function VendorList({
   category,
+  eventId,
+  eventDate,
   booked,
-  booking,
   onBook,
   onShowAll,
 }: {
   category: string | null;
+  eventId: string;
+  eventDate: string;
   booked: Set<string>;
-  booking: Set<string>;
-  onBook: (vendorId: string) => void;
+  onBook: (vendor: Vendor) => void;
   onShowAll: () => void;
 }) {
-  const { state, reload } = useLoad(() => api.listVendors(category ?? undefined));
+  // With eventId, each vendor carries availableOnEventDate.
+  const { state, reload } = useLoad(() => api.listVendors(category ?? undefined, eventId));
 
   if (state.status === "loading") return <SkeletonGrid />;
   if (state.status === "error") {
@@ -233,8 +224,8 @@ function VendorList({
           <VendorCard
             vendor={v}
             booked={booked.has(v.id)}
-            booking={booking.has(v.id)}
-            onBook={() => onBook(v.id)}
+            eventDate={eventDate}
+            onBook={() => onBook(v)}
           />
         </Reveal>
       ))}

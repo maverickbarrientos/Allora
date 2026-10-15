@@ -28,7 +28,25 @@ export type Event = {
   guestCount: number;
   notes: string | null;
 };
-export type Vendor = { id: string; name: string; category: string; price: number };
+export type Vendor = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  /** docs/SPEC-availability.md: present only when listVendors is called with an eventId. */
+  availableOnEventDate?: boolean;
+};
+
+// Shapes from docs/SPEC-availability.md. Dates are "YYYY-MM-DD".
+export type VendorAvailability = { vendorId: string; from: string; to: string; unavailable: string[] };
+export type VendorCalendarBooking = {
+  bookingId: string;
+  date: string;
+  status: "pending" | "confirmed";
+  eventType: EventType;
+  customerName: string;
+};
+export type VendorCalendar = { from: string; to: string; blocked: string[]; bookings: VendorCalendarBooking[] };
 export type VendorProfile = { vendor: Vendor; categoryLocked: boolean };
 export type PlanBooking = {
   id: string;

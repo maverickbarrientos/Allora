@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { api, toApiError } from "@/lib/api/client";
 import type { MissingCard, PlanBooking } from "@/lib/api/types";
 import { capitalize, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { CheckAvailabilityDialog } from "@/components/check-availability-dialog";
 
 const FADE_MS = 300;
 
@@ -24,21 +22,23 @@ export const missingCardId = (category: string) => `missing-card-${category}`;
 export function MissingCardView({
   card,
   eventId,
+  eventDate,
   onBooked,
   onRemove,
   declinedVendorIds,
 }: {
   card: MissingCard;
   eventId: string;
+  /** The event's date ("YYYY-MM-DD"), for "Check availability". */
+  eventDate: string;
   onBooked: (booking?: PlanBooking) => void;
   onRemove: (category: string) => void;
   /** Vendors with a declined booking on this event: shown with "Declined earlier". */
   declinedVendorIds?: ReadonlySet<string>;
 }) {
-  const [bookingId, setBookingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Book opens "Check availability"; the booking is sent only from that dialog.
+  const [checking, setChecking] = useState<{ id: string; name: string } | null>(null);
   const [leaving, setLeaving] = useState(false);
-  const inFlight = useRef(false); // blocks a second click before the re-render
   const mounted = useRef(true);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -57,31 +57,7 @@ export function MissingCardView({
     timer.current = setTimeout(() => onRemove(card.category), reduced ? 0 : FADE_MS);
   }
 
-  async function book(vendorId: string) {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBookingId(vendorId);
-    setError(null);
-    try {
-      const { booking } = await api.createBooking({ eventId, vendorId });
-      if (mounted.current) finish(booking);
-    } catch (e) {
-      if (!mounted.current) return;
-      const { code } = toApiError(e);
-      if (code === "already_booked") finish();
-      else
-        setError(
-          code === "forbidden"
-            ? "Only customers can book vendors."
-            : "Couldn't book this vendor. Please try again.",
-        );
-    } finally {
-      inFlight.current = false;
-      if (mounted.current) setBookingId(null);
-    }
-  }
-
-  const locked = bookingId !== null || leaving;
+  const locked = leaving || checking !== null;
 
   return (
     <Card
@@ -106,11 +82,6 @@ export function MissingCardView({
         </p>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            {error}
-          </Alert>
-        )}
         {card.vendors.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No vendors close to this budget share.
@@ -141,17 +112,25 @@ export function MissingCardView({
                   size="sm"
                   className="w-full shrink-0 sm:w-auto"
                   disabled={locked}
-                  onClick={() => book(v.id)}
-                  aria-label={`Book ${v.name}`}
+                  onClick={() => setChecking({ id: v.id, name: v.name })}
+                  aria-label={`Book ${v.name}: check availability first`}
                 >
-                  {bookingId === v.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {bookingId === v.id ? "Booking" : "Book"}
+                  Book
                 </Button>
               </li>
             ))}
           </ul>
         )}
       </CardContent>
+      <CheckAvailabilityDialog
+        vendor={checking}
+        eventId={eventId}
+        eventDate={eventDate}
+        onOpenChange={(open) => !open && setChecking(null)}
+        onBooked={(booking) => {
+          if (mounted.current) finish(booking);
+        }}
+      />
     </Card>
   );
 }

@@ -12,7 +12,9 @@ import type {
   SignupInput,
   TestMethod,
   Vendor,
+  VendorAvailability,
   VendorBooking,
+  VendorCalendar,
   VendorProfile,
 } from "./types";
 import { ApiError } from "./errors";
@@ -68,11 +70,20 @@ export const api = {
       "GET",
       `/api/events/${encodeURIComponent(eventId)}/plan`,
     ),
-  listVendors: (category?: string) =>
-    request<{ vendors: Vendor[] }>(
+  listVendors: (category?: string, eventId?: string) => {
+    const q = new URLSearchParams();
+    if (category) q.set("category", category);
+    if (eventId) q.set("eventId", eventId);
+    const qs = q.toString();
+    return request<{ vendors: Vendor[] }>("GET", qs ? `/api/vendors?${qs}` : "/api/vendors");
+  },
+  getVendorAvailability: (vendorId: string, from: string, to: string) =>
+    request<VendorAvailability>(
       "GET",
-      category ? `/api/vendors?category=${encodeURIComponent(category)}` : "/api/vendors",
+      `/api/vendors/${encodeURIComponent(vendorId)}/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     ),
+  getVendorCalendar: (from: string, to: string) =>
+    request<VendorCalendar>("GET", `/api/vendor/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
   getMissing: (eventId: string) =>
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   chat: (eventId: string, messages: ChatMessage[]) =>
