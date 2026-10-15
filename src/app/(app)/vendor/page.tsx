@@ -11,6 +11,7 @@ import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { VendorPaymentBadge } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert } from "@/components/ui/alert";
@@ -272,6 +273,9 @@ function VendorBookings() {
                 {capitalize(pendingDecision.booking.event.type)} on{" "}
                 {formatDate(pendingDecision.booking.event.date)}. The customer will see this
                 change on their event plan.
+                {pendingDecision.status === "declined" &&
+                  pendingDecision.booking.payment?.status === "paid" &&
+                  " The customer's deposit will be refunded."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -336,8 +340,9 @@ function BookingRow({
         </span>
         <span className="font-display text-xl">{capitalize(event.type)}</span>
       </div>
-      <div className="sm:justify-self-end">
+      <div className="flex flex-wrap items-center gap-2 sm:justify-self-end">
         <StatusBadge status={booking.status} />
+        <VendorPaymentBadge booking={booking} />
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:col-span-2">
         <span className="label">{booking.category}</span>

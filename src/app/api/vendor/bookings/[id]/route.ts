@@ -7,6 +7,7 @@ import {
   UUID_RE,
   type VendorBookingRow,
 } from "@/lib/vendor-portal";
+import { withVendorPayments } from "@/lib/payments/status";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -59,7 +60,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (rows.length === 0) {
       return errorResponse(500, "server_error", "Could not load booking.");
     }
-    return NextResponse.json({ booking: toVendorBooking(rows[0]) });
+    // The refund trigger (008) has already run in the same transaction as the update.
+    const [booking] = await withVendorPayments(supabase, [toVendorBooking(rows[0])]);
+    return NextResponse.json({ booking });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }

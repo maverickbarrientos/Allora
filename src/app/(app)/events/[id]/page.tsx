@@ -13,6 +13,7 @@ import { ErrorState } from "@/components/error-state";
 import { missingCardId } from "@/components/missing-card";
 import { MissingSection } from "@/components/missing-section";
 import { PageHeader } from "@/components/page-header";
+import { PlanPaymentLine } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
 import { ReplacementNotice, hasNewlyDeclined, replacementCategories } from "@/components/replacement-notice";
@@ -260,10 +261,13 @@ export default function PlanPage() {
                 <Reveal delay={500 + Math.min(i, 3) * 80}>
                   <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2 py-5 sm:grid-cols-[10rem_1fr_auto_auto]">
                     <span className="label col-span-2 sm:col-span-1">{b.category}</span>
-                    <span className="font-display text-h2">{b.vendorName}</span>
+                    <span className="min-w-0 font-display text-h2 wrap-anywhere">{b.vendorName}</span>
                     <span className="hidden text-right sm:block">{formatNumber(b.price)}</span>
                     <StatusBadge status={b.status} />
                     <span className="text-sm sm:hidden">{formatNumber(b.price)}</span>
+                    <div className="col-span-2 empty:hidden sm:col-span-3 sm:col-start-2">
+                      <PlanPaymentLine booking={b} eventId={event.id} />
+                    </div>
                   </div>
                 </Reveal>
               </li>

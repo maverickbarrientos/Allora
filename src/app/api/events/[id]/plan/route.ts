@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { UUID_RE, errorResponse, requireSession } from "@/lib/api-helpers";
 import { EVENT_COLUMNS, PLAN_BOOKING_COLUMNS, toEvent, toPlanBooking } from "@/lib/server/shapes";
+import { withPlanPayments } from "@/lib/payments/status";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,10 +30,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .order("id", { ascending: true });
     if (bookingsError) return errorResponse(500, "server_error", "Could not load bookings.");
 
-    return NextResponse.json({
-      event: toEvent(event),
-      bookings: (bookings ?? []).map(toPlanBooking),
-    });
+    let withPayments;
+    try {
+      withPayments = await withPlanPayments(supabase, (bookings ?? []).map(toPlanBooking));
+    } catch {
+      return errorResponse(500, "server_error", "Could not load payments.");
+    }
+
+    return NextResponse.json({ event: toEvent(event), bookings: withPayments });
   } catch {
     return errorResponse(500, "server_error", "Unexpected error.");
   }

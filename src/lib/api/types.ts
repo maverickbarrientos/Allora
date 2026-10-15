@@ -37,6 +37,8 @@ export type PlanBooking = {
   price: number;
   status: BookingStatus;
   createdAt: string;
+  /** docs/SPEC-payment.md. Always sent by the API; the UI still copes without it. */
+  payment?: PlanPayment | null;
 };
 
 // Shape from docs/SPEC-vendor-portal.md ("Shared shapes").
@@ -47,7 +49,29 @@ export type VendorBooking = {
   createdAt: string;
   customerName: string;
   event: { type: EventType; date: string; guestCount: number; budget: number };
+  /** docs/SPEC-payment.md. Always sent by the API; the UI still copes without it. */
+  payment?: VendorPayment | null;
 };
+
+// Shapes from docs/SPEC-payment.md ("Shared shapes").
+export type PaymentStatus = "unpaid" | "paid" | "refunded";
+export type Payment = {
+  id: string;
+  bookingId: string;
+  amount: number;
+  status: "paid" | "refunded";
+  reference: string;
+  createdAt: string;
+  refundedAt: string | null;
+};
+export type PlanPayment = {
+  status: PaymentStatus;
+  depositAmount: number;
+  paidAmount: number | null;
+  paidAt: string | null;
+};
+export type VendorPayment = { status: PaymentStatus; paidAmount: number | null };
+export type TestMethod = "approve" | "decline";
 
 // Shapes from docs/SPEC-matching.md ("Shared shapes" and API).
 export type MatchedVendor = {
