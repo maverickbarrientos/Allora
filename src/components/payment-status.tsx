@@ -6,13 +6,28 @@ import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Payment line on a plan row (docs/SPEC-payment.md). Confirmed and unpaid:
- * "Pay deposit" with the amount. Paid: "Deposit paid" with the amount.
- * Refunded: "Deposit refunded". Otherwise, or with no payment data, nothing.
+ * "Pay deposit" with the amount. Pending and unpaid: the same link, outlined,
+ * with a note; the pay page shows "Waiting for the vendor" and the server only
+ * accepts a payment once the booking is confirmed. Paid: "Deposit paid" with
+ * the amount. Refunded: "Deposit refunded". Declined, or no payment data on a
+ * confirmed row: nothing.
  */
 export function PlanPaymentLine({ booking, eventId }: { booking: PlanBooking; eventId: string }) {
   const p = booking.payment;
+  const payHref = `/events/${encodeURIComponent(eventId)}/bookings/${encodeURIComponent(booking.id)}/pay`;
   if (booking.status === "pending" && p?.status !== "paid" && p?.status !== "refunded") {
-    return <p className="text-sm text-muted-foreground">You can pay a deposit once the vendor confirms.</p>;
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Link
+          href={payHref}
+          className={cn(buttonVariants({ size: "sm", variant: "outline" }), "w-fit")}
+          aria-label={`Pay deposit${p ? ` of ${formatAmount(p.depositAmount)}` : ""} for ${booking.vendorName}, available once the vendor confirms`}
+        >
+          Pay deposit{p && <> &middot; {formatAmount(p.depositAmount)}</>}
+        </Link>
+        <p className="text-sm text-muted-foreground">You can pay a deposit once the vendor confirms.</p>
+      </div>
+    );
   }
   if (!p) return null;
   if (p.status === "paid") {
