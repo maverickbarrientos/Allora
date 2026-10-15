@@ -15,6 +15,7 @@ import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Reveal } from "@/components/reveal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isEnded } from "@/components/replacement-notice";
 import { captionFor } from "../vendor-card";
 
 /** The vendor (with availability on the event's date) and the plan (for the event and what is booked). */
@@ -24,7 +25,7 @@ async function loadPage(eventId: string, vendorId: string) {
     api.getPlan(eventId),
   ]);
   // Booked when this event already has a pending or confirmed booking with the vendor.
-  const booked = bookings.some((b) => b.vendorId === vendor.id && b.status !== "declined");
+  const booked = bookings.some((b) => b.vendorId === vendor.id && !isEnded(b));
   return { vendor, contact, event, booked };
 }
 

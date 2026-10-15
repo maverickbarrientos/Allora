@@ -316,8 +316,10 @@ function Blocked({
   const [title, body] =
     code === "already_paid"
       ? ["This deposit is already paid", "There's nothing more to pay for this booking."]
-      : booking.status === "declined"
-        ? ["This booking was declined", "Only a confirmed booking can be paid."]
+      : booking.status === "declined" || booking.status === "cancelled"
+        ? [`This booking was ${booking.status === "cancelled" ? "cancelled" : "declined"}`, "Only a confirmed booking can be paid."]
+        : booking.status === "cancel_requested"
+          ? ["Cancellation requested", "You asked to cancel this booking, so it can't be paid while the vendor decides."]
         : booking.status === "pending"
           ? ["Waiting for the vendor", "You can pay the deposit once the vendor confirms this booking."]
           : ["This booking can't be paid yet", "Only a confirmed booking can be paid."];

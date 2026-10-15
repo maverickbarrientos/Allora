@@ -22,7 +22,7 @@ import { CancelRequestButton } from "@/components/cancel-request-button";
 import { PlanPaymentLine } from "@/components/payment-status";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
-import { ReplacementNotice, hasNewlyDeclined, replacementCategories } from "@/components/replacement-notice";
+import { ReplacementNotice, hasNewlyDeclined, isEnded, replacementCategories } from "@/components/replacement-notice";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -133,7 +133,7 @@ export default function PlanPage() {
 
   const planBookings = state.status === "loaded" ? state.data.bookings : null;
   const declinedVendorIds = useMemo(
-    () => new Set((planBookings ?? []).filter((b) => b.status === "declined").map((b) => b.vendorId)),
+    () => new Set((planBookings ?? []).filter(isEnded).map((b) => b.vendorId)),
     [planBookings],
   );
 
