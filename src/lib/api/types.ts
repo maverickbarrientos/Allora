@@ -47,6 +47,26 @@ export type VendorBooking = {
   event: { type: EventType; date: string; guestCount: number };
 };
 
+// Shapes from docs/SPEC-matching.md ("Shared shapes" and API).
+export type MatchedVendor = {
+  id: string;
+  name: string;
+  price: number;
+  matchPercent: number;
+  reason: string;
+};
+export type MissingCard = {
+  category: string;
+  budgetShare: number;
+  whyItMatters: string;
+  vendors: MatchedVendor[];
+};
+export type MissingResponse = {
+  eventId: string;
+  textSource: "ai" | "fallback";
+  cards: MissingCard[];
+};
+
 export type CreateEventInput = {
   type: EventType;
   date: string;

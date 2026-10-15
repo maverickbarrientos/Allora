@@ -3,6 +3,7 @@ import type {
   ErrorBody,
   Event,
   LoginInput,
+  MissingResponse,
   PlanBooking,
   Session,
   SignupInput,
@@ -75,6 +76,8 @@ export const api = {
       "GET",
       category ? `/api/vendors?category=${encodeURIComponent(category)}` : "/api/vendors",
     ),
+  getMissing: (eventId: string) =>
+    request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   createBooking: (input: { eventId: string; vendorId: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
 
