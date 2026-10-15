@@ -3,44 +3,38 @@
 /* Design tokens (docs/DESIGN.md). Light theme only.
    Change these to re-skin the whole app at once. */
 :root {
-  /* Palette: hazel page, plum components (the user's palette overrides the
-     DESIGN.md colors; layout, type and motion rules still apply). */
-  --hazel: #938563;
-  --plum-light: #9e749d;
-  --plum: #6c3069;
-  --pink: #b76e79;
-  --plum-ink: #140f14; /* text on plum-light and pink */
   --ivory: #faf7f2;
   --stone: #f1ece4;
   --ink: #1c1b19;
-  --ink-muted: #1f1c19; /* body-size text on hazel needs ink-level contrast */
-  --label: #1c1b19;
-  --brass: #6c3069; /* the one hairline highlight (name kept from DESIGN.md) */
-  --brick: #3a0f0a; /* errors and declined, dark enough for text on hazel */
-  --hairline: rgb(28 27 25 / 0.25);
+  --ink-muted: #6b665e;
+  --forest: #1f3a32;
+  --brass: #b08d57; /* hairlines and details only, never small text */
+  --brass-ink: #7a5f33; /* small brass labels */
+  --brick: #8a3b2e; /* errors and declined */
+  --hairline: rgb(28 27 25 / 0.12);
   --radius: 1.25rem;
   --shadow-soft:
-    0 2px 4px rgb(28 27 25 / 0.2), 0 18px 40px -12px rgb(28 27 25 / 0.5);
+    0 1px 2px rgb(28 27 25 / 0.04), 0 12px 32px -16px rgb(28 27 25 / 0.14);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* shadcn theme mapping */
-  --background: var(--hazel);
+  --background: var(--ivory);
   --foreground: var(--ink);
-  --card: var(--plum);
-  --card-foreground: var(--ivory);
-  --primary: var(--plum);
+  --card: var(--stone);
+  --card-foreground: var(--ink);
+  --primary: var(--forest);
   --primary-foreground: var(--ivory);
-  --secondary: var(--plum-light);
-  --secondary-foreground: var(--plum-ink);
-  --muted: var(--plum-light);
+  --secondary: var(--stone);
+  --secondary-foreground: var(--ink);
+  --muted: var(--stone);
   --muted-foreground: var(--ink-muted);
-  --accent: var(--plum-light);
-  --accent-foreground: var(--plum-ink);
+  --accent: var(--stone);
+  --accent-foreground: var(--ink);
   --destructive: var(--brick);
   --destructive-foreground: var(--ivory);
   --border: var(--hairline);
-  --input: rgb(28 27 25 / 0.45);
-  --ring: var(--ink);
+  --input: var(--hairline);
+  --ring: var(--forest);
 }
 
 @theme inline {
@@ -63,12 +57,9 @@
   --color-ring: var(--ring);
   --color-ivory: var(--ivory);
   --color-stone: var(--stone);
-  --color-hazel: var(--hazel);
-  --color-plum: var(--plum);
-  --color-plum-light: var(--plum-light);
-  --color-pink: var(--pink);
-  --color-plum-ink: var(--plum-ink);
+  --color-forest: var(--forest);
   --color-brass: var(--brass);
+  --color-brass-ink: var(--brass-ink);
   --color-brick: var(--brick);
   --radius-base: var(--radius);
   --shadow-soft: var(--shadow-soft);
@@ -113,27 +104,16 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-weight: 500;
-  color: var(--label);
-}
-
-/* Plum surface (cards, header, auth hero): light text, pink buttons. Re-maps
-   the theme variables, so shadcn components adapt without changes. */
-.surface-plum {
-  --foreground: var(--ivory);
-  --card-foreground: var(--ivory);
-  --muted-foreground: #ecdcea;
-  --primary: var(--pink);
-  --primary-foreground: var(--plum-ink);
-  --ring: var(--ivory);
-  --border: rgb(250 247 242 / 0.25);
-  --label: #f3d6db;
-  color: var(--foreground);
+  color: var(--brass-ink);
 }
 
 /* Visible keyboard focus: 2px forest, 2px offset (ivory on dark surfaces) */
 :focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid var(--forest);
   outline-offset: 2px;
+}
+.on-dark :focus-visible {
+  outline-color: var(--ivory);
 }
 
 /* Paper grain, login and sign-up hero panel only */
@@ -184,7 +164,7 @@ body {
       rgb(255 255 255 / 0.5) 50%,
       transparent 70%
     )
-    rgb(28 27 25 / 0.12);
+    var(--stone);
   background-size: 200% 100%;
   animation: shimmer 1.8s linear infinite;
 }
