@@ -9,8 +9,8 @@ const notFound = () => errorResponse(404, "booking_not_found", "Booking not foun
 /**
  * The customer asks to cancel a pending or confirmed booking
  * (docs/SPEC-customer-cancel.md). Customers cannot update bookings directly;
- * request_booking_cancellation() (029) checks ownership and status and moves
- * it to cancel_requested. The vendor then approves or rejects.
+ * request_booking_cancellation() (029) checks ownership and status and flags
+ * it by setting cancel_requested_at; the status stays as it is. The vendor then approves or keeps it.
  */
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,12 +24,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     // RLS: customers only see bookings on their own events.
     const { data: existing, error: readErr } = await supabase
       .from("bookings")
-      .select("id, status")
+      .select("id, status, cancel_requested_at")
       .eq("id", id)
       .maybeSingle();
     if (readErr) return errorResponse(500, "server_error", "Could not load booking.");
     if (!existing) return notFound();
-    if (existing.status === "cancel_requested") {
+    if (existing.cancel_requested_at) {
       return errorResponse(409, "already_requested", "A cancellation was already requested for this booking.");
     }
 

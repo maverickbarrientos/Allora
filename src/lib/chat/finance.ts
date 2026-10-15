@@ -50,8 +50,7 @@ const TIGHT_FRACTION = 0.1;
 
 const cents = (n: number) => Math.round((n + Number.EPSILON) * 100);
 const fromCents = (c: number) => c / 100;
-const isActive = (status: string) =>
-  status === "pending" || status === "confirmed" || status === "cancel_requested";
+const isActive = (status: string) => status === "pending" || status === "confirmed";
 
 export function computeFinance(args: {
   /** The event's own service list, in order. */
@@ -121,7 +120,7 @@ export function computeFinance(args: {
     };
   });
 
-  // A cancel request is still waiting on the vendor; a cancelled booking counts as declined.
+  // A cancelled booking counts as declined.
   const count = (...statuses: string[]) => bookings.filter((b) => statuses.includes(b.status)).length;
 
   return {
@@ -132,7 +131,7 @@ export function computeFinance(args: {
       committed,
       remaining,
       counts: {
-        pending: count("pending", "cancel_requested"),
+        pending: count("pending"),
         confirmed: count("confirmed"),
         declined: count("declined", "cancelled"),
       },

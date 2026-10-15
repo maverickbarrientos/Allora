@@ -175,6 +175,8 @@ export const api = {
       `/api/vendor/bookings/${encodeURIComponent(id)}`,
       { status },
     ),
+  keepBooking: (id: string) =>
+    request<{ booking: VendorBooking }>("POST", `/api/vendor/bookings/${encodeURIComponent(id)}/keep`),
   listCategories: () => request<{ categories: string[] }>("GET", "/api/categories"),
   getVendorProfile: () => request<VendorProfile>("GET", "/api/vendor/profile"),
   createVendorProfile: (input: VendorProfileInput) =>

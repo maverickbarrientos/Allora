@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       .map((r) => ({
         bookingId: r.id,
         date: r.event_date,
-        status: (r.status === "cancel_requested" ? "pending" : r.status) as "pending" | "confirmed",
+        status: r.status as "pending" | "confirmed",
         eventType: r.event_type,
         customerName: r.customer_name,
       }));

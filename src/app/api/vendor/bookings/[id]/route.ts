@@ -28,10 +28,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     // Applies only when the status actually changes, so of two simultaneous
     // same-status requests one updates and the other matches no row.
     // RLS limits it to this vendor's own bookings. Approving a cancellation
-    // (cancelled) is only valid on a booking the customer asked to cancel;
-    // rejecting one is the existing confirm.
+    // (cancelled) is only valid on a booking the customer asked to cancel.
     let query = supabase.from("bookings").update({ status }).eq("id", id).neq("status", status);
-    if (status === "cancelled") query = query.eq("status", "cancel_requested");
+    if (status === "cancelled") query = query.not("cancel_requested_at", "is", null);
     const { data: updated, error } = await query.select("id");
     if (error) {
       // bookings_event_vendor_active_uniq (002): another pending or confirmed
