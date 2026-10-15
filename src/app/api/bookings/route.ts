@@ -11,11 +11,13 @@ export async function POST(req: Request) {
     if (auth.response) return auth.response;
 
     const body = await readJson(req);
-    const { eventId, vendorId } = body ?? {};
+    // agreedTerms: the vendor terms the customer read and agreed to (docs/SPEC-booking-documents.md).
+    const { eventId, vendorId, agreedTerms } = body ?? {};
 
     const invalid: string[] = [];
     if (typeof eventId !== "string" || !UUID_RE.test(eventId)) invalid.push("eventId");
     if (typeof vendorId !== "string" || !UUID_RE.test(vendorId)) invalid.push("vendorId");
+    if (agreedTerms !== undefined && agreedTerms !== null && typeof agreedTerms !== "string") invalid.push("agreedTerms");
     if (invalid.length > 0) {
       return errorResponse(400, "validation_error", `Invalid fields: ${invalid.join(", ")}.`);
     }
@@ -39,7 +41,16 @@ export async function POST(req: Request) {
 
     const { data, error } = await supabase
       .from("bookings")
-      .insert({ event_id: eventId, vendor_id: vendorId, category: vendor.category, status: "pending" })
+      .insert({
+        event_id: eventId,
+        vendor_id: vendorId,
+        category: vendor.category,
+        status: "pending",
+        // Only a signal for the database (018): it checks them against the
+        // vendor's current terms, then stores its own copy and time.
+        terms_snapshot: agreedTerms ?? null,
+        terms_accepted_at: typeof agreedTerms === "string" ? new Date().toISOString() : null,
+      })
       .select(PLAN_BOOKING_COLUMNS)
       .single();
     if (error) {
@@ -50,6 +61,12 @@ export async function POST(req: Request) {
       // The bookings trigger (021): the vendor blocked the date or is confirmed elsewhere on it.
       if (error.message === "vendor_unavailable") {
         return errorResponse(409, "vendor_unavailable", "This vendor isn't available on your event date.");
+      }
+      if (error.message === "terms_not_accepted") {
+        return errorResponse(400, "terms_not_accepted", "Agree to the vendor's terms before booking.");
+      }
+      if (error.message === "terms_changed") {
+        return errorResponse(409, "terms_changed", "The vendor's terms changed. Read them again before booking.");
       }
       return errorResponse(500, "server_error", "Could not create booking.");
     }

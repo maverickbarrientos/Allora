@@ -1,4 +1,5 @@
 import type {
+  BookingReceipt,
   BudgetEntry,
   BudgetSummary,
   ChatIntent,
@@ -13,6 +14,7 @@ import type {
   LoginInput,
   MissingResponse,
   Payment,
+  BookingContract,
   PlanBooking,
   Session,
   SignupInput,
@@ -129,14 +131,19 @@ export const api = {
     request<MissingResponse>("GET", `/api/events/${encodeURIComponent(eventId)}/missing`),
   chat: (eventId: string, messages: ChatMessage[], intent?: ChatIntent) =>
     request<ChatResponse>("POST", `/api/events/${encodeURIComponent(eventId)}/chat`, { messages, intent }),
-  createBooking: (input: { eventId: string; vendorId: string }) =>
+  /** agreedTerms: the vendor terms the customer ticked "I agree" to; leave out when the vendor has none. */
+  createBooking: (input: { eventId: string; vendorId: string; agreedTerms?: string }) =>
     request<{ booking: PlanBooking }>("POST", "/api/bookings", input),
+  getBookingContract: (bookingId: string) =>
+    request<{ contract: BookingContract }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/contract`),
   payBooking: (bookingId: string, testMethod: TestMethod) =>
     request<{ payment: Payment; booking: PlanBooking }>(
       "POST",
       `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
       { testMethod },
     ),
+  getBookingReceipt: (bookingId: string) =>
+    request<{ receipt: BookingReceipt }>("GET", `/api/bookings/${encodeURIComponent(bookingId)}/receipt`),
 
   listVendorBookings: () =>
     request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),

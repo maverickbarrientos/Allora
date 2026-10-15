@@ -49,8 +49,8 @@ export type VendorCalendarBooking = {
   customerName: string;
 };
 export type VendorCalendar = { from: string; to: string; blocked: string[]; bookings: VendorCalendarBooking[] };
-/** docs/SPEC-vendor-profiles.md: a vendor with its profile text. */
-export type VendorDetail = Vendor & { about: string | null };
+/** docs/SPEC-vendor-profiles.md: a vendor with its profile text; terms from docs/SPEC-booking-documents.md. */
+export type VendorDetail = Vendor & { about: string | null; terms: string | null };
 /** Contact details; shown to customers only after the vendor confirms their booking. */
 export type VendorContact = { phone: string | null; email: string | null; website: string | null };
 export type VendorProfile = { vendor: VendorDetail; contact: VendorContact; categoryLocked: boolean };
@@ -61,9 +61,23 @@ export type VendorProfileInput = {
   price: number;
   about?: string | null;
   location?: string | null;
+  terms?: string | null;
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+};
+/** docs/SPEC-booking-documents.md: a booking's contract, for the event's customer only. */
+export type BookingContract = {
+  bookingId: string;
+  category: string;
+  status: "pending" | "confirmed" | "declined";
+  bookedAt: string;
+  event: { id: string; name: string | null; type: EventType; date: string; guestCount: number };
+  vendor: { name: string; price: number };
+  customerName: string;
+  /** The vendor's terms as the customer agreed to them; null when the vendor had none. */
+  terms: string | null;
+  agreedAt: string | null;
 };
 export type PlanBooking = {
   id: string;
@@ -76,6 +90,18 @@ export type PlanBooking = {
   createdAt: string;
   /** docs/SPEC-payment.md. Always sent by the API; the UI still copes without it. */
   payment?: PlanPayment | null;
+};
+
+/** docs/SPEC-booking-documents.md: a booking's receipt, for the event's customer only. */
+export type BookingReceipt = {
+  bookingId: string;
+  category: string;
+  status: BookingStatus;
+  bookedAt: string;
+  event: { id: string; name: string | null; type: EventType; date: string; guestCount: number };
+  vendor: { name: string; price: number };
+  /** null when no deposit was ever paid. paidAt is when the deposit was paid. */
+  deposit: { status: "paid" | "refunded"; amount: number | null; paidAt: string | null } | null;
 };
 
 // Shape from docs/SPEC-vendor-portal.md ("Shared shapes").
