@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { api, ApiError, toApiError } from "@/lib/api/client";
-import { capitalize } from "@/lib/format";
 import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
 import type { Event, UpdateEventInput } from "@/lib/api/types";
@@ -20,16 +19,6 @@ import {
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
-import { Alert } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -45,18 +34,13 @@ function changes(saved: Event, input: Required<UpdateEventInput>): UpdateEventIn
   return diff;
 }
 
-/** "Clear these service budgets first: photography, music." -> "photography, music" */
-const categoriesFrom = (message: string) => message.split(":")[1]?.trim().replace(/\.$/, "") ?? "";
-
 export default function EditEventPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { state, setState, reload } = useLoad(() => api.getPlan(id));
   const [edited, setEdited] = useState<EventFormValues | null>(null);
   const [errors, setErrors] = useState<EventFormErrors>({});
-  const [conflict, setConflict] = useState<React.ReactNode>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [pendingTypeChange, setPendingTypeChange] = useState<UpdateEventInput | null>(null);
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
   const alive = useRef(true);
@@ -86,7 +70,6 @@ export default function EditEventPage() {
     if (inFlight.current || !saved || !values) return;
     const { errors: next, input } = validateEventForm(values);
     setErrors(next);
-    setConflict(null);
     setNotice(null);
     if (!input) return;
 
@@ -95,9 +78,8 @@ export default function EditEventPage() {
       setNotice("No changes to save.");
       return;
     }
-    // A type change changes the checklist, so it is confirmed first.
-    if (diff.type) setPendingTypeChange(diff);
-    else void send(diff);
+    // A type change keeps the event's services, so it needs no confirmation.
+    void send(diff);
   }
 
   async function send(diff: UpdateEventInput) {
@@ -120,17 +102,6 @@ export default function EditEventPage() {
       } else if (code === "validation_error") {
         const fields = fieldErrorsFrom(message);
         setErrors(Object.keys(fields).length ? fields : { form: message });
-      } else if (code === "budgets_outside_checklist") {
-        const list = categoriesFrom(message);
-        setConflict(
-          <>
-            You&apos;ve set service budgets for services a {diff.type} event doesn&apos;t include
-            {list ? ` (${list})` : ""}. Clear those budgets first, then change the type.{" "}
-            <Link href={`/events/${id}/budgets`} className="underline underline-offset-4">
-              Go to budgets
-            </Link>
-          </>,
-        );
       } else if (code === "budget_below_allocations") {
         setErrors({
           budget:
@@ -208,7 +179,6 @@ export default function EditEventPage() {
           submitLabel="Save changes"
           savingLabel="Saving"
           onSubmit={submit}
-          before={conflict && <Alert variant="destructive">{conflict}</Alert>}
           after={
             notice && (
               <p role="status" className="text-sm text-muted-foreground">
@@ -218,37 +188,6 @@ export default function EditEventPage() {
           }
         />
       </Reveal>
-
-      <AlertDialog
-        open={pendingTypeChange !== null}
-        onOpenChange={(open) => !open && setPendingTypeChange(null)}
-      >
-        {pendingTypeChange?.type && (
-          <>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Change the type to {capitalize(pendingTypeChange.type)}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Your checklist, budget suggestions and &ldquo;What&apos;s missing&rdquo; cards will follow
-                the new type. Bookings you&apos;ve already made stay on your plan.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingTypeChange(null)}>
-                Keep {capitalize(saved.type)}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  const diff = pendingTypeChange;
-                  setPendingTypeChange(null);
-                  void send(diff);
-                }}
-              >
-                Change type
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </>
-        )}
-      </AlertDialog>
     </div>
   );
 }

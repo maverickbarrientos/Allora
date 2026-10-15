@@ -171,5 +171,9 @@ export type BudgetSummary = { eventBudget: number; allocated: number; budgets: S
 /** `amount: null` clears that service's budget. */
 export type BudgetEntry = { category: string; amount: number | null };
 
+// The event's own service list (GET /api/events/:id/services), in list order.
+// `status` is the strongest active booking (confirmed over pending), or null for a gap.
+export type EventService = { category: string; status: "pending" | "confirmed" | null };
+
 /** Error body for all errors: `{ error: { code, message } }`. */
 export type ErrorBody = { error: { code: string; message: string } };

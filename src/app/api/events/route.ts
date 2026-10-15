@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse, readJson, requireSession } from "@/lib/api-helpers";
+import { DEFAULT_SERVICES } from "@/lib/matching/config";
 import { parseEventFields } from "@/lib/server/event-input";
 import { EVENT_COLUMNS, toEvent } from "@/lib/server/shapes";
 
@@ -22,6 +23,17 @@ export async function POST(req: Request) {
       .select(EVENT_COLUMNS)
       .single();
     if (error || !data) return errorResponse(500, "server_error", "Could not create event.");
+
+    // Every event starts with its type's default services. If they can't be
+    // saved, the event is removed again so no event is left without a list.
+    const { error: servicesError } = await supabase.rpc("set_event_services", {
+      p_event_id: data.id,
+      p_categories: DEFAULT_SERVICES[fields.type!],
+    });
+    if (servicesError) {
+      await supabase.from("events").delete().eq("id", data.id);
+      return errorResponse(500, "server_error", "Could not create event.");
+    }
 
     return NextResponse.json({ event: toEvent(data) }, { status: 201 });
   } catch {
