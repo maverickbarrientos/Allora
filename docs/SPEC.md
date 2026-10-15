@@ -29,6 +29,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 - Create an event (type, date, budget, guest count)
 - Browse vendors by category
 - Book a vendor
+- View a vendor's profile page (about, location, price, availability; contact details once the vendor confirms a booking)
 - View the plan with bookings and status (pending, confirmed, declined)
 - See a vendor's availability in a calendar when booking; a vendor can only be booked on an 
 - Choose the event's services when creating it, and add or remove them later on the plan and edit pages (more categories: florist, cake, lighting, transport, makeup)
@@ -37,7 +38,7 @@ Next.js (TypeScript, Tailwind, shadcn), route handlers for the API, Supabase, pr
 **Vendor portal**
 - List of incoming bookings
 - Accept or decline; status shows on the customer's plan
-- Create and edit own vendor profile (name, category, price)
+- Create and edit own vendor profile (name, category, price, about, location, and contact details shown to a customer only after a confirmed booking; see SPEC-vendor-profiles.md)
 - Change an accept or decline later (confirmed and declined, not back to pending)
 - See the customer's name and the event budget on each booking addressed to them
 - Calendar to block and unblock unavailable dates, and to see bookings by date
@@ -60,7 +61,8 @@ Each service category gets a share of the event budget (venue and catering large
 ## Data
 - **Profile**: id (auth user), role, name
 - **Event**: owner (profile), type, date, budget, guestCount
-- **Vendor**: name, category, price, owner (profile, optional)
+- **Vendor**: name, category, price, about, location, owner (profile, optional)
+- **Vendor contact**: vendor, phone, email, website (readable by the owner and by customers with a confirmed booking)
 - **Booking**: event, vendor, category, status
 - **Event service**: event, category, position (the event's own list of services; see SPEC-event-services.md)
 - **Blocked date**: vendor, date (a date the vendor is unavailable)
