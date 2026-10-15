@@ -3,8 +3,8 @@ import "./globals.css";
 
 // TODO: change these to your app's name and description.
 export const metadata: Metadata = {
-  title: "PHINMA Builder",
-  description: "Built at the PHINMA AI Builder Workshop",
+  title: "Allora",
+  description: "Plan events and book vendors",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

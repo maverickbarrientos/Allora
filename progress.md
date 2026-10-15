@@ -15,7 +15,9 @@ Booking and planning platform where customers create events, book vendors, and s
 
 ## Decisions and changes
 
-_No entries yet. Add dated entries (YYYY-MM-DD) below._
+_Add dated entries (YYYY-MM-DD) below._
+
+- **2026-10-15: Auth frontend built against mocks** (branch `feature/auth-frontend`, not merged). `/login`, `/signup` and `/` with every state in the spec. All screens use one client, `src/lib/api/client.ts`, which calls the real routes, or `src/mocks/auth.ts` when `NEXT_PUBLIC_USE_MOCKS=true`. The mock is temporary and keeps its fake session and users in `localStorage`. `src/components/session-guard.tsx` is a temporary client-side guard (calls `GET /api/me`, redirects) so redirects work in mock mode; remove it if the middleware makes it redundant. The API contract is unchanged. Notes: (1) the contract's `validation_error` carries no field name, so per-field messages come from client-side checks that mirror the server rules, and a server `validation_error` shows as a form-level message; (2) the spec file is named `SPEC-setupa-and-auth.md` (typo), left as is; (3) no new dependencies: the role picker is native radio inputs and `alert.tsx` is hand-written in the style of the other `ui/` components. Starter page removed; app title set to Allora.
 
 ## Open questions
 

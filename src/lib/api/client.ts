@@ -1,0 +1,63 @@
+import type { ErrorBody, LoginInput, Session, SignupInput } from "./types";
+
+/** An API error response (`{ error: { code, message } }`) with its HTTP status. */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** Normalises anything thrown (including network failures) into an ApiError. */
+export function toApiError(e: unknown): ApiError {
+  if (e instanceof ApiError) return e;
+  return new ApiError(0, "server_error", "Something went wrong");
+}
+
+// Mocks are TEMPORARY, see src/mocks/auth.ts. NEXT_PUBLIC_ vars are inlined at
+// build time, so the dynamic import is dropped when the flag is not "true".
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+
+async function send(method: string, path: string, body?: unknown) {
+  const init: RequestInit = {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: "same-origin",
+  };
+  if (USE_MOCKS) {
+    const { mockFetch } = await import("@/mocks/auth");
+    return mockFetch(path, init);
+  }
+  return fetch(path, init);
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await send(method, path, body);
+  } catch {
+    throw new ApiError(0, "server_error", "Network error");
+  }
+  if (res.status === 204) return undefined as T;
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = (data as ErrorBody | null)?.error;
+    throw new ApiError(
+      res.status,
+      err?.code ?? "server_error",
+      err?.message ?? "Something went wrong",
+    );
+  }
+  return data as T;
+}
+
+export const api = {
+  signup: (input: SignupInput) => request<Session>("POST", "/api/auth/signup", input),
+  login: (input: LoginInput) => request<Session>("POST", "/api/auth/login", input),
+  logout: () => request<void>("POST", "/api/auth/logout"),
+  me: () => request<Session>("GET", "/api/me"),
+};
