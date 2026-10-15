@@ -100,7 +100,7 @@ export default function SignupPage() {
               {ROLES.map((r) => (
                 <label
                   key={r.value}
-                  className="flex min-h-12 cursor-pointer flex-col gap-1 rounded-xl border border-input bg-background p-4 text-sm has-[:checked]:border-primary has-[:checked]:bg-secondary has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:opacity-50"
+                  className="flex min-h-12 cursor-pointer flex-col gap-1 rounded-xl border border-input bg-ivory p-4 text-sm text-plum-ink has-[:checked]:border-plum has-[:checked]:ring-2 has-[:checked]:ring-plum has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:opacity-50"
                 >
                   <input type="radio" name="role" value={r.value} className="sr-only" />
                   <span className="font-medium">{r.label}</span>

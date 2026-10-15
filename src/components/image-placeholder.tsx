@@ -37,10 +37,10 @@ export function ImagePlaceholder({
       style={{
         aspectRatio: aspect,
         background:
-          "linear-gradient(135deg, var(--stone), color-mix(in srgb, var(--brass) 18%, var(--stone)))",
+          "linear-gradient(135deg, var(--plum-light), var(--pink))",
       }}
     >
-      <span className="absolute bottom-3 left-4 right-4 text-xs text-foreground">
+      <span className="absolute bottom-3 left-4 right-4 text-xs text-plum-ink">
         {caption}
       </span>
     </div>
