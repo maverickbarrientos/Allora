@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Menu } from "lucide-react";
 import { api } from "@/lib/api/client";
 import type { Profile } from "@/lib/api/types";
 import { useLoad } from "@/lib/use-load";
-import { AppHeader } from "@/components/app-header";
 import { ErrorState } from "@/components/error-state";
+import { SidebarContent } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ProfileContext = createContext<Profile | null>(null);
@@ -21,17 +22,26 @@ export function useProfile(): Profile {
 }
 
 /**
- * Header (wordmark, name, log out) and page container for signed-in pages.
- * Loads GET /api/me once; a 401 sends the user to /login.
+ * Signed-in shell: fixed sidebar from 1024px, a drawer below it, and the
+ * page container. Loads GET /api/me once; a 401 sends the user to /login.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { state, reload } = useLoad(() => api.me());
   const [loggingOut, setLoggingOut] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (state.status === "error" && state.error.status === 401) router.replace("/login");
   }, [state, router]);
+
+  // The drawer only exists below 1024px; close it if the window grows past that.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => mq.matches && setDrawerOpen(false);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   async function logout() {
     setLoggingOut(true);
@@ -43,36 +53,52 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const profile = state.status === "loaded" ? state.data.profile : null;
+  const sidebarProps = {
+    profile,
+    loading: state.status === "loading",
+    loggingOut,
+    onLogout: logout,
+  };
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader>
-        {profile && (
-          <>
-            <span className="hidden text-sm text-muted-foreground sm:inline">{profile.name}</span>
-            <Button variant="outline" size="sm" onClick={logout} disabled={loggingOut}>
-              {loggingOut && <Loader2 className="h-4 w-4 animate-spin" />}
-              Log out
+    <div className="flex min-h-screen flex-col lg:h-screen lg:flex-row lg:overflow-hidden">
+      <aside className="hidden w-64 shrink-0 border-r border-border bg-stone lg:block">
+        <SidebarContent {...sidebarProps} />
+      </aside>
+
+      <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-stone px-2 lg:hidden">
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Open menu">
+              <Menu className="h-5 w-5" aria-hidden="true" />
             </Button>
-          </>
-        )}
-      </AppHeader>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-14 sm:px-6 lg:py-24">
-        {state.status === "loading" && (
-          <div role="status" aria-label="Loading" className="flex flex-col gap-4">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-12 w-3/4 max-w-md" />
-            <Skeleton className="h-5 w-1/2 max-w-xs" />
-          </div>
-        )}
-        {state.status === "error" && state.error.status !== 401 && (
-          <ErrorState
-            error={state.error}
-            onRetry={reload}
-            message="Couldn't load your account. Please try again."
-          />
-        )}
-        {profile && <ProfileContext.Provider value={profile}>{children}</ProfileContext.Provider>}
+          </SheetTrigger>
+          <SheetContent aria-describedby={undefined}>
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <SidebarContent {...sidebarProps} onNavigate={() => setDrawerOpen(false)} />
+          </SheetContent>
+        </Sheet>
+        <span className="font-display text-2xl">Allora</span>
+      </div>
+
+      <main className="min-w-0 flex-1 lg:overflow-y-auto">
+        <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:py-16">
+          {state.status === "loading" && (
+            <div role="status" aria-label="Loading" className="flex flex-col gap-4">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-12 w-3/4 max-w-md" />
+              <Skeleton className="h-5 w-1/2 max-w-xs" />
+            </div>
+          )}
+          {state.status === "error" && state.error.status !== 401 && (
+            <ErrorState
+              error={state.error}
+              onRetry={reload}
+              message="Couldn't load your account. Please try again."
+            />
+          )}
+          {profile && <ProfileContext.Provider value={profile}>{children}</ProfileContext.Provider>}
+        </div>
       </main>
     </div>
   );
