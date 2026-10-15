@@ -227,3 +227,44 @@ export async function listMockVendorBookings(): Promise<{
     bookings: data.bookings.map((item) => ({ ...item, event: { ...item.event } })),
   };
 }
+
+export async function decideMockVendorBooking(
+  id: string,
+  status: "confirmed" | "declined",
+): Promise<{ booking: VendorBooking }> {
+  const session = currentVendor();
+  const data = dataFor(session.user.email);
+  if (!data) throw new ApiError(404, "vendor_not_linked", "Vendor profile not found.");
+  if (status !== "confirmed" && status !== "declined") {
+    throw new ApiError(400, "validation_error", "status must be confirmed or declined.");
+  }
+  if (id === "missing") {
+    throw new ApiError(404, "booking_not_found", "Booking not found.");
+  }
+  if (id === "same") {
+    throw new ApiError(409, "status_unchanged", "This booking already has that status.");
+  }
+  if (id === "conflict" && status === "confirmed") {
+    throw new ApiError(
+      409,
+      "conflicting_booking",
+      "Another active booking exists for this event.",
+    );
+  }
+  if (id === "network-failure") {
+    throw new ApiError(0, "server_error", "Network error.");
+  }
+  const bookingIndex = data.bookings.findIndex((item) => item.id === id);
+  if (bookingIndex < 0) {
+    throw new ApiError(404, "booking_not_found", "Booking not found.");
+  }
+  const booking = data.bookings[bookingIndex];
+  if (booking.status === status) {
+    throw new ApiError(409, "status_unchanged", "This booking already has that status.");
+  }
+  const updated = { ...booking, status };
+  const bookings = [...data.bookings];
+  bookings[bookingIndex] = updated;
+  writeStored(`${BOOKINGS_PREFIX}${session.user.email}`, bookings);
+  return { booking: { ...updated, event: { ...updated.event } } };
+}

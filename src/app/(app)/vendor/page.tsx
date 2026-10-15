@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -54,6 +54,7 @@ function VendorBookings() {
   const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
+  const decisionLock = useRef(false);
   useEffect(() => {
     if (state.status === "error" && state.error.code === "vendor_not_linked") {
       router.replace("/vendor/profile");
@@ -61,6 +62,8 @@ function VendorBookings() {
   }, [router, state]);
 
   async function decide({ booking, status }: Decision) {
+    if (decisionLock.current) return;
+    decisionLock.current = true;
     setPendingDecision(null);
     setNotice(null);
     setBusy((s) => new Set(s).add(booking.id));
@@ -79,8 +82,11 @@ function VendorBookings() {
       );
     } catch (e) {
       const { code } = toApiError(e);
-      if (code === "already_decided") {
-        setNotice("This booking was already decided.");
+      if (code === "status_unchanged") {
+        setNotice("This booking already has that status.");
+        reload();
+      } else if (code === "conflicting_booking") {
+        setNotice("Another active booking exists for this event. The list has been refreshed.");
         reload();
       } else if (code === "booking_not_found") {
         setNotice("This booking is no longer available.");
@@ -94,6 +100,7 @@ function VendorBookings() {
         next.delete(booking.id);
         return next;
       });
+      decisionLock.current = false;
     }
   }
 
@@ -198,8 +205,8 @@ function VendorBookings() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {capitalize(pendingDecision.booking.event.type)} on{" "}
-                {formatDate(pendingDecision.booking.event.date)}. This decision is final. You
-                can&apos;t change it later.
+                {formatDate(pendingDecision.booking.event.date)}. The customer will see this
+                change on their event plan.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -235,7 +242,7 @@ function BookingRow({
         </span>
       </div>
       <StatusBadge status={booking.status} />
-      {booking.status === "pending" && (
+      {booking.status === "pending" ? (
         <div className="col-span-2 flex gap-3 lg:col-span-1">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onDecide("declined")}>
             Decline
@@ -243,6 +250,17 @@ function BookingRow({
           <Button size="sm" disabled={busy} onClick={() => onDecide("confirmed")}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Accept
+          </Button>
+        </div>
+      ) : (
+        <div className="col-span-2 flex gap-3 lg:col-span-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => onDecide(booking.status === "confirmed" ? "declined" : "confirmed")}
+          >
+            {booking.status === "confirmed" ? "Decline instead" : "Accept instead"}
           </Button>
         </div>
       )}

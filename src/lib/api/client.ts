@@ -21,6 +21,7 @@ import {
 } from "@/mocks/auth";
 import {
   createMockVendorProfile,
+  decideMockVendorBooking,
   getMockVendorProfile,
   listMockCategories,
   listMockVendorBookings,
@@ -99,11 +100,13 @@ export const api = {
       ? listMockVendorBookings()
       : request<{ vendor: Vendor; bookings: VendorBooking[] }>("GET", "/api/vendor/bookings"),
   decideBooking: (id: string, status: "confirmed" | "declined") =>
-    request<{ booking: VendorBooking }>(
-      "PATCH",
-      `/api/vendor/bookings/${encodeURIComponent(id)}`,
-      { status },
-    ),
+    USE_MOCKS
+      ? decideMockVendorBooking(id, status)
+      : request<{ booking: VendorBooking }>(
+          "PATCH",
+          `/api/vendor/bookings/${encodeURIComponent(id)}`,
+          { status },
+        ),
   listCategories: () =>
     USE_MOCKS
       ? listMockCategories()
