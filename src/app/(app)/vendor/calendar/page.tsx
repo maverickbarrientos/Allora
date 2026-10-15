@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, toApiError, type ApiError } from "@/lib/api/client";
+import { MAX_BLOCK_DATES } from "@/lib/availability";
 import type { VendorCalendar } from "@/lib/api/types";
 import { capitalize } from "@/lib/format";
 import { longDate, monthKey, monthOf, monthRange, parseMonthKey, todayYmd, type YearMonth, type Ymd } from "@/lib/dates";
@@ -63,14 +64,20 @@ function Calendar() {
     };
   }, []);
 
+  // Only the latest request for a month may write its result, so a slow
+  // response from before a save can't bring back old blocked days.
+  const latest = useRef<Record<string, number>>({});
   function fetchMonth(ym: YearMonth) {
     const key = monthKey(ym);
     const { from, to } = monthRange(ym);
+    const ticket = (latest.current[key] ?? 0) + 1;
+    latest.current[key] = ticket;
+    const isLatest = () => mounted.current && latest.current[key] === ticket;
     api
       .getVendorCalendar(from, to)
-      .then((data) => mounted.current && setLoads((p) => ({ ...p, [key]: { status: "loaded", data } })))
+      .then((data) => isLatest() && setLoads((p) => ({ ...p, [key]: { status: "loaded", data } })))
       .catch((e) => {
-        if (!mounted.current) return;
+        if (!isLatest()) return;
         const error = toApiError(e);
         if (error.code === "vendor_not_linked") router.replace("/vendor/profile");
         setLoads((p) => ({ ...p, [key]: { status: "error", error } }));
@@ -90,6 +97,8 @@ function Calendar() {
   });
 
   function changeMonth(next: YearMonth) {
+    // A save reloads the month it started on; moving away mid-save would leave this one unloaded.
+    if (saving) return;
     setMonth(next);
     setSelected(null);
     setNotice(null);
@@ -113,8 +122,11 @@ function Calendar() {
   }
   const toBlock = [...picked].filter((d) => !blockedDays.has(d)).sort();
   const toUnblock = [...picked].filter((d) => blockedDays.has(d)).sort();
+  const pickedElsewhere = [...picked].filter((d) => !d.startsWith(monthKey(month))).length;
 
   function onDayClick(date: Ymd) {
+    // Until the month has loaded, its blocked and confirmed days aren't known.
+    if (current?.status !== "loaded") return;
     setSelected(date);
     setNotice(null);
     // A day with a confirmed booking only shows its bookings; it can't be blocked.
@@ -148,7 +160,7 @@ function Calendar() {
       const error = toApiError(e);
       // The selection stays, so the vendor can adjust it and try again.
       if (error.code === "date_has_confirmed_booking") setSaveError(error.message);
-      else if (error.code === "validation_error") setSaveError("Select between 1 and 62 days.");
+      else if (error.code === "validation_error") setSaveError(`Select between 1 and ${MAX_BLOCK_DATES} days.`);
       else setSaveError("Couldn't save your changes. Please try again.");
     } finally {
       inFlight.current = false;
@@ -180,7 +192,7 @@ function Calendar() {
                 selectedDates={picked}
                 onDayClick={onDayClick}
                 extraControls={
-                  <Button variant="ghost" size="sm" onClick={() => changeMonth(monthOf(todayYmd()))}>
+                  <Button variant="ghost" size="sm" onClick={() => changeMonth(monthOf(todayYmd()))} disabled={saving}>
                     Today
                   </Button>
                 }
@@ -211,6 +223,11 @@ function Calendar() {
                 </Button>
               )}
             </div>
+            {pickedElsewhere > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {pickedElsewhere} selected {pickedElsewhere === 1 ? "day is" : "days are"} in other months.
+              </p>
+            )}
             {notice && (
               <p role="status" className="text-sm text-muted-foreground">
                 {notice}

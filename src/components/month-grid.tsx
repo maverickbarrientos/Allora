@@ -97,12 +97,13 @@ export function MonthGrid({
                 const info = dayInfo(date);
                 const isHighlight = date === highlight;
                 const isSelected = selectedDate === date || !!selectedDates?.has(date);
-                // In multi-select, a picked day says so in text too; an empty one shows "Selected".
-                const shown = info.label ?? (selectedDates?.has(date) ? "Selected" : undefined);
+                const isPicked = !!selectedDates?.has(date);
+                // In multi-select, a picked day says so in text too ("Blocked · Selected").
+                const shown = isPicked ? [info.label, "Selected"].filter(Boolean).join(" · ") : info.label;
                 // A day with nothing on it: "Available" to customers, "Open" on the vendor's own calendar.
                 const empty = selectedDates ? "Open" : "Available";
                 const status =
-                  [info.label, isHighlight ? highlightLabel : "", selectedDates?.has(date) ? "Selected" : ""]
+                  [info.label, isHighlight ? highlightLabel : "", isPicked ? "Selected" : ""]
                     .filter(Boolean)
                     .join(", ") || empty;
                 const label = `${longDate(date)}, ${status}`;
@@ -114,10 +115,11 @@ export function MonthGrid({
                 );
                 const cls = cn(
                   "flex min-h-11 w-full flex-col items-center justify-center rounded-lg px-0.5 py-1",
-                  info.tone && TONE[info.tone],
+                  // A picked day drops its pattern for a solid fill, so its text stays readable
+                  // and it can't be mistaken for the "Today" ring.
+                  isPicked ? "bg-foreground text-background" : info.tone && TONE[info.tone],
                   isHighlight && "ring-2 ring-forest ring-offset-1 ring-offset-background font-semibold",
-                  // Multi-select fills the day, so it can't be mistaken for the "Today" ring.
-                  isSelected && (selectedDates ? "bg-foreground text-background" : "outline outline-2 outline-ink"),
+                  selectedDate === date && "outline outline-2 outline-ink",
                 );
                 return (
                   <td key={d} className="p-0.5">

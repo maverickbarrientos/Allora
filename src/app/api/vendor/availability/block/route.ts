@@ -22,10 +22,17 @@ export async function POST(req: Request) {
         return errorResponse(
           409,
           "date_has_confirmed_booking",
-          `These dates have a confirmed booking: ${error.details ?? ""}.`,
+          error.details
+            ? `These dates have a confirmed booking: ${error.details}.`
+            : "Some of these dates have a confirmed booking.",
         );
       }
       if (error.message === "invalid_dates") return errorResponse(400, "validation_error", "The dates are not valid.");
+      // Only reachable if the role or vendor link changed since the checks above.
+      if (error.message === "forbidden") return errorResponse(403, "forbidden", "Vendor accounts only.");
+      if (error.message === "vendor_not_linked") {
+        return errorResponse(404, "vendor_not_linked", "Your account is not linked to a service.");
+      }
       return errorResponse(500, "server_error", "Could not block dates.");
     }
 

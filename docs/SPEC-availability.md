@@ -52,6 +52,7 @@ Time slots, more than one booking per day, recurring unavailability, the custome
   2. Before update of `status` on `bookings`, when the new status is confirmed and the old one is not: lock the event row. Then, if the vendor is not available on the event's date (excluding this booking), raise `date_unavailable`.
   3. Before insert on `vendor_blocked_dates`: if the vendor has a confirmed booking on that date, raise `date_has_confirmed_booking`.
   4. Before update of `date` on `events`, when the date changes: lock the event's confirmed bookings' vendors. If the event has any confirmed booking, raise `date_has_confirmed_bookings`.
+- `block_vendor_dates(p_dates date[]) returns setof date` (014, ticket 08): blocks a batch for the caller's own vendor, all or nothing. It checks every date first, so the 409 names all the dates with a confirmed booking; trigger 3 stays as the backstop for direct inserts. Security definer, vendor-role callers only.
 - The raised messages are exactly those codes, and handlers map them to the errors below.
 - SQL starts at **014** (`main` has 001 to 013), one file per ticket if that keeps slices separate. Safe to rerun. Never edit earlier files.
 
@@ -109,7 +110,8 @@ All routes require a session. Logged-out requests return 401 `unauthorized`.
   - Click or Space toggles a day's selection, with "Block selected" and "Unblock selected" buttons showing the count. Days with a confirmed booking can't be selected for blocking.
   - A day with bookings opens a side panel listing customer name, event type and status (built).
   - Saving state. `date_has_confirmed_booking` and other errors show a message and keep the selection. Success clears the selection and refreshes.
-  - Redirects: customer-role to `/`, unlinked vendor to `/vendor/profile`.
+  - Redirects: customer-role to `/dashboard` (`/` is the public landing page), unlinked vendor to `/vendor/profile`.
+  - Also: a "Clear selection" button; days read "Open" when nothing is on them and "· Selected" when picked; a line counts days picked in other months; clicks wait until the month has loaded.
 - `/vendor` (dashboard): "Month at a glance" shows blocked days once the route returns them. Its fallback stays.
 - `/vendor/bookings`:
   - A confirm, or "Accept instead", that hits `date_unavailable` shows "You already have a confirmed booking on {date}." on that row.
