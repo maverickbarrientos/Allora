@@ -11,6 +11,7 @@ import { useLoad } from "@/lib/use-load";
 import { useProfile } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
+import { eventName } from "@/lib/event-name";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,6 +165,7 @@ function Pay() {
 
       <div className="flex max-w-xl flex-col gap-8">
         <dl className="flex flex-col divide-y divide-border border-y border-border">
+          <Row label="Event" value={state.status === "loaded" ? eventName(state.data.event) : ""} />
           <Row label="Vendor" value={booking.vendorName} />
           <Row label="Category" value={booking.category} />
           <Row label="Price" value={formatAmount(booking.price)} />

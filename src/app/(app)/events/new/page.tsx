@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 
 type Errors = {
+  name?: string;
   type?: string;
   date?: string;
   budget?: string;
@@ -25,7 +26,11 @@ type Errors = {
 const TYPES: EventType[] = ["wedding", "birthday", "corporate"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+const NAME_MAX = 80;
+const NAME_COUNTER_FROM = 70;
+
 const FIELD_MESSAGES = {
+  name: `Enter an event name (up to ${NAME_MAX} characters)`,
   type: "Choose an event type",
   date: "Choose a valid date",
   budget: "Enter a budget above 0",
@@ -45,10 +50,12 @@ export default function NewEventPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
+  const [name, setName] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    const trimmedName = name.trim();
     const type = String(f.get("type") ?? "");
     const date = String(f.get("date") ?? "");
     const budgetRaw = String(f.get("budget") ?? "").trim();
@@ -58,6 +65,7 @@ export default function NewEventPage() {
 
     // Mirrors the server rules so each field shows its own message.
     const next: Errors = {};
+    if (trimmedName.length < 1 || trimmedName.length > NAME_MAX) next.name = FIELD_MESSAGES.name;
     if (!TYPES.includes(type as EventType)) next.type = FIELD_MESSAGES.type;
     if (!DATE_RE.test(date)) next.date = FIELD_MESSAGES.date;
     if (!budgetRaw || !Number.isFinite(budget) || budget <= 0) next.budget = FIELD_MESSAGES.budget;
@@ -70,6 +78,7 @@ export default function NewEventPage() {
     setSubmitting(true);
     try {
       const { event } = await api.createEvent({
+        name: trimmedName,
         type: type as EventType,
         date,
         budget,
@@ -110,6 +119,30 @@ export default function NewEventPage() {
       <Reveal delay={700}>
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6">
           {errors.form && <Alert variant="destructive">{errors.form}</Alert>}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="name">Event name</Label>
+            <Input
+              id="name"
+              name="name"
+              required
+              maxLength={NAME_MAX}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={submitting}
+              aria-invalid={!!errors.name}
+              aria-describedby={[errors.name ? "name-error" : "", name.length >= NAME_COUNTER_FROM ? "name-counter" : ""].filter(Boolean).join(" ") || undefined}
+            />
+            {name.length >= NAME_COUNTER_FROM && (
+              <p id="name-counter" className="self-end text-xs text-muted-foreground" aria-live="polite">
+                {name.length} / {NAME_MAX}
+              </p>
+            )}
+            {errors.name && (
+              <p id="name-error" className="text-sm text-destructive">
+                {errors.name}
+              </p>
+            )}
+          </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="type">Type</Label>
             <Select id="type" name="type" defaultValue="" disabled={submitting} aria-invalid={!!errors.type}>

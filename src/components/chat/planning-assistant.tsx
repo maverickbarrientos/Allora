@@ -47,9 +47,12 @@ type Status = "idle" | "sending" | "error" | "forbidden";
  */
 export function PlanningAssistant({
   eventId,
+  eventName,
   onNotFound,
 }: {
   eventId: string;
+  /** Shown under the heading so the customer knows which event this is about. */
+  eventName?: string;
   onNotFound: () => void;
 }) {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -107,9 +110,14 @@ export function PlanningAssistant({
 
   return (
     <section className="flex flex-col gap-6" aria-labelledby="assistant-heading">
-      <h2 id="assistant-heading" className="font-display text-h2">
-        Planning assistant
-      </h2>
+      <div className="flex min-w-0 flex-col gap-1">
+        <h2 id="assistant-heading" className="font-display text-h2">
+          Planning assistant
+        </h2>
+        {eventName && (
+          <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">For {eventName}</p>
+        )}
+      </div>
       <Card className="flex min-w-0 flex-col gap-5 p-5 sm:p-7">
         {entries.length === 0 ? (
           <div className="flex flex-col items-start gap-3">

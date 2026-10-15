@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import type { Vendor } from "@/lib/api/types";
 import { capitalize, formatNumber } from "@/lib/format";
+import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
 import { ErrorState } from "@/components/error-state";
 import { ImagePlaceholder } from "@/components/image-placeholder";
@@ -102,6 +103,7 @@ export default function VendorsPage() {
       all={state.data.all}
       initialBooked={state.data.booked}
       back={back}
+      eventLabel={eventName(state.data.event)}
     />
   );
 }
@@ -111,11 +113,13 @@ function Browser({
   all,
   initialBooked,
   back,
+  eventLabel,
 }: {
   eventId: string;
   all: Vendor[];
   initialBooked: string[];
   back: React.ReactNode;
+  eventLabel: string;
 }) {
   const [category, setCategory] = useState<string | null>(null); // null = All
   const [booked, setBooked] = useState<Set<string>>(new Set(initialBooked));
@@ -155,7 +159,12 @@ function Browser({
       <PageHeader
         label="Vendors"
         title="Add vendor"
-        description="Booking sends a request. It shows as pending on your plan until the vendor responds."
+        description={
+          <>
+            For <span className="font-medium text-foreground [overflow-wrap:anywhere]">{eventLabel}</span>.
+            Booking sends a request. It shows as pending on your plan until the vendor responds.
+          </>
+        }
       />
 
       <div role="tablist" aria-label="Category" className="-mx-4 flex gap-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">

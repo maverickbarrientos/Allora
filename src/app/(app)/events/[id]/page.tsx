@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api/client";
 import { capitalize, formatDate, formatNumber } from "@/lib/format";
+import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
 import type { PlanBooking } from "@/lib/api/types";
 import { PlanningAssistant } from "@/components/chat/planning-assistant";
@@ -204,8 +205,8 @@ export default function PlanPage() {
       {back}
       <PageHeader
         label="Event plan"
-        title={capitalize(event.type)}
-        description={formatDate(event.date)}
+        title={<span className="[overflow-wrap:anywhere]">{eventName(event)}</span>}
+        description={`${capitalize(event.type)} · ${formatDate(event.date)}`}
         action={addVendor}
       />
 
@@ -287,6 +288,7 @@ export default function PlanPage() {
 
       <PlanningAssistant
         eventId={id}
+        eventName={eventName(event)}
         onNotFound={() =>
           setState({
             status: "error",
