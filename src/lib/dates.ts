@@ -63,3 +63,28 @@ export function longDate(date: Ymd): string {
   const { year, month, day } = parseYmd(date);
   return `${WEEKDAY_NAMES[weekdayOf(year, month, day)]}, ${day} ${MONTH_NAMES[month - 1]} ${year}`;
 }
+
+/** Whole days from `today` to `date` (negative when past), from the date parts only. */
+export function daysFrom(today: Ymd, date: Ymd): number {
+  const day = (d: Ymd) => {
+    const { year, month, day: dd } = parseYmd(d);
+    return Date.UTC(year, month - 1, dd) / 86_400_000;
+  };
+  return Math.round(day(date) - day(today));
+}
+
+/** Countdown text (docs/SPEC-dashboard.md): "Today", "Tomorrow", "{n} days to go", "Happened {n} days ago". */
+export function countdownText(days: number): string {
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days > 1) return `${days} days to go`;
+  const ago = -days;
+  return `Happened ${ago} ${ago === 1 ? "day" : "days"} ago`;
+}
+
+/** `date` plus `n` days (n may be negative), from the date parts only. */
+export function addDays(date: Ymd, n: number): Ymd {
+  const { year, month, day } = parseYmd(date);
+  const d = new Date(Date.UTC(year, month - 1, day + n));
+  return ymd(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+}

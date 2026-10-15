@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   ChatResponse,
   CreateEventInput,
+  Dashboard,
   ErrorBody,
   Event,
   LoginInput,
@@ -26,6 +27,11 @@ export function toApiError(e: unknown): ApiError {
   if (e instanceof ApiError) return e;
   return new ApiError(0, "server_error", "Something went wrong");
 }
+
+// TEMPORARY: NEXT_PUBLIC_USE_MOCKS=true serves the dashboard and the event list
+// from src/mocks/dashboard.ts until GET /api/events/:id/dashboard is on main.
+// Inlined at build time, so the mock module is dropped when the flag is off.
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 async function send(method: string, path: string, body?: unknown) {
   return fetch(path, {
@@ -64,7 +70,12 @@ export const api = {
 
   createEvent: (input: CreateEventInput) =>
     request<{ event: Event }>("POST", "/api/events", input),
-  listEvents: () => request<{ events: Event[] }>("GET", "/api/events"),
+  listEvents: () =>
+    USE_MOCKS ? import("@/mocks/dashboard").then((m) => m.mockListEvents()) : request<{ events: Event[] }>("GET", "/api/events"),
+  getDashboard: (eventId: string) =>
+    USE_MOCKS
+      ? import("@/mocks/dashboard").then((m) => m.mockDashboard(eventId))
+      : request<Dashboard>("GET", `/api/events/${encodeURIComponent(eventId)}/dashboard`),
   getPlan: (eventId: string) =>
     request<{ event: Event; bookings: PlanBooking[] }>(
       "GET",
