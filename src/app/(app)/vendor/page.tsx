@@ -126,7 +126,7 @@ function VendorBookings() {
   const { vendor, bookings } = state.data;
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-14 lg:gap-24">
       <PageHeader
         label={capitalize(vendor.category)}
         title={vendor.name}

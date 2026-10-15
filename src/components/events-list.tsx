@@ -22,7 +22,7 @@ export function EventsList() {
   const { state, reload } = useLoad(() => api.listEvents());
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-14 lg:gap-24">
       <PageHeader label="Plans" title="Your events" action={createButton} />
 
       {state.status === "loading" && (
