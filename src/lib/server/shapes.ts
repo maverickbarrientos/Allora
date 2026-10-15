@@ -4,7 +4,7 @@ export type EventType = "wedding" | "birthday" | "corporate";
 export type BookingStatus = "pending" | "confirmed" | "declined";
 
 export const EVENT_COLUMNS = "id, name, type, date, budget, guest_count, notes";
-export const VENDOR_COLUMNS = "id, name, category, price";
+export const VENDOR_COLUMNS = "id, name, category, price, location";
 /** A vendor with its profile text (docs/SPEC-vendor-profiles.md). */
 export const VENDOR_DETAIL_COLUMNS = "id, name, category, price, about, location";
 export const PLAN_BOOKING_COLUMNS =
@@ -19,8 +19,14 @@ type EventRow = {
   guest_count: number;
   notes: string | null;
 };
-type VendorRow = { id: string; name: string; category: string; price: number | string };
-type VendorDetailRow = VendorRow & { about: string | null; location: string | null };
+type VendorRow = {
+  id: string;
+  name: string;
+  category: string;
+  price: number | string;
+  location: string | null;
+};
+type VendorDetailRow = VendorRow & { about: string | null };
 type PlanBookingRow = {
   id: string;
   event_id: string;
@@ -46,11 +52,17 @@ export function toEvent(row: EventRow) {
 }
 
 export function toVendor(row: VendorRow) {
-  return { id: row.id, name: row.name, category: row.category, price: Number(row.price) };
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    price: Number(row.price),
+    location: row.location ?? null,
+  };
 }
 
 export function toVendorDetail(row: VendorDetailRow) {
-  return { ...toVendor(row), about: row.about ?? null, location: row.location ?? null };
+  return { ...toVendor(row), about: row.about ?? null };
 }
 
 export function toPlanBooking(row: PlanBookingRow) {

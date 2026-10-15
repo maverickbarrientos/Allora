@@ -23,6 +23,7 @@ import type {
   VendorCalendar,
   VendorProfile,
   VendorProfileInput,
+  VendorDetail,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -107,6 +108,12 @@ export const api = {
     const qs = q.toString();
     return request<{ vendors: Vendor[] }>("GET", qs ? `/api/vendors?${qs}` : "/api/vendors");
   },
+  /** One vendor's profile; with eventId it also says whether they are free on the event's date. */
+  getVendor: (vendorId: string, eventId?: string) =>
+    request<{ vendor: VendorDetail }>(
+      "GET",
+      `/api/vendors/${encodeURIComponent(vendorId)}${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ""}`,
+    ),
   getVendorAvailability: (vendorId: string, from: string, to: string) =>
     request<VendorAvailability>(
       "GET",

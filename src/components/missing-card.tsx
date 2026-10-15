@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { MissingCard, PlanBooking } from "@/lib/api/types";
 import { capitalize, formatNumber } from "@/lib/format";
@@ -95,9 +96,12 @@ export function MissingCardView({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="min-w-0 font-medium [overflow-wrap:anywhere]">
+                    <Link
+                      href={`/events/${eventId}/vendors/${v.id}`}
+                      className="-my-3 min-w-0 py-3 font-medium [overflow-wrap:anywhere] underline-offset-4 hover:underline"
+                    >
                       {v.name}
-                    </span>
+                    </Link>
                     <span>{formatNumber(v.price)}</span>
                     <span className="text-sm text-muted-foreground">{v.matchPercent}% match</span>
                   </div>
