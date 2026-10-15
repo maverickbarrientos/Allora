@@ -8,7 +8,9 @@ import { api, toApiError } from "@/lib/api/client";
 import type { Role } from "@/lib/api/types";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthHero } from "@/components/auth-hero";
+import { PageHeader } from "@/components/page-header";
+import { Reveal } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -62,13 +64,20 @@ export default function SignupPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create your account</CardTitle>
-        <CardDescription>Join Allora as a customer or a vendor.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+    <>
+      <AuthHero
+        headline="Begin with a plan that feels like yours."
+        line="Create an account to plan events or welcome bookings."
+      />
+      <section className="flex items-center px-4 py-14 sm:px-6 lg:p-16">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-10">
+          <PageHeader
+            label="Join Allora"
+            title="Create your account"
+            description="Join as a customer or a vendor."
+          />
+          <Reveal delay={700}>
+        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6">
           {errors.form && <Alert variant="destructive">{errors.form}</Alert>}
           <div className="flex flex-col gap-2">
             <Label htmlFor="name">Name</Label>
@@ -86,12 +95,12 @@ export default function SignupPage() {
             {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
           <fieldset className="flex flex-col gap-2" disabled={submitting}>
-            <legend className="mb-2 text-sm font-medium leading-none">I am a</legend>
-            <div className="grid grid-cols-2 gap-3">
+            <legend className="label mb-2">I am a</legend>
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
               {ROLES.map((r) => (
                 <label
                   key={r.value}
-                  className="flex cursor-pointer flex-col gap-1 rounded-[var(--radius)] border border-input p-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-secondary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:disabled]:opacity-50"
+                  className="flex min-h-12 cursor-pointer flex-col gap-1 rounded-xl border border-input bg-background p-4 text-sm has-[:checked]:border-primary has-[:checked]:bg-secondary has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:opacity-50"
                 >
                   <input type="radio" name="role" value={r.value} className="sr-only" />
                   <span className="font-medium">{r.label}</span>
@@ -112,7 +121,9 @@ export default function SignupPage() {
             </Link>
           </p>
         </form>
-      </CardContent>
-    </Card>
+          </Reveal>
+        </div>
+      </section>
+    </>
   );
 }

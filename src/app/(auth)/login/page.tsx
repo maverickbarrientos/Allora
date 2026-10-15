@@ -7,7 +7,9 @@ import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthHero } from "@/components/auth-hero";
+import { PageHeader } from "@/components/page-header";
+import { Reveal } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -51,13 +53,20 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Log in</CardTitle>
-        <CardDescription>Welcome back to Allora.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+    <>
+      <AuthHero
+        headline="Your event, thoughtfully planned."
+        line="Plan your event and book the people who make it."
+      />
+      <section className="flex items-center px-4 py-14 sm:px-6 lg:p-16">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-10">
+          <PageHeader
+            label="Welcome back"
+            title="Log in"
+            description="Pick up where you left off."
+          />
+          <Reveal delay={700}>
+        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6">
           {errors.form && <Alert variant="destructive">{errors.form}</Alert>}
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
@@ -80,7 +89,9 @@ export default function LoginPage() {
             </Link>
           </p>
         </form>
-      </CardContent>
-    </Card>
+          </Reveal>
+        </div>
+      </section>
+    </>
   );
 }

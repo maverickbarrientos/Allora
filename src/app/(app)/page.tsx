@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import type { Profile } from "@/lib/api/types";
+import { AppHeader } from "@/components/app-header";
+import { PageHeader } from "@/components/page-header";
+import { Reveal } from "@/components/reveal";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type State =
   | { status: "loading" }
@@ -46,38 +49,51 @@ export default function HomePage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12">
-      <Card>
+    <div className="flex flex-1 flex-col">
+      <AppHeader>
+        {state.status === "loaded" && (
+          <>
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              {state.profile.name}
+            </span>
+            <Button variant="outline" size="sm" onClick={logout} disabled={loggingOut}>
+              {loggingOut && <Loader2 className="h-4 w-4 animate-spin" />}
+              Log out
+            </Button>
+          </>
+        )}
+      </AppHeader>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-14 sm:px-6 lg:py-24">
         {state.status === "loading" && (
-          <CardContent className="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading
-          </CardContent>
+          <div role="status" aria-label="Loading" className="flex flex-col gap-4">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-12 w-3/4 max-w-md" />
+            <Skeleton className="h-5 w-1/2 max-w-xs" />
+          </div>
         )}
         {state.status === "error" && (
-          <CardContent className="flex flex-col gap-4 p-6">
+          <div className="flex max-w-md flex-col items-start gap-4">
             <Alert variant="destructive">Couldn&apos;t load your account. Please try again.</Alert>
             <Button variant="outline" onClick={retry}>
               Retry
             </Button>
-          </CardContent>
+          </div>
         )}
         {state.status === "loaded" && (
-          <>
-            <CardHeader>
-              <CardTitle>Hi, {state.profile.name}</CardTitle>
-              <CardDescription>
-                Signed in as a <span className="font-medium">{state.profile.role}</span>.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" onClick={logout} disabled={loggingOut}>
-                {loggingOut && <Loader2 className="h-4 w-4 animate-spin" />}
-                Log out
-              </Button>
-            </CardContent>
-          </>
+          <Reveal>
+            <PageHeader
+              label="Your account"
+              title={`Hi, ${state.profile.name}`}
+              description={
+                <>
+                  Signed in as a{" "}
+                  <span className="font-medium text-foreground">{state.profile.role}</span>.
+                </>
+              }
+            />
+          </Reveal>
         )}
-      </Card>
-    </main>
+      </main>
+    </div>
   );
 }
