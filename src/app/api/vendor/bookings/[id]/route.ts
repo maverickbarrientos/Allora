@@ -43,7 +43,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           "The customer has another active booking with you for this event.",
         );
       }
-      // The confirm trigger (017): the date is taken. The hint says why.
+      // The confirm trigger (022): the date is taken. The hint says why.
       if (error.message === "date_unavailable") {
         const date = error.details ?? "this date";
         return errorResponse(

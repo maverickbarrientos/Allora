@@ -1,4 +1,4 @@
--- 016_booking_availability: customers can't book a vendor on a taken date
+-- 021_booking_availability: customers can't book a vendor on a taken date
 -- (docs/SPEC-availability.md, ticket 09). Safe to run more than once.
 -- Run after 009 (read functions) and 014 (vendor_blocked_dates).
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.

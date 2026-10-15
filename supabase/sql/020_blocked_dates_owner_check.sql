@@ -1,4 +1,4 @@
--- 015_blocked_dates_owner_check: review fix for 014 (ticket 08).
+-- 020_blocked_dates_owner_check: review fix for 014 (ticket 08).
 -- Safe to run more than once. Run after 014.
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 --

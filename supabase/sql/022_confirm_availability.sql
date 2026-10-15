@@ -1,6 +1,6 @@
--- 017_confirm_availability: confirming a booking rechecks the date
+-- 022_confirm_availability: confirming a booking rechecks the date
 -- (docs/SPEC-availability.md, ticket 10). Safe to run more than once.
--- Run after 016 (vendor_is_available).
+-- Run after 021 (vendor_is_available).
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 --
 -- Trigger 2 (spec): when a booking becomes confirmed (a new acceptance, or

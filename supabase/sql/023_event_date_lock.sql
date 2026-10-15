@@ -1,6 +1,6 @@
--- 018_event_date_lock: an event's date is locked once it has a confirmed
+-- 023_event_date_lock: an event's date is locked once it has a confirmed
 -- booking (docs/SPEC-availability.md, ticket 11). Safe to run more than once.
--- Run after 017 (confirm check).
+-- Run after 022 (confirm check).
 -- Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 --
 -- Trigger 4 (spec): changing the date of an event with a confirmed booking is
@@ -8,7 +8,7 @@
 -- other field in it is saved either. Other edits still work.
 --
 -- Locking: the UPDATE already holds this event's row lock when the trigger
--- runs. A confirm (017) takes the vendor lock and then this same event row
+-- runs. A confirm (022) takes the vendor lock and then this same event row
 -- lock, so the two can't interleave: if the confirm commits first, this check
 -- sees the confirmed booking and refuses; if the date change commits first,
 -- the confirm re-reads the event and checks the new date. The vendor rows are
