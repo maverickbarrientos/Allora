@@ -60,7 +60,7 @@ export function EventsList() {
       {state.status === "loaded" && state.data.events.length > 0 && (
         <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
           {state.data.events.map((event, i) => (
-            <Reveal key={event.id} delay={Math.min(i, 3) * 80}>
+            <Reveal key={event.id} delay={Math.min(i, 3) * 80} className="min-w-0">
               <EventCard event={event} />
             </Reveal>
           ))}

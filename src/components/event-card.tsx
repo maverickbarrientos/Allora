@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Event, EventType } from "@/lib/api/types";
 import { capitalize, formatDateShort, formatNumber } from "@/lib/format";
+import { eventName } from "@/lib/event-name";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Card } from "@/components/ui/card";
 
@@ -12,6 +13,7 @@ const CAPTIONS: Record<EventType, string> = {
 
 /** Compact event card: image, type, then date, budget and guests in one row between hairlines. */
 export function EventCard({ event }: { event: Event }) {
+  const name = eventName(event);
   return (
     <Link
       href={`/events/${event.id}`}
@@ -19,7 +21,12 @@ export function EventCard({ event }: { event: Event }) {
     >
       <Card className="flex h-full flex-col gap-2">
         <ImagePlaceholder caption={CAPTIONS[event.type]} aspect="16 / 9" />
-        <h2 className="font-display text-h2">{capitalize(event.type)}</h2>
+        <div className="flex min-w-0 flex-col">
+          <h2 className="truncate font-display text-h2" title={name}>
+            {name}
+          </h2>
+          <p className="text-sm text-muted-foreground">{capitalize(event.type)}</p>
+        </div>
         <dl className="grid grid-cols-[1.4fr_1fr_0.8fr] divide-x divide-border border-t border-border pt-2 text-sm">
           <Stat label="Date" value={formatDateShort(event.date)} first />
           <Stat label="Budget" value={formatNumber(event.budget)} />

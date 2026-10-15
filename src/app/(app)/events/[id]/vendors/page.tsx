@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { api, toApiError } from "@/lib/api/client";
 import type { EventType, Vendor } from "@/lib/api/types";
+import { eventName } from "@/lib/event-name";
 import { useLoad } from "@/lib/use-load";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
@@ -100,6 +101,7 @@ export default function VendorsPage() {
       all={state.data.all}
       initialBooked={state.data.booked}
       back={back}
+      eventLabel={eventName(state.data.event)}
     />
   );
 }
@@ -110,12 +112,14 @@ function Browser({
   all,
   initialBooked,
   back,
+  eventLabel,
 }: {
   eventId: string;
   eventType: EventType;
   all: Vendor[];
   initialBooked: string[];
   back: React.ReactNode;
+  eventLabel: string;
 }) {
   const [category, setCategory] = useState<string | null>(null); // null = All
   const [booked, setBooked] = useState<Set<string>>(new Set(initialBooked));
@@ -155,7 +159,12 @@ function Browser({
       <PageHeader
         label="Vendors"
         title="Add vendor"
-        description={`Book the services for your ${eventType}.`}
+        description={
+          <>
+            For <span className="font-medium text-foreground [overflow-wrap:anywhere]">{eventLabel}</span>. Book the
+            services for your {eventType}.
+          </>
+        }
       />
 
       <div className="flex flex-col gap-5">

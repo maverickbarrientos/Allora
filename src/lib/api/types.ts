@@ -21,10 +21,12 @@ export type BookingStatus = "pending" | "confirmed" | "declined";
 
 export type Event = {
   id: string;
+  name: string;
   type: EventType;
   date: string; // YYYY-MM-DD
   budget: number;
   guestCount: number;
+  notes: string | null;
 };
 export type Vendor = { id: string; name: string; category: string; price: number };
 export type VendorProfile = { vendor: Vendor; categoryLocked: boolean };
@@ -103,6 +105,7 @@ export type ChatResponse = {
 };
 
 export type CreateEventInput = {
+  name: string;
   type: EventType;
   date: string;
   budget: number;
