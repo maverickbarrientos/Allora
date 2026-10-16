@@ -76,6 +76,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // Nothing is stored. An LLM failure or an invalid answer gives the fallback, never an error.
     const output = await requestJson({
+      use: "chat",
       system: CHAT_SYSTEM_PROMPT,
       input: buildChatInput({
         today,
