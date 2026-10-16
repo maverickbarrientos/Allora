@@ -50,7 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
 
     // An LLM failure returns null and the templates are used; never an error.
-    const output = await requestJson({ system: MISSING_SYSTEM_PROMPT, input: buildLlmInput(type, ranked) });
+    const output = await requestJson({ use: "cards", system: MISSING_SYSTEM_PROMPT, input: buildLlmInput(type, ranked) });
     const { cards, textSource } = applyText(type, ranked, output);
 
     return NextResponse.json({ eventId: event.id, textSource, cards });
