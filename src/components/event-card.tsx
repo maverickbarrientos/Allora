@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Event, EventType } from "@/lib/api/types";
 import { capitalize, formatDateShort, formatNumber } from "@/lib/format";
 import { eventName } from "@/lib/event-name";
+import { EVENT_TYPE_IMAGES } from "@/lib/images";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Card } from "@/components/ui/card";
 
@@ -20,7 +21,11 @@ export function EventCard({ event }: { event: Event }) {
       className="group block rounded-[var(--radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <Card className="flex h-full flex-col gap-2">
-        <ImagePlaceholder caption={CAPTIONS[event.type]} aspect="16 / 9" />
+        <ImagePlaceholder
+          caption={CAPTIONS[event.type]}
+          aspect="16 / 9"
+          src={EVENT_TYPE_IMAGES[event.type]}
+        />
         <div className="flex min-w-0 flex-col">
           <h2 className="truncate font-display text-h2" title={name}>
             {name}

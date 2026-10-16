@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Vendor } from "@/lib/api/types";
 import { formatNumber } from "@/lib/format";
+import { imageForCategory } from "@/lib/images";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,7 +45,11 @@ export function VendorCard({
   const unavailable = available === false && !booked;
   return (
     <Card className="flex h-full min-w-0 flex-col gap-2">
-      <ImagePlaceholder caption={captionFor(vendor.category)} aspect="16 / 9" />
+      <ImagePlaceholder
+        caption={captionFor(vendor.category)}
+        aspect="16 / 9"
+        src={imageForCategory(vendor.category)}
+      />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="label">{vendor.category}</p>
         <h2 className="min-w-0 font-display text-h2" title={vendor.name}>
