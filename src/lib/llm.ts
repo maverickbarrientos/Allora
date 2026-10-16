@@ -87,9 +87,12 @@ export async function requestJson({
       signal: controller.signal,
     });
     if (!res.ok) {
-      // Anthropic's error type (for example authentication_error), never the key.
-      const type = await res.json().then((d) => d?.error?.type, () => undefined);
-      console.warn(`LLM ${use} call failed: HTTP ${res.status}${typeof type === "string" ? ` ${type}` : ""}`);
+      // Anthropic's error type and message (for example "credit balance is too low"),
+      // cut short. Never the key.
+      const error = await res.json().then((d) => d?.error, () => undefined);
+      const type = typeof error?.type === "string" ? ` ${error.type}` : "";
+      const message = typeof error?.message === "string" ? `: ${error.message.slice(0, 200)}` : "";
+      console.warn(`LLM ${use} call failed: HTTP ${res.status}${type}${message}`);
       return null;
     }
     const data = await res.json();
