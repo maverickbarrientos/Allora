@@ -1,29 +1,31 @@
 # SPEC-llm-config.md
 
 ## Goal
-The "What's missing" cards and the planning assistant can each use their own LLM provider settings (key, model and endpoint), so they can run on different models or accounts.
+The "What's missing" cards and the planning assistant call Anthropic's API directly, and can each use their own key and model.
 
 ## Supersedes
 - SPEC-matching.md and SPEC-chatbot.md: only where the LLM settings come from. What the model is asked, what it may return and the fallbacks are unchanged.
+- An earlier version of this spec (OpenRouter with optional per-use endpoints). OpenRouter is no longer used.
 
 ## Out of scope
-Changing any prompt, input, output check or fallback; a provider whose API is not OpenAI-compatible chat completions; choosing a model per request or per user; moving settings into the database or an admin screen; new dependencies.
+Changing any prompt, input, output check or fallback; other providers; choosing a model per request or per user; moving settings into the database or an admin screen; new dependencies (plain `fetch`, no SDK).
 
 ## Rules
 - Server-side only, read from environment variables at call time. No key is ever logged, returned or sent to the browser; none is prefixed `NEXT_PUBLIC_`.
-- Per use (`CARDS` for the cards, `CHAT` for the assistant): `LLM_<USE>_API_KEY`, `LLM_<USE>_MODEL`, `LLM_<USE>_ENDPOINT`. Each is optional.
-- Anything not set (or empty) falls back to `LLM_API_KEY` and the defaults (OpenRouter, `anthropic/claude-haiku-5.5`). With only `LLM_API_KEY` set, behaviour is exactly as before.
-- With no key for a use, that use skips the model call and shows its template text, as today. One use having no key does not affect the other.
-- The OpenRouter-only `reasoning` field is sent only to the default OpenRouter endpoint, never to a custom one.
-- The endpoint must accept an OpenAI-compatible chat completions request (`Authorization: Bearer <key>`, `model`, `messages`, `max_tokens`, `temperature`) and answer with `choices[0].message.content`.
-- Failures (timeout, HTTP error, bad output) return nothing and the fallback text is used, as before. The log line names the use ("LLM cards call failed: HTTP 401"), never the key.
+- Calls go to Anthropic's Messages API (`https://api.anthropic.com/v1/messages`, `x-api-key` and `anthropic-version: 2023-06-01` headers, the system prompt in `system`, one user message). The default model is `claude-haiku-5-5`.
+- Per use (`CARDS` for the cards, `CHAT` for the assistant), the key is the first of these that is an Anthropic key (starts with `sk-ant-`): `LLM_<USE>_API_KEY`, then `ANTHROPIC_API_KEY`, then the older `LLM_API_KEY`. A value that isn't an Anthropic key, such as a leftover OpenRouter key, is skipped so it can't shadow the right one. The model is `LLM_<USE>_MODEL`, else the default. Empty values count as not set.
+- With no usable key for a use, that use skips the model call and shows its template text, as before. One use having no key does not affect the other. If something is set but isn't an Anthropic key, the log says so (never the value).
+- Failures (timeout, HTTP error, empty or bad output) return nothing and the fallback text is used, as before. The log line names the use and Anthropic's error type (for example "LLM cards call failed: HTTP 401 authentication_error"), never the key.
+- A key that is not tied to a workspace needs `ANTHROPIC_WORKSPACE_ID` (an id like `wrkspc_...`, not a secret), sent as the `anthropic-workspace-id` header. Without a workspace id the header is not sent, which is right for a workspace-scoped key.
+- Reasoning/thinking is not turned on, so short answers stay fast and inside the token limit.
 
 ## Setup
-Put the variables in `.env.local` for local runs and in the Vercel project's environment variables for the deployed site. `.env.example` lists them.
+Set `ANTHROPIC_API_KEY` in `.env.local` for local runs and in the Vercel project's environment variables for the deployed site (redeploy after changing it). `.env.example` lists the variables.
 
 ## Acceptance criteria
-1. With only `LLM_API_KEY` set, both uses call the default endpoint and model with that key.
-2. With `LLM_CARDS_*` and `LLM_CHAT_*` set, each use sends its own key, model and endpoint, and neither key appears in the other's request.
-3. A use with no settings of its own falls back to `LLM_API_KEY`; with no key at all it returns the fallback text.
-4. A custom endpoint never receives the `reasoning` field.
-5. Errors return the fallback and never throw.
+1. With only `ANTHROPIC_API_KEY` set, both uses call Anthropic's Messages API with that key and `claude-haiku-5-5`.
+2. `LLM_CARDS_*` and `LLM_CHAT_*` override the key and model for their own use only.
+3. A key that doesn't start with `sk-ant-` is never sent anywhere; the use falls back to template text and the log says why.
+4. Text blocks in the reply are joined; other block types are ignored; fenced JSON is tolerated unless the caller asks for strict JSON.
+5. Errors return the fallback and never throw, and no log line contains the key.
+6. The `anthropic-workspace-id` header is sent only when `ANTHROPIC_WORKSPACE_ID` is set.

@@ -2,34 +2,44 @@
 // handlers, never from client components. Keys are read from the environment
 // and are never logged or returned.
 //
-// Each use has its own provider settings, so the "What's missing" cards and the
-// planning assistant can run on different models or accounts:
-//   LLM_CARDS_API_KEY / LLM_CARDS_MODEL / LLM_CARDS_ENDPOINT
-//   LLM_CHAT_API_KEY  / LLM_CHAT_MODEL  / LLM_CHAT_ENDPOINT
-// Anything not set falls back to LLM_API_KEY and the defaults below.
+// Provider: Anthropic's Messages API, called with plain fetch (no SDK).
 //
-// The endpoint must speak the OpenAI-compatible chat completions format
-// (OpenRouter by default), called with plain fetch (no SDK).
+// Settings come from the environment, per use ("cards" for the "What's missing"
+// cards, "chat" for the planning assistant), so the two can run on different
+// keys or models. For the key, the first of these that is an Anthropic key
+// (starts with sk-ant-) wins:
+//   LLM_CARDS_API_KEY or LLM_CHAT_API_KEY  (that use only)
+//   ANTHROPIC_API_KEY                      (both uses)
+//   LLM_API_KEY                            (older name, both uses)
+// A value that isn't an Anthropic key (for example a leftover OpenRouter key)
+// is skipped, so it can never shadow the right one.
+// The model is LLM_CARDS_MODEL or LLM_CHAT_MODEL, else the default below.
+// A key that is not tied to a workspace needs ANTHROPIC_WORKSPACE_ID (wrkspc_...),
+// which is sent as the anthropic-workspace-id header. Not needed for a scoped key.
 
 export type LlmUse = "cards" | "chat";
 
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "anthropic/claude-haiku-5.5";
+const ENDPOINT = "https://api.anthropic.com/v1/messages";
+const API_VERSION = "2023-06-01";
+const MODEL = "claude-haiku-5-5";
 const DEFAULT_TIMEOUT_MS = 8000;
 
-/** The key, model and endpoint for one use, read at call time. */
+/** The key and model for one use, read at call time. */
 export function llmConfig(use: LlmUse) {
   const name = `LLM_${use.toUpperCase()}`;
   const env = process.env;
+  const candidates = [env[`${name}_API_KEY`], env.ANTHROPIC_API_KEY, env.LLM_API_KEY];
   return {
-    key: env[`${name}_API_KEY`] || env.LLM_API_KEY,
+    key: candidates.find((k) => k?.startsWith("sk-ant-")),
+    // Something is set but none of it is an Anthropic key.
+    wrongKey: candidates.some(Boolean),
     model: env[`${name}_MODEL`] || MODEL,
-    endpoint: env[`${name}_ENDPOINT`] || ENDPOINT,
+    workspace: env.ANTHROPIC_WORKSPACE_ID || undefined,
   };
 }
 
 type JsonRequest = {
-  /** Which provider settings to use. */
+  /** Which settings to use. */
   use: LlmUse;
   system: string;
   /** Sent as the user message. Objects are JSON-encoded. */
@@ -53,37 +63,42 @@ export async function requestJson({
   maxTokens = 1500,
   strictJson = false,
 }: JsonRequest): Promise<unknown | null> {
-  const { key, model, endpoint } = llmConfig(use);
-  if (!key) return null;
+  const { key, wrongKey, model, workspace } = llmConfig(use);
+  if (!key) {
+    if (wrongKey) console.warn(`LLM ${use} call skipped: the key set is not an Anthropic key (sk-ant-...)`);
+    return null;
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(endpoint, {
+    const res = await fetch(ENDPOINT, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": API_VERSION,
+        "content-type": "application/json",
+        ...(workspace && { "anthropic-workspace-id": workspace }),
+      },
       body: JSON.stringify({
         model,
         temperature: 0.3,
         max_tokens: maxTokens,
-        // Short text tasks: no hidden reasoning. With it on, calls took 5 to 7.5 s
-        // (close to the 8 s timeout) and reasoning tokens ate into max_tokens.
-        // OpenRouter-only field, so other providers never receive it.
-        ...(endpoint === ENDPOINT && { reasoning: { enabled: false } }),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: typeof input === "string" ? input : JSON.stringify(input) },
-        ],
+        system,
+        messages: [{ role: "user", content: typeof input === "string" ? input : JSON.stringify(input) }],
       }),
       signal: controller.signal,
     });
     if (!res.ok) {
-      console.warn(`LLM ${use} call failed: HTTP ${res.status}`);
+      // Anthropic's error type (for example authentication_error), never the key.
+      const type = await res.json().then((d) => d?.error?.type, () => undefined);
+      console.warn(`LLM ${use} call failed: HTTP ${res.status}${typeof type === "string" ? ` ${type}` : ""}`);
       return null;
     }
     const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== "string" || content.trim() === "") return null;
+    const blocks: { type?: string; text?: string }[] = Array.isArray(data?.content) ? data.content : [];
+    const content = blocks.filter((b) => b.type === "text" && typeof b.text === "string").map((b) => b.text).join("");
+    if (content.trim() === "") return null;
     return parseJson(content, strictJson);
   } catch {
     console.warn(`LLM ${use} call failed: ${controller.signal.aborted ? "timeout" : "network or parse error"}`);
