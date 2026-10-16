@@ -102,7 +102,7 @@ export default function LandingPage() {
           >
             <Reveal className="flex flex-col gap-6">
               <span className="label">Event planning, made calm</span>
-              <h1 className="text-display max-w-[14ch]">Every detail, in one place.</h1>
+              <h1 className="text-display max-w-[14ch]">Simply Together</h1>
               <div
                 aria-hidden="true"
                 className="hairline-draw h-px w-full max-w-xs bg-linear-to-r from-brass to-transparent"
