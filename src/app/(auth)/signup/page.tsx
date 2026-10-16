@@ -12,6 +12,7 @@ import { AuthHero } from "@/components/auth-hero";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { EMAIL_RE } from "@/lib/validation";
 
@@ -91,7 +92,7 @@ export default function SignupPage() {
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" autoComplete="new-password" disabled={submitting} aria-invalid={!!errors.password} />
+            <PasswordInput id="password" name="password" autoComplete="new-password" disabled={submitting} aria-invalid={!!errors.password} />
             {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
           <fieldset className="flex flex-col gap-2" disabled={submitting}>

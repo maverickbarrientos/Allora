@@ -11,6 +11,7 @@ import { AuthHero } from "@/components/auth-hero";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { EMAIL_RE } from "@/lib/validation";
 
@@ -75,7 +76,7 @@ export default function LoginPage() {
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" autoComplete="current-password" disabled={submitting} aria-invalid={!!errors.password} />
+            <PasswordInput id="password" name="password" autoComplete="current-password" disabled={submitting} aria-invalid={!!errors.password} />
             {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
           <Button type="submit" disabled={submitting}>
