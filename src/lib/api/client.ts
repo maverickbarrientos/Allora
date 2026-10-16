@@ -164,6 +164,18 @@ export const api = {
       `/api/bookings/${encodeURIComponent(bookingId)}/pay`,
       { testMethod, plan },
     ),
+  /** Pays several confirmed bookings of one event at once (docs/SPEC-bulk-payment.md); all or nothing. */
+  payBookings: (
+    eventId: string,
+    bookingIds: string[],
+    testMethod: TestMethod,
+    plan: Exclude<PaymentKind, "balance"> = "deposit",
+  ) =>
+    request<{ payments: Payment[]; bookings: PlanBooking[] }>(
+      "POST",
+      `/api/events/${encodeURIComponent(eventId)}/payments`,
+      { bookingIds, testMethod, plan },
+    ),
   requestBookingCancellation: (bookingId: string) =>
     request<{ booking: PlanBooking }>("POST", `/api/bookings/${encodeURIComponent(bookingId)}/cancel-request`),
   getBookingReceipt: (bookingId: string) =>
