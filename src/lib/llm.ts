@@ -14,6 +14,8 @@
 // A value that isn't an Anthropic key (for example a leftover OpenRouter key)
 // is skipped, so it can never shadow the right one.
 // The model is LLM_CARDS_MODEL or LLM_CHAT_MODEL, else the default below.
+// A key that is not tied to a workspace needs ANTHROPIC_WORKSPACE_ID (wrkspc_...),
+// which is sent as the anthropic-workspace-id header. Not needed for a scoped key.
 
 export type LlmUse = "cards" | "chat";
 
@@ -32,6 +34,7 @@ export function llmConfig(use: LlmUse) {
     // Something is set but none of it is an Anthropic key.
     wrongKey: candidates.some(Boolean),
     model: env[`${name}_MODEL`] || MODEL,
+    workspace: env.ANTHROPIC_WORKSPACE_ID || undefined,
   };
 }
 
@@ -60,7 +63,7 @@ export async function requestJson({
   maxTokens = 1500,
   strictJson = false,
 }: JsonRequest): Promise<unknown | null> {
-  const { key, wrongKey, model } = llmConfig(use);
+  const { key, wrongKey, model, workspace } = llmConfig(use);
   if (!key) {
     if (wrongKey) console.warn(`LLM ${use} call skipped: the key set is not an Anthropic key (sk-ant-...)`);
     return null;
@@ -71,7 +74,12 @@ export async function requestJson({
   try {
     const res = await fetch(ENDPOINT, {
       method: "POST",
-      headers: { "x-api-key": key, "anthropic-version": API_VERSION, "content-type": "application/json" },
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": API_VERSION,
+        "content-type": "application/json",
+        ...(workspace && { "anthropic-workspace-id": workspace }),
+      },
       body: JSON.stringify({
         model,
         temperature: 0.3,
