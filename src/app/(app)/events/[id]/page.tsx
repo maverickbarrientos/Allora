@@ -257,7 +257,7 @@ export default function PlanPage() {
   );
 
   return (
-    <div className="flex flex-col gap-10 lg:gap-16">
+    <div className="flex flex-col gap-10 pb-16 lg:gap-16">
       {back}
       <PageHeader
         label="Event plan"
@@ -321,49 +321,56 @@ export default function PlanPage() {
             </Link>
           </Reveal>
         ) : (
-          <ul className="flex flex-col divide-y divide-border border-y border-border">
+          <ul className="flex flex-col gap-3">
             {bookings.map((b, i) => (
               <li key={b.id}>
                 <Reveal delay={500 + Math.min(i, 3) * 80}>
-                  <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-1 py-3 sm:grid-cols-[9rem_1fr_auto_5.5rem]">
-                    <span className="label col-span-2 sm:col-span-1">{b.category}</span>
-                    <Link
-                      href={`/events/${event.id}/vendors/${b.vendorId}`}
-                      className="-my-2 min-w-0 py-2 font-display text-h2 wrap-anywhere underline-offset-4 hover:underline"
-                    >
-                      {b.vendorName}
-                    </Link>
-                    <span className="hidden text-right sm:block">{formatNumber(b.price)}</span>
-                    <StatusBadge status={b.status} className="justify-self-end" />
-                    <span className="text-sm sm:hidden">{formatNumber(b.price)}</span>
-                    <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 empty:hidden sm:col-span-3 sm:col-start-2">
-                      <PlanPaymentLine booking={b} eventId={event.id} />
-                      <CancelRequestButton booking={b} onRequested={onCancelRequested} />
-                      {conversations.state.status === "loaded" && conversations.state.data.bookings[b.id] && (
-                        <MessageLink
-                          href={`/messages/${conversations.state.data.bookings[b.id].conversationId}`}
-                          name={b.vendorName}
-                          unread={conversations.state.data.bookings[b.id].unread}
-                        />
-                      )}
+                  <article className="flex flex-col gap-4 rounded-2xl border border-border bg-stone/40 p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <p className="label">{b.category}</p>
+                        <Link
+                          href={`/events/${event.id}/vendors/${b.vendorId}`}
+                          className="-my-1 py-1 font-display text-h2 wrap-anywhere underline-offset-4 hover:underline"
+                        >
+                          {b.vendorName}
+                        </Link>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <StatusBadge status={b.status} />
+                        <span className="font-medium">{formatNumber(b.price)}</span>
+                      </div>
                     </div>
-                    <div className="col-span-2 flex flex-wrap gap-x-4 text-sm sm:col-span-3 sm:col-start-2">
-                      <Link
-                        href={`/events/${event.id}/bookings/${b.id}/contract`}
-                        className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
-                        aria-label={`Contract for ${b.vendorName}`}
-                      >
-                        Contract
-                      </Link>
-                      <Link
-                        href={`/events/${event.id}/bookings/${b.id}/receipt`}
-                        className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
-                        aria-label={`Receipt for ${b.vendorName}`}
-                      >
-                        Receipt
-                      </Link>
+                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-border pt-4">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 empty:hidden">
+                        <PlanPaymentLine booking={b} eventId={event.id} />
+                        <CancelRequestButton booking={b} onRequested={onCancelRequested} />
+                        {conversations.state.status === "loaded" && conversations.state.data.bookings[b.id] && (
+                          <MessageLink
+                            href={`/messages/${conversations.state.data.bookings[b.id].conversationId}`}
+                            name={b.vendorName}
+                            unread={conversations.state.data.bookings[b.id].unread}
+                          />
+                        )}
+                      </div>
+                      <div className="ml-auto flex gap-4 text-sm">
+                        <Link
+                          href={`/events/${event.id}/bookings/${b.id}/contract`}
+                          className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
+                          aria-label={`Contract for ${b.vendorName}`}
+                        >
+                          Contract
+                        </Link>
+                        <Link
+                          href={`/events/${event.id}/bookings/${b.id}/receipt`}
+                          className="-my-2 py-2 underline underline-offset-4 hover:text-muted-foreground"
+                          aria-label={`Receipt for ${b.vendorName}`}
+                        >
+                          Receipt
+                        </Link>
+                      </div>
                     </div>
-                  </div>
+                  </article>
                 </Reveal>
               </li>
             ))}
