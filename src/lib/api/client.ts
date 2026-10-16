@@ -170,11 +170,13 @@ export const api = {
     bookingIds: string[],
     testMethod: TestMethod,
     plan: Exclude<PaymentKind, "balance"> = "deposit",
+    /** The total shown to the customer; the server refuses (409 amount_changed) if it would charge another amount. */
+    expectedTotal?: number,
   ) =>
     request<{ payments: Payment[]; bookings: PlanBooking[] }>(
       "POST",
       `/api/events/${encodeURIComponent(eventId)}/payments`,
-      { bookingIds, testMethod, plan },
+      { bookingIds, testMethod, plan, expectedTotal },
     ),
   requestBookingCancellation: (bookingId: string) =>
     request<{ booking: PlanBooking }>("POST", `/api/bookings/${encodeURIComponent(bookingId)}/cancel-request`),

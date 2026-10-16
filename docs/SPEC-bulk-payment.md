@@ -39,7 +39,7 @@ Paying bookings of different events together, choosing deposit for some and full
 
 
 ## Shared shapes
-- Request: `{ bookingIds: string[], plan?: "deposit" | "full", testMethod: "approve" | "decline" }` (plan defaults to deposit)
+- Request: `{ bookingIds: string[], plan?: "deposit" | "full", testMethod: "approve" | "decline", expectedTotal?: number }` (plan defaults to deposit; `expectedTotal` is the total the customer was shown, and the server refuses the batch if it would charge a different amount, so a stale page or a payment made in another tab cannot charge more than was shown)
 - Response 201: `{ payments: Payment[], bookings: PlanBooking[] }` (`bookings` in booking creation order, with the new `payment`)
 - Error body as in earlier specs.
 
@@ -55,6 +55,7 @@ Requires a session. Logged-out requests return 401 `unauthorized`.
 - 404 `event_not_found`: missing, not the caller's, or malformed id
 - 404 `booking_not_found`: a booking is missing, not the caller's, or on another event
 - 409 `booking_not_confirmed`, 409 `already_paid`, 409 `nothing_due`: the message names the vendor. Nothing is recorded.
+- 409 `amount_changed`: `expectedTotal` differs from what would be charged. Nothing is recorded.
 - 500 `server_error`
 - Order: validation, event, bookings, status and already-paid checks, then the demo provider, then `pay_bookings` (checks everything again).
 

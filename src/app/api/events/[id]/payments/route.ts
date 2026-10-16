@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { UUID_RE, errorResponse, readJson, requireSession } from "@/lib/api-helpers";
 import { PLAN_BOOKING_COLUMNS, toPlanBooking } from "@/lib/server/shapes";
 import { charge, isTestMethod } from "@/lib/payments/mockProvider";
-import { toPayment, withPlanPayments, type PaymentRow } from "@/lib/payments/status";
+import { planPayments, toPayment, withPlanPayments, type PaymentRow } from "@/lib/payments/status";
+import { toCents } from "@/lib/amount";
 
 const MAX_BOOKINGS = 20;
 const PLANS = ["deposit", "full"];
@@ -14,7 +15,8 @@ const notFound = () => errorResponse(404, "booking_not_found", "One of these boo
  * Pays several confirmed bookings of one event in a single request
  * (docs/SPEC-bulk-payment.md). Body: `{ bookingIds, plan, testMethod }`, where
  * plan is "deposit" or "full". A booking whose deposit is already paid pays its
- * balance instead. Amounts and references are never read from the body: the
+ * balance instead. An optional `expectedTotal` (the total the customer saw) must
+ * match what would be charged, else 409 amount_changed and nothing is paid. Amounts and references are never read from the body: the
  * amounts come from pay_bookings() (which uses pay_booking() and deposit_for()),
  * the reference from the demo provider.
  *
@@ -47,6 +49,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return errorResponse(400, "validation_error", `Invalid fields: bookingIds (1 to ${MAX_BOOKINGS} different ids).`);
     }
     const bookingIds = ids as string[];
+    // Optional: the total the customer was shown. If what the server would charge
+    // differs (a stale page, a price change, a payment made in another tab), nothing is paid.
+    const expected = body.expectedTotal;
+    if (expected !== undefined && (typeof expected !== "number" || !Number.isFinite(expected) || expected < 0)) {
+      return errorResponse(400, "validation_error", "Invalid fields: expectedTotal.");
+    }
 
     const { id } = await params;
     if (!UUID_RE.test(id)) return errorResponse(404, "event_not_found", "Event not found.");
@@ -58,15 +66,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const { data: rows, error: bErr } = await supabase
       .from("bookings")
-      .select("id, event_id, status, vendor:vendors(name)")
+      .select("id, event_id, status, vendor:vendors(name, price)")
       .in("id", bookingIds);
     if (bErr) return errorResponse(500, "server_error", "Could not load bookings.");
     if ((rows ?? []).length !== bookingIds.length || (rows ?? []).some((r) => r.event_id !== id)) return notFound();
 
-    const nameOf = (r: { vendor: unknown }) => {
-      const v = Array.isArray(r.vendor) ? r.vendor[0] : r.vendor;
-      return (v as { name?: string } | null)?.name ?? "A vendor";
-    };
+    const vendorOf = (r: { vendor: unknown }) =>
+      ((Array.isArray(r.vendor) ? r.vendor[0] : r.vendor) as { name?: string; price?: number | string } | null) ?? {};
+    const nameOf = (r: { vendor: unknown }) => vendorOf(r).name ?? "A vendor";
 
     const { data: paidRows, error: pErr } = await supabase
       .from("payments")
@@ -92,6 +99,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return errorResponse(409, "already_paid", `${nameOf(r)} is already paid.`);
       }
       kindOf.set(r.id, kinds.includes("deposit") ? "balance" : plan);
+    }
+
+    if (expected !== undefined) {
+      // Same amounts the plan shows: deposit_for() for a deposit, the price for a full payment, what is left for a balance.
+      const priced = (rows ?? []).map((r) => ({ id: r.id, price: Number(vendorOf(r).price) }));
+      const due = await planPayments(supabase, priced);
+      let cents = 0;
+      for (const r of priced) {
+        const p = due.get(r.id)!;
+        const kind = kindOf.get(r.id);
+        cents += toCents(kind === "balance" ? p.balanceDue : kind === "full" ? r.price : p.depositAmount);
+      }
+      if (toCents(expected) !== cents) {
+        return errorResponse(409, "amount_changed", "The amounts changed since you looked. Please review and try again.");
+      }
     }
 
     // The demo provider is the only thing that decides success. A decline records nothing.
