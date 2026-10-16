@@ -136,6 +136,7 @@ export function PaySelectedDialog({
         selected.map((b) => b.id),
         method,
         plan,
+        fromCents(t.due),
       );
       const nameOf = new Map(bookings.map((b) => [b.id, b.vendorName]));
       setPhase({

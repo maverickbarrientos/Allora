@@ -4,10 +4,10 @@
 
 **Blocked by:** 34, 35
 
-**Status:** not started
+**Status:** done
 
-- [ ] One click on Confirm pays all ticked bookings with one request (double click sends one)
-- [ ] Rows and totals update from the response, with receipt links
-- [ ] Decline keeps the ticks and allows a retry
-- [ ] A refused booking shows the vendor name and pays nothing
-- [ ] Works on the live URL
+- [x] One click on Confirm pays all ticked bookings with one request (double click sends one)
+- [x] Rows and totals update from the response, with receipt links
+- [x] Decline keeps the ticks and allows a retry
+- [x] A refused booking shows the vendor name and pays nothing
+- [ ] Works on the live URL (only the local production build was tested)
