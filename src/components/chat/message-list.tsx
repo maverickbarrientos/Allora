@@ -32,7 +32,7 @@ export function MessageList({ entries, typing }: { entries: Entry[]; typing: boo
     <div
       role="log"
       aria-label="Conversation"
-      className="flex max-h-[28rem] flex-col gap-4 overflow-y-auto"
+      className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
     >
       {entries.map((e, i) =>
         e.role === "user" ? (
