@@ -34,7 +34,7 @@ Paying bookings of different events together, choosing deposit for some and full
 
 ## Data and tables
 - No new table.
-- `pay_bookings(p_booking_ids uuid[], p_reference text, p_plan text default 'deposit') returns setof payments`: security definer, empty search_path, execute only for authenticated. Checks: caller is a customer, plan is `deposit` or `full` (`invalid_plan`), reference not empty, 1 to 20 non-null different ids (`invalid_booking_ids`). Loops in id order, locks each booking (own bookings only), picks the kind, calls `pay_booking()`. On any error it re-raises the same message and code with the failing booking id in `detail`, which rolls the whole batch back.
+- `pay_bookings(p_booking_ids uuid[], p_kinds text[], p_reference text) returns setof payments`: security definer, empty search_path, execute only for authenticated. `p_kinds[i]` is the kind for `p_booking_ids[i]` (`deposit`, `full` or `balance`); the route picks it from what is already paid (a booking with a paid deposit gets `balance`, any other gets the batch plan), so the database never guesses and two identical requests at the same time cannot both pay. Checks: caller is a customer, reference not empty, 1 to 20 non-null different ids with one kind each (`invalid_booking_ids`, `invalid_kind`). Loops in id order and calls `pay_booking()` for each. On any error it re-raises the same message and code with the failing booking id in `detail`, which rolls the whole batch back.
 - File: `supabase/sql/032_pay_bookings.sql`. Safe to run more than once.
 
 
@@ -75,7 +75,7 @@ Requires a session. Logged-out requests return 401 `unauthorized`.
 5. A booking of another customer, or of another event, returns 404 and nothing is paid.
 6. 0 ids, 21 ids, duplicate ids, a non-uuid id, a bad plan, a bad testMethod: 400.
 7. "decline" returns 402 and records nothing.
-8. Repeating the same request: 409 `already_paid`. Two simultaneous identical requests: one 201, one 409, no double payment.
+8. Repeating a deposit batch pays the balances (the deposit is already paid). Repeating a full batch, or a batch of fully paid bookings: 409 `already_paid`. Two simultaneous identical requests: one 201, one 409, no double payment.
 9. A vendor declining one booking at the same time as the batch: never a paid payment on a declined booking (SPEC-payment.md criterion 6 still holds).
 10. RLS: nobody can insert payments directly; vendor, anon and another customer cannot call `pay_bookings` for these bookings. Logged-out 401, vendor 403.
 11. The totals on the plan equal the sum of the rows and update after paying.

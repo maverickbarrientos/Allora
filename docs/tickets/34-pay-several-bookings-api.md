@@ -4,7 +4,7 @@
 
 **Blocked by:** 31, 32, 33
 
-**Status:** built, SQL not yet run on the live project, not tested against it
+**Status:** built, being tested
 
 - [ ] A batch of confirmed bookings is paid in one request with the right amounts
 - [ ] A refused booking (pending, declined, already paid, someone else's, another event) refuses the whole batch and names the vendor

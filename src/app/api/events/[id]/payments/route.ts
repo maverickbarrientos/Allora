@@ -78,6 +78,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     for (const p of paidRows ?? []) paidKinds.set(p.booking_id, [...(paidKinds.get(p.booking_id) ?? []), p.kind]);
 
     // Same rules as pay_booking(), so an obvious refusal happens before the charge.
+    // The kind to pay is decided here, from what is already paid, and sent to
+    // the database explicitly: a booking with a deposit pays its balance, any
+    // other pays the batch plan. pay_booking() checks it again under a lock, so
+    // two identical requests at the same time cannot both pay.
+    const kindOf = new Map<string, string>();
     for (const r of rows ?? []) {
       if (r.status !== "confirmed") {
         return errorResponse(409, "booking_not_confirmed", `${nameOf(r)} is not confirmed yet, so it cannot be paid.`);
@@ -86,6 +91,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (kinds.includes("full") || kinds.includes("balance") || (kinds.length > 0 && !kinds.includes("deposit"))) {
         return errorResponse(409, "already_paid", `${nameOf(r)} is already paid.`);
       }
+      kindOf.set(r.id, kinds.includes("deposit") ? "balance" : plan);
     }
 
     // The demo provider is the only thing that decides success. A decline records nothing.
@@ -94,8 +100,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const { data: paid, error: payErr } = await supabase.rpc("pay_bookings", {
       p_booking_ids: bookingIds,
+      p_kinds: bookingIds.map((bid) => kindOf.get(bid)),
       p_reference: result.reference,
-      p_plan: plan,
     });
     if (payErr) {
       // Nothing was recorded. pay_bookings() puts the failing booking id in `details`.
@@ -110,7 +116,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (msg.includes("already_paid") || payErr.code === "23505") {
         return errorResponse(409, "already_paid", `${who} is already paid.`);
       }
-      if (msg.includes("invalid_booking_ids") || msg.includes("invalid_plan")) {
+      if (msg.includes("invalid_booking_ids") || msg.includes("invalid_kind")) {
         return errorResponse(400, "validation_error", "Invalid fields.");
       }
       return errorResponse(500, "server_error", "Could not record the payments.");
