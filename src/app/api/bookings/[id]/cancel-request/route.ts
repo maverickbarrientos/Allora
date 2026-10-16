@@ -9,7 +9,7 @@ const notFound = () => errorResponse(404, "booking_not_found", "Booking not foun
 /**
  * The customer asks to cancel a pending or confirmed booking
  * (docs/SPEC-customer-cancel.md). Customers cannot update bookings directly;
- * request_booking_cancellation() (029) checks ownership and status and flags
+ * request_booking_cancellation() (030) checks ownership and status and flags
  * it by setting cancel_requested_at; the status stays as it is. The vendor then approves or keeps it.
  */
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {

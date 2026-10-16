@@ -96,7 +96,7 @@ function Receipt({ receipt }: { receipt: BookingReceipt }) {
 
         {deposit?.status === "paid" && (
           <p className="font-medium">
-            Deposit paid: {deposit.amount != null ? formatAmount(deposit.amount) : ""}
+            {deposit.fullyPaid ? "Paid in full" : "Deposit paid"}: {deposit.amount != null ? formatAmount(deposit.amount) : ""}
             {deposit.paidAt && <> on {formatTimestamp(deposit.paidAt)}</>}
           </p>
         )}

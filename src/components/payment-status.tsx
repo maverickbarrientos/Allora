@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
  * "Pay deposit" with the amount. Pending and unpaid: the same link, outlined,
  * with a note; the pay page shows "Waiting for the vendor" and the server only
  * accepts a payment once the booking is confirmed. Paid: "Deposit paid" with
- * the amount. Refunded: "Deposit refunded". Declined, or no payment data on a
+ * the amount. Refunded: "Deposit refunded" (plus the pay link if the vendor confirmed it again). Declined, or no payment data on a
  * confirmed row: nothing.
  */
 export function PlanPaymentLine({ booking, eventId }: { booking: PlanBooking; eventId: string }) {
@@ -32,14 +32,27 @@ export function PlanPaymentLine({ booking, eventId }: { booking: PlanBooking; ev
   if (!p) return null;
   if (p.status === "paid") {
     return (
-      <p className="text-sm font-medium">
-        Deposit paid{p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="text-sm font-medium">
+          {p.fullyPaid ? "Paid in full" : "Deposit paid"}
+          {p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
+        </p>
+        {p.balanceDue > 0 && (
+          <Link
+            href={payHref}
+            className={cn(buttonVariants({ size: "sm" }), "w-fit")}
+            aria-label={`Pay balance of ${formatAmount(p.balanceDue)} for ${booking.vendorName}`}
+          >
+            Pay balance &middot; {formatAmount(p.balanceDue)}
+          </Link>
+        )}
+      </div>
     );
   }
-  if (p.status === "refunded") return <p className="text-sm font-medium">Deposit refunded</p>;
+  // A refunded booking the vendor confirmed again can be paid again.
+  if (p.status === "refunded" && booking.status !== "confirmed") return <p className="text-sm font-medium">Deposit refunded</p>;
   if (booking.status !== "confirmed") return null;
-  return (
+  const payLink = (
     <Link
       href={`/events/${encodeURIComponent(eventId)}/bookings/${encodeURIComponent(booking.id)}/pay`}
       className={cn(buttonVariants({ size: "sm" }), "w-fit")}
@@ -47,6 +60,13 @@ export function PlanPaymentLine({ booking, eventId }: { booking: PlanBooking; ev
     >
       Pay deposit &middot; {formatAmount(p.depositAmount)}
     </Link>
+  );
+  if (p.status !== "refunded") return payLink;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <p className="text-sm font-medium">Deposit refunded</p>
+      {payLink}
+    </div>
   );
 }
 
@@ -62,7 +82,8 @@ export function VendorPaymentBadge({ booking }: { booking: VendorBooking }) {
   if (p.status === "paid") {
     return (
       <span className={cn(badge, "border-forest text-forest")}>
-        Deposit paid{p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
+        {p.fullyPaid ? "Paid in full" : "Deposit paid"}
+        {p.paidAmount != null && <> &middot; {formatAmount(p.paidAmount)}</>}
       </span>
     );
   }

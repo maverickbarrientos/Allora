@@ -4,17 +4,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // The deposit amount always comes from SQL deposit_for(); it is never computed here.
 
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
+export type PaymentKind = "deposit" | "full" | "balance";
 export type PlanPayment = {
   status: PaymentStatus;
   depositAmount: number;
   paidAmount: number | null;
   paidAt: string | null;
+  fullyPaid: boolean;
+  balanceDue: number;
 };
-export type VendorPayment = { status: PaymentStatus; paidAmount: number | null };
+export type VendorPayment = { status: PaymentStatus; paidAmount: number | null; fullyPaid: boolean };
 
 export type PaymentRow = {
   id: string;
   booking_id: string;
+  kind: PaymentKind;
   amount: number | string;
   status: "paid" | "refunded";
   reference: string;
@@ -26,6 +30,7 @@ export function toPayment(r: PaymentRow) {
   return {
     id: r.id,
     bookingId: r.booking_id,
+    kind: r.kind,
     amount: Number(r.amount),
     status: r.status,
     reference: r.reference,
@@ -34,19 +39,28 @@ export function toPayment(r: PaymentRow) {
   };
 }
 
-type Summary = { status: PaymentStatus; amount: number | null; at: string | null };
+type Summary = { status: PaymentStatus; amount: number | null; at: string | null; fullyPaid: boolean };
 
 /**
  * Spec rule: "paid" if an active paid payment exists, else "refunded" if the
  * latest payment was refunded, else "unpaid". The amount and date are those of
  * the paid payment, or of the latest refunded one.
  */
-function summarise(rows: Pick<PaymentRow, "amount" | "status" | "created_at">[]): Summary {
-  const paid = rows.find((r) => r.status === "paid");
-  if (paid) return { status: "paid", amount: Number(paid.amount), at: paid.created_at };
+function summarise(rows: Pick<PaymentRow, "amount" | "status" | "created_at" | "kind">[]): Summary {
+  const paid = rows.filter((r) => r.status === "paid");
+  if (paid.length > 0) {
+    const first = paid.map((r) => r.created_at).sort()[0];
+    return {
+      status: "paid",
+      amount: paid.reduce((n, r) => n + Number(r.amount), 0),
+      at: first,
+      fullyPaid: paid.some((r) => r.kind !== "deposit"),
+    };
+  }
   const latest = [...rows].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1);
-  if (latest?.status === "refunded") return { status: "refunded", amount: Number(latest.amount), at: latest.created_at };
-  return { status: "unpaid", amount: null, at: null };
+  // shortcut: refunded amount is the latest row only, not deposit + balance; fine while it is only shown as a status
+  if (latest?.status === "refunded") return { status: "refunded", amount: Number(latest.amount), at: latest.created_at, fullyPaid: false };
+  return { status: "unpaid", amount: null, at: null, fullyPaid: false };
 }
 
 /** Payment summaries by booking id. RLS limits rows to the caller's own bookings. Never reads the reference. */
@@ -55,13 +69,13 @@ async function loadSummaries(supabase: SupabaseClient, bookingIds: string[]) {
   if (bookingIds.length === 0) return out;
   const { data, error } = await supabase
     .from("payments")
-    .select("booking_id, amount, status, created_at")
+    .select("booking_id, amount, status, created_at, kind")
     .in("booking_id", bookingIds);
   if (error) throw error;
-  const byBooking = new Map<string, Pick<PaymentRow, "amount" | "status" | "created_at">[]>();
+  const byBooking = new Map<string, Pick<PaymentRow, "amount" | "status" | "created_at" | "kind">[]>();
   for (const r of data ?? []) {
     const list = byBooking.get(r.booking_id) ?? [];
-    list.push(r as Pick<PaymentRow, "amount" | "status" | "created_at">);
+    list.push(r as Pick<PaymentRow, "amount" | "status" | "created_at" | "kind">);
     byBooking.set(r.booking_id, list);
   }
   for (const id of bookingIds) out.set(id, summarise(byBooking.get(id) ?? []));
@@ -89,7 +103,8 @@ export async function planPayments(supabase: SupabaseClient, bookings: { id: str
   const out = new Map<string, PlanPayment>();
   for (const b of bookings) {
     const s = summaries.get(b.id)!;
-    out.set(b.id, { status: s.status, depositAmount: deposits.get(b.price)!, paidAmount: s.amount, paidAt: s.at });
+    const balanceDue = s.status === "paid" && !s.fullyPaid ? Math.max(0, b.price - (s.amount ?? 0)) : 0;
+    out.set(b.id, { status: s.status, depositAmount: deposits.get(b.price)!, paidAmount: s.amount, paidAt: s.at, fullyPaid: s.fullyPaid, balanceDue });
   }
   return out;
 }
@@ -98,7 +113,7 @@ export async function planPayments(supabase: SupabaseClient, bookings: { id: str
 export async function vendorPayments(supabase: SupabaseClient, bookingIds: string[]) {
   const summaries = await loadSummaries(supabase, bookingIds);
   const out = new Map<string, VendorPayment>();
-  for (const [id, s] of summaries) out.set(id, { status: s.status, paidAmount: s.amount });
+  for (const [id, s] of summaries) out.set(id, { status: s.status, paidAmount: s.amount, fullyPaid: s.fullyPaid });
   return out;
 }
 

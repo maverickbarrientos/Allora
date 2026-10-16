@@ -1,6 +1,6 @@
--- 029_customer_cancel: a customer asks to cancel a booking; the vendor approves
+-- 030_customer_cancel: a customer asks to cancel a booking; the vendor approves
 -- or keeps it (docs/SPEC-customer-cancel.md). Safe to run more than once.
--- Run after 028. Run in Supabase -> SQL Editor -> New query -> paste -> Run.
+-- Run after 029. Run in Supabase -> SQL Editor -> New query -> paste -> Run.
 --
 -- A request is a flag, not a status: bookings.cancel_requested_at. The booking
 -- stays pending or confirmed while the vendor decides, so every existing rule

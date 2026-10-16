@@ -39,7 +39,7 @@ Routes:
 - `PATCH /api/vendor/bookings/:id` also accepts `cancelled`; 409 `status_unchanged` when there is no request to approve.
 - `POST /api/vendor/bookings/:id/keep` (vendor): 200 `{ booking }`, 404, 409 `no_request`.
 
-Migration: `supabase/sql/029_customer_cancel.sql`.
+Migration: `supabase/sql/030_customer_cancel.sql`.
 
 ## Login
 Existing Supabase Auth with the customer and vendor roles. Nothing new.

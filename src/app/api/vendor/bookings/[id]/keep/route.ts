@@ -6,7 +6,7 @@ import { withVendorPayments } from "@/lib/payments/status";
 
 /**
  * The vendor keeps a booking the customer asked to cancel
- * (docs/SPEC-customer-cancel.md). keep_booking() (029) clears the request and
+ * (docs/SPEC-customer-cancel.md). keep_booking() (030) clears the request and
  * leaves the status alone, so no date or availability rule runs again.
  */
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
