@@ -16,7 +16,7 @@ export type LlmUse = "cards" | "chat";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "anthropic/claude-haiku-5.5";
-const DEFAULT_TIMEOUT_MS = 8000;
+const DEFAULT_TIMEOUT_MS = 12000;
 
 /** The key and model for one use, read at call time. */
 export function llmConfig(use: LlmUse) {
