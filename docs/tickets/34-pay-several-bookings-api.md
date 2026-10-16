@@ -4,11 +4,11 @@
 
 **Blocked by:** 31, 32, 33
 
-**Status:** built, being tested
+**Status:** done
 
-- [ ] A batch of confirmed bookings is paid in one request with the right amounts
-- [ ] A refused booking (pending, declined, already paid, someone else's, another event) refuses the whole batch and names the vendor
-- [ ] 0, 21, duplicate and invalid ids, bad plan and bad testMethod return 400
-- [ ] A decline returns 402 and records nothing
-- [ ] Repeating the request returns 409; two at once: one succeeds
-- [ ] Logged out 401, vendor 403, no direct payment inserts
+- [x] A batch of confirmed bookings is paid in one request with the right amounts
+- [x] A refused booking (pending, declined, already paid, someone else's, another event) refuses the whole batch and names the vendor
+- [x] 0, 21, duplicate and invalid ids, bad plan and bad testMethod return 400
+- [x] A decline returns 402 and records nothing
+- [x] Repeating the request returns 409; two at once: one succeeds
+- [x] Logged out 401, vendor 403, no direct payment inserts

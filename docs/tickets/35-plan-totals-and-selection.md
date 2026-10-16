@@ -4,9 +4,9 @@
 
 **Blocked by:** none (reads the plan data that already exists)
 
-**Status:** not started
+**Status:** done
 
-- [ ] Totals equal the sum of the rows, in cents, and ignore declined and cancelled
-- [ ] Only payable rows have a tick box; pending rows say they can be paid once the vendor confirms
-- [ ] The bar shows count, total price and due now, and is hidden with nothing ticked
-- [ ] Works with the keyboard, at 375px with no sideways scroll, and with reduced motion
+- [x] Totals equal the sum of the rows, in cents, and ignore declined and cancelled
+- [x] Only payable rows have a tick box; pending rows say they can be paid once the vendor confirms
+- [x] The bar shows count, total price and due now, and is hidden with nothing ticked
+- [x] Works with the keyboard, at 375px with no sideways scroll, (nothing animates, so reduced motion needs nothing)
