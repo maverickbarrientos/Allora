@@ -8,6 +8,7 @@ import { api } from "@/lib/api/client";
 import type { VendorContact } from "@/lib/api/types";
 import { eventName } from "@/lib/event-name";
 import { formatNumber } from "@/lib/format";
+import { imageForCategory } from "@/lib/images";
 import { useLoad } from "@/lib/use-load";
 import { CheckAvailabilityDialog } from "@/components/check-availability-dialog";
 import { ErrorState } from "@/components/error-state";
@@ -169,7 +170,12 @@ export default function VendorProfilePage() {
       {back}
 
       <Reveal className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <ImagePlaceholder caption={captionFor(vendor.category)} aspect="4 / 3" />
+        <ImagePlaceholder
+          caption={captionFor(vendor.category)}
+          aspect="4 / 3"
+          src={imageForCategory(vendor.category)}
+          loading="eager"
+        />
         <div className="flex min-w-0 flex-col gap-4">
           <p className="label">{vendor.category}</p>
           <h1 className="font-display text-h1 [overflow-wrap:anywhere]">{vendor.name}</h1>

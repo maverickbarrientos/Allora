@@ -8,11 +8,14 @@ export function ImagePlaceholder({
   caption,
   aspect = "16 / 9",
   src,
+  loading = "lazy",
   className,
 }: {
   caption: string;
   aspect?: string;
   src?: string;
+  /** "eager" for a picture that is visible on first load. */
+  loading?: "lazy" | "eager";
   className?: string;
 }) {
   if (src) {
@@ -22,7 +25,13 @@ export function ImagePlaceholder({
         style={{ aspectRatio: aspect }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={caption} className="h-full w-full object-cover" />
+        <img
+          src={src}
+          alt={caption}
+          loading={loading}
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
       </div>
     );
   }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ImagePlaceholder } from "@/components/image-placeholder";
+import { EVENT_TYPE_IMAGES, LANDING_HERO_IMAGE } from "@/lib/images";
 import { Reveal } from "@/components/reveal";
 import { Card, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
@@ -55,16 +56,19 @@ const EVENT_TYPES = [
     name: "Weddings",
     body: "From the venue to the last dance, every service accounted for.",
     caption: "Long table, candlelight",
+    src: EVENT_TYPE_IMAGES.wedding,
   },
   {
     name: "Birthdays",
     body: "Small dinners or full celebrations, planned without the scramble.",
     caption: "Cake and flowers, afternoon light",
+    src: EVENT_TYPE_IMAGES.birthday,
   },
   {
     name: "Corporate",
     body: "Offsites and launches with a plan the whole team can follow.",
     caption: "Venue interior, morning light",
+    src: EVENT_TYPE_IMAGES.corporate,
   },
 ];
 
@@ -118,7 +122,12 @@ export default function LandingPage() {
               </div>
             </Reveal>
             <Reveal delay={80}>
-              <ImagePlaceholder caption="Table setting, natural light" aspect="4 / 3" />
+              <ImagePlaceholder
+                caption="Table setting, natural light"
+                aspect="4 / 3"
+                src={LANDING_HERO_IMAGE}
+                loading="eager"
+              />
             </Reveal>
           </div>
         </section>
@@ -198,7 +207,7 @@ export default function LandingPage() {
             <div className="mt-10 grid gap-10 md:grid-cols-3 md:gap-8">
               {EVENT_TYPES.map((t, i) => (
                 <Reveal key={t.name} delay={i * 80} className="flex flex-col gap-4">
-                  <ImagePlaceholder caption={t.caption} aspect="4 / 5" />
+                  <ImagePlaceholder caption={t.caption} aspect="4 / 5" src={t.src} />
                   <h3 className="text-h2">{t.name}</h3>
                   <p className="text-muted-foreground">{t.body}</p>
                 </Reveal>
