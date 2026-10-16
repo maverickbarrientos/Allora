@@ -20,6 +20,9 @@ import { PageHeader } from "@/components/page-header";
 import { MessageLink } from "@/components/message-link";
 import { CancelRequestButton } from "@/components/cancel-request-button";
 import { PlanPaymentLine } from "@/components/payment-status";
+import { PlanTotals } from "@/components/plan-totals";
+import { PaySelectedBar, PaySelectedDialog } from "@/components/pay-selected";
+import { isPayable, type BatchPlan } from "@/lib/payments/totals";
 import { Reveal } from "@/components/reveal";
 import { StatusBadge } from "@/components/status-badge";
 import { ReplacementNotice, hasNewlyDeclined, isEnded, replacementCategories } from "@/components/replacement-notice";
@@ -136,6 +139,41 @@ export default function PlanPage() {
     () => new Set((planBookings ?? []).filter(isEnded).map((b) => b.vendorId)),
     [planBookings],
   );
+
+  // Tick boxes for "pay selected" (docs/SPEC-bulk-payment.md). Only payable
+  // bookings can be ticked, and a ticked one that stops being payable (paid,
+  // cancelled, refreshed) drops out of `selected` by itself.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [batchPlan, setBatchPlan] = useState<BatchPlan>("deposit");
+  const [payOpen, setPayOpen] = useState(false);
+  const payable = useMemo(() => (planBookings ?? []).filter(isPayable), [planBookings]);
+  const selected = useMemo(() => payable.filter((b) => selectedIds.has(b.id)), [payable, selectedIds]);
+
+  function toggleSelected(bookingId: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(bookingId);
+      else next.delete(bookingId);
+      return next;
+    });
+  }
+
+  // After "pay selected": rows and totals follow the response at once, then the plan refreshes quietly.
+  function onBatchPaid(paid: PlanBooking[]) {
+    setSelectedIds(new Set());
+    setState((prev) =>
+      prev.status === "loaded"
+        ? {
+            status: "loaded",
+            data: {
+              ...prev.data,
+              bookings: prev.data.bookings.map((b) => paid.find((p) => p.id === b.id) ?? b),
+            },
+          }
+        : prev,
+    );
+    void refreshPlan({ cards: false, queue: true });
+  }
 
   // After a booking from a card: show it on the plan at once, then refresh the
   // bookings quietly. The cards are not refetched.
@@ -293,6 +331,15 @@ export default function PlanPage() {
             Bookings
           </h2>
           <div className="flex items-center gap-3">
+            {payable.length > 1 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedIds(selected.length === payable.length ? new Set() : new Set(payable.map((b) => b.id)))}
+              >
+                {selected.length === payable.length ? "Clear selection" : `Select all payable (${payable.length})`}
+              </Button>
+            )}
             {refreshFailed && (
               <p role="status" className="text-sm text-muted-foreground">
                 Couldn&apos;t refresh. Please try again.
@@ -321,6 +368,8 @@ export default function PlanPage() {
             </Link>
           </Reveal>
         ) : (
+          <>
+          <PlanTotals bookings={bookings} />
           <ul className="flex flex-col gap-3">
             {bookings.map((b, i) => (
               <li key={b.id}>
@@ -343,6 +392,18 @@ export default function PlanPage() {
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-border pt-4">
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 empty:hidden">
+                        {isPayable(b) && (
+                          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg text-sm has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-primary"
+                              checked={selectedIds.has(b.id)}
+                              onChange={(e) => toggleSelected(b.id, e.target.checked)}
+                              aria-label={`Select ${b.vendorName} to pay`}
+                            />
+                            Select to pay
+                          </label>
+                        )}
                         <PlanPaymentLine booking={b} eventId={event.id} />
                         <CancelRequestButton booking={b} onRequested={onCancelRequested} />
                         {conversations.state.status === "loaded" && conversations.state.data.bookings[b.id] && (
@@ -375,6 +436,7 @@ export default function PlanPage() {
               </li>
             ))}
           </ul>
+          </>
         )}
       </section>
 
@@ -407,6 +469,25 @@ export default function PlanPage() {
             error: new ApiError(404, "event_not_found", "Event not found"),
           })
         }
+      />
+
+      {selected.length > 0 && (
+        <PaySelectedBar
+          selected={selected}
+          plan={batchPlan}
+          onPlanChange={setBatchPlan}
+          onPay={() => setPayOpen(true)}
+          onClear={() => setSelectedIds(new Set())}
+        />
+      )}
+      <PaySelectedDialog
+        open={payOpen}
+        eventId={id}
+        selected={selected}
+        plan={batchPlan}
+        onClose={() => setPayOpen(false)}
+        onPaid={onBatchPaid}
+        onStale={() => void refreshPlan({ cards: false, queue: true })}
       />
     </div>
   );
