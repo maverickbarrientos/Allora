@@ -46,8 +46,6 @@ type JsonRequest = {
   input: unknown;
   timeoutMs?: number;
   maxTokens?: number;
-  /** Reply must be exactly one JSON value; no code fence or other text around it. */
-  strictJson?: boolean;
 };
 
 /**
@@ -61,7 +59,6 @@ export async function requestJson({
   input,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   maxTokens = 1500,
-  strictJson = false,
 }: JsonRequest): Promise<unknown | null> {
   const { key, wrongKey, model, workspace } = llmConfig(use);
   if (!key) {
@@ -90,16 +87,26 @@ export async function requestJson({
       signal: controller.signal,
     });
     if (!res.ok) {
-      // Anthropic's error type (for example authentication_error), never the key.
-      const type = await res.json().then((d) => d?.error?.type, () => undefined);
-      console.warn(`LLM ${use} call failed: HTTP ${res.status}${typeof type === "string" ? ` ${type}` : ""}`);
+      // Anthropic's error type and message (for example "credit balance is too low"),
+      // cut short. Never the key.
+      const error = await res.json().then((d) => d?.error, () => undefined);
+      const type = typeof error?.type === "string" ? ` ${error.type}` : "";
+      const message = typeof error?.message === "string" ? `: ${error.message.slice(0, 200)}` : "";
+      console.warn(`LLM ${use} call failed: HTTP ${res.status}${type}${message}`);
       return null;
     }
     const data = await res.json();
     const blocks: { type?: string; text?: string }[] = Array.isArray(data?.content) ? data.content : [];
     const content = blocks.filter((b) => b.type === "text" && typeof b.text === "string").map((b) => b.text).join("");
-    if (content.trim() === "") return null;
-    return parseJson(content, strictJson);
+    // stop_reason "max_tokens" means the answer was cut off, so its JSON is incomplete.
+    const detail = `stop_reason=${data?.stop_reason}, ${content.length} characters`;
+    if (content.trim() === "") {
+      console.warn(`LLM ${use} reply was empty (${detail})`);
+      return null;
+    }
+    const parsed = parseJson(content);
+    if (parsed === null) console.warn(`LLM ${use} reply was not valid JSON (${detail}, starts with ${JSON.stringify(content.trim().slice(0, 12))})`);
+    return parsed;
   } catch {
     console.warn(`LLM ${use} call failed: ${controller.signal.aborted ? "timeout" : "network or parse error"}`);
     return null;
@@ -108,10 +115,9 @@ export async function requestJson({
   }
 }
 
-/** Parses a JSON reply. Unless strict, a surrounding ```json fence is tolerated. */
-function parseJson(content: string, strict: boolean): unknown | null {
-  const trimmed = content.trim();
-  const text = strict ? trimmed : trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+/** Parses a JSON reply. A surrounding ```json fence is tolerated, as Claude often adds one. */
+function parseJson(content: string): unknown | null {
+  const text = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   try {
     return JSON.parse(text);
   } catch {

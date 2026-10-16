@@ -86,13 +86,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         finance,
       }),
       timeoutMs: CHAT_TIMEOUT_MS,
-      maxTokens: 600,
-      strictJson: true,
+      // A reply of up to REPLY_MAX characters plus a full order must fit, or the JSON is cut off.
+      maxTokens: 1500,
     });
 
     // The block shown is the button's intent, else what the model asked for.
     // Its numbers always come from finance, never from the model.
     const valid = validateChatOutput(output, missing);
+    if (output !== null && valid === null) console.warn("LLM chat answer failed validation");
     const { show, ...answer } = valid ?? { ...fallbackResponse(type, missing, intent), show: null };
     const block = intent ?? show;
     return NextResponse.json({
