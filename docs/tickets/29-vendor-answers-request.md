@@ -4,11 +4,11 @@
 
 **Blocked by:** 28
 
-**Status:** todo
+**Status:** done
 
-- [ ] The vendor's bookings page has a "Cancellation requested" group with "Approve cancellation" and "Keep booking"
-- [ ] Approving (after a confirm dialog) makes the booking cancelled; a paid deposit becomes "Deposit refunded"
-- [ ] Keeping the booking clears the request and leaves its status as it was
-- [ ] Approving a booking with no open request is refused and changes nothing
-- [ ] Only the booking's own vendor can answer; other vendors get 404
-- [ ] Works on the live URL
+- [x] The vendor's bookings page has a "Cancellation requested" group with "Approve cancellation" and "Keep booking"
+- [x] Approving (after a confirm dialog) makes the booking cancelled; a paid deposit becomes "Deposit refunded"
+- [x] Keeping the booking clears the request and leaves its status as it was
+- [x] Approving a booking with no open request is refused and changes nothing
+- [x] Only the booking's own vendor can answer; other vendors get 404
+- [x] Works on the live URL
